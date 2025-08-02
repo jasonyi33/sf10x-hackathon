@@ -351,6 +351,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 20,
     alignItems: 'center',
+
   },
   locationButtonText: {
     color: 'white',
