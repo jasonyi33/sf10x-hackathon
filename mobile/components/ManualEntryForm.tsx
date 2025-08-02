@@ -126,9 +126,11 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
       // Add location data if available
       if (selectedLocation) {
-        cleanData.latitude = selectedLocation.latitude;
-        cleanData.longitude = selectedLocation.longitude;
-        cleanData.address = selectedLocation.address;
+        cleanData.location = {
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude,
+          address: selectedLocation.address || 'Unknown Address',
+        };
       }
 
       onSave(cleanData);

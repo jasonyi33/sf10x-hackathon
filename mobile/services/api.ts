@@ -1,7 +1,5 @@
 import { supabase } from './supabase';
-
-// Replace with your actual backend URL (Dev 1 will provide this)
-const API_BASE_URL = 'http://localhost:8000'; // or your Railway URL
+import { API_CONFIG, getApiUrl, shouldUseRealApi } from '../config/api';
 
 // Helper function to get auth token
 const getAuthToken = async () => {
@@ -14,6 +12,11 @@ const apiRequest = async (
   endpoint: string,
   options: RequestInit = {}
 ) => {
+  // Skip real API calls if disabled
+  if (!shouldUseRealApi()) {
+    throw new Error('Real API disabled for demo');
+  }
+
   const token = await getAuthToken();
   
   const config: RequestInit = {
@@ -26,13 +29,19 @@ const apiRequest = async (
   };
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+    const fullUrl = getApiUrl(endpoint);
+    console.log(`Making API request to: ${fullUrl}`);
+    const response = await fetch(fullUrl, config);
     
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`API Error ${response.status}:`, errorText);
       throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
     
-    return await response.json();
+    const result = await response.json();
+    console.log(`API response from ${endpoint}:`, result);
+    return result;
   } catch (error) {
     console.error('API request error:', error);
     throw error;
@@ -56,7 +65,7 @@ const mockTranscription = (audioUrl: string): TranscriptionResult => {
   console.log('Using mock transcription for:', audioUrl);
   
   // Test different confidence levels based on audio URL
-  let confidence = 45; // Default for testing merge UI (60-94% range)
+  let confidence = 87; // Default for testing merge UI (60-94% range)
   
   if (audioUrl.includes('high-confidence')) {
     confidence = 97; // Test streamlined confirmation (≥95%)
@@ -101,7 +110,7 @@ export const api = {
       name: 'recording.m4a',
     } as any);
 
-    const response = await fetch(`${API_BASE_URL}/api/upload-audio`, {
+    const response = await fetch(getApiUrl('/api/upload-audio'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -147,7 +156,31 @@ export const api = {
     return apiRequest(`/api/individuals/${id}`);
   },
 
-  // Create new individual
+  // Save individual (create new or update existing)
+  saveIndividual: async (data: any) => {
+    console.log('Saving individual data:', data);
+    
+    try {
+      // Try real API first
+      const result = await apiRequest('/api/individuals', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      
+      console.log('Save result:', result);
+      return result.data;
+    } catch (error) {
+      console.log('Backend not available, using mock save');
+      // Mock successful save for demo
+      return {
+        id: 'mock-' + Date.now(),
+        success: true,
+        message: 'Data saved successfully (mock)'
+      };
+    }
+  },
+
+  // Create new individual (legacy)
   createIndividual: async (data: any) => {
     return apiRequest('/api/individuals', {
       method: 'POST',

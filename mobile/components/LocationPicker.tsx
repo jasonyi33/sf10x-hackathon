@@ -4,7 +4,13 @@ import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 
 interface LocationPickerProps {
-  onLocationSelected: (location: { latitude: number; longitude: number; address?: string }) => void;
+  onLocationSelected: (location: { 
+    location: {
+      latitude: number;
+      longitude: number;
+      address: string;
+    }
+  }) => void;
   onCancel: () => void;
   initialLocation?: { latitude: number; longitude: number };
 }
@@ -87,18 +93,21 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         ? `${address.street || ''} ${address.city || ''} ${address.region || ''}`.trim()
         : 'Unknown location';
 
+      if (!addressString || addressString === 'Unknown location') {
+        Alert.alert('Error', 'Unable to get address for this location. Please try again.');
+        return;
+      }
+
       onLocationSelected({
-        latitude: selectedLocation.latitude,
-        longitude: selectedLocation.longitude,
-        address: addressString,
+        location: {
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude,
+          address: addressString,
+        }
       });
     } catch (err) {
       console.error('Error getting address:', err);
-      // Still pass location even if address lookup fails
-      onLocationSelected({
-        latitude: selectedLocation.latitude,
-        longitude: selectedLocation.longitude,
-      });
+      Alert.alert('Error', 'Unable to get address for this location. Please try again.');
     }
   };
 

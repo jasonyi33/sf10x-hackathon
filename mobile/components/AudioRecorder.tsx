@@ -4,7 +4,13 @@ import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 
 interface AudioRecorderProps {
-  onRecordingComplete: (uri: string, location?: { latitude: number; longitude: number; address?: string }) => void;
+  onRecordingComplete: (uri: string, location?: { 
+    location: {
+      latitude: number;
+      longitude: number;
+      address: string;
+    }
+  }) => void;
   onRecordingStart?: () => void;
   onRecordingStop?: () => void;
 }
@@ -39,7 +45,13 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       });
 
       // Capture location when recording starts
-      let locationData: { latitude: number; longitude: number; address?: string } | undefined;
+      let locationData: { 
+        location: {
+          latitude: number;
+          longitude: number;
+          address: string;
+        }
+      } | undefined;
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === 'granted') {
@@ -56,12 +68,14 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
           const address = addressResponse[0];
           const addressString = address 
             ? `${address.street || ''} ${address.city || ''} ${address.region || ''}`.trim()
-            : undefined;
+            : 'Unknown Address';
 
           locationData = {
-            latitude: currentLocation.coords.latitude,
-            longitude: currentLocation.coords.longitude,
-            address: addressString,
+            location: {
+              latitude: currentLocation.coords.latitude,
+              longitude: currentLocation.coords.longitude,
+              address: addressString,
+            }
           };
         }
       } catch (locationErr) {

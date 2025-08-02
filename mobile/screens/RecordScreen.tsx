@@ -20,12 +20,20 @@ export const RecordScreen: React.FC = () => {
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{
-    latitude: number;
-    longitude: number;
-    address?: string;
+    location: {
+      latitude: number;
+      longitude: number;
+      address: string;
+    }
   } | null>(null);
 
-  const handleRecordingComplete = async (uri: string, location?: { latitude: number; longitude: number; address?: string }) => {
+  const handleRecordingComplete = async (uri: string, location?: { 
+    location: {
+      latitude: number;
+      longitude: number;
+      address: string;
+    }
+  }) => {
     console.log('Recording completed:', uri, location);
     setRecordingUri(uri);
     setUploadError(null);
@@ -168,7 +176,13 @@ export const RecordScreen: React.FC = () => {
     setTranscriptionError(null);
   };
 
-  const handleLocationSelected = (location: { latitude: number; longitude: number; address?: string }) => {
+  const handleLocationSelected = (location: { 
+    location: {
+      latitude: number;
+      longitude: number;
+      address: string;
+    }
+  }) => {
     console.log('Location selected:', location);
     setSelectedLocation(location);
     setShowLocationPicker(false);
@@ -216,7 +230,7 @@ export const RecordScreen: React.FC = () => {
       <LocationPicker
         onLocationSelected={handleLocationSelected}
         onCancel={handleLocationCancel}
-        initialLocation={selectedLocation || undefined}
+        initialLocation={selectedLocation?.location || undefined}
       />
     );
   }
@@ -228,7 +242,7 @@ export const RecordScreen: React.FC = () => {
         <ManualEntryForm
           onSave={handleSaveManualEntry}
           onCancel={handleCancelManualEntry}
-          selectedLocation={selectedLocation}
+          selectedLocation={selectedLocation?.location || null}
         />
       </View>
     );
@@ -265,7 +279,7 @@ export const RecordScreen: React.FC = () => {
       {selectedLocation && (
         <View style={styles.locationInfoContainer}>
           <Text style={styles.locationInfoText}>
-            📍 Location: {selectedLocation.address || `${selectedLocation.latitude.toFixed(4)}, ${selectedLocation.longitude.toFixed(4)}`}
+            📍 Location: {selectedLocation.location.address || `${selectedLocation.location.latitude.toFixed(4)}, ${selectedLocation.location.longitude.toFixed(4)}`}
           </Text>
         </View>
       )}

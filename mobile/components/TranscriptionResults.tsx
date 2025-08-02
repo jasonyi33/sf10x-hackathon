@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { TranscriptionResult } from '../services/api';
+import { TranscriptionResult, api } from '../services/api';
 import { MergeUI } from './MergeUI';
 
 interface TranscriptionResultsProps {
@@ -30,7 +30,11 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
     }));
   };
 
-  const handleSave = () => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (isSaving) return;
+    
     // Validate required fields
     const missingFields = result.missing_required.filter(field => 
       !categorizedData[field] || categorizedData[field] === ''
@@ -45,47 +49,79 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
       return;
     }
 
-    // Check for potential matches with updated confidence thresholds
-    const highConfidenceMatch = result.potential_matches?.find(match => match.confidence >= 95);
-    const mediumConfidenceMatch = result.potential_matches?.find(match => match.confidence >= 60 && match.confidence < 95);
-    const lowConfidenceMatch = result.potential_matches?.find(match => match.confidence < 60);
+    setIsSaving(true);
 
-    if (highConfidenceMatch) {
-      // Streamlined confirmation for >= 95% confidence
-      Alert.alert(
-        'High Confidence Match Found',
-        `We found a similar individual: ${highConfidenceMatch.name} (${highConfidenceMatch.confidence}% match). Merge this data?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Merge', 
-            onPress: () => {
-              const mergedData = { ...categorizedData, existing_individual_id: highConfidenceMatch.id };
-              onSave(mergedData);
+    try {
+      // Check for potential matches with updated confidence thresholds
+      const highConfidenceMatch = result.potential_matches?.find(match => match.confidence >= 95);
+      const mediumConfidenceMatch = result.potential_matches?.find(match => match.confidence >= 60 && match.confidence < 95);
+      const lowConfidenceMatch = result.potential_matches?.find(match => match.confidence < 60);
+
+      if (highConfidenceMatch) {
+        // Streamlined confirmation for >= 95% confidence
+        Alert.alert(
+          'High Confidence Match Found',
+          `We found a similar individual: ${highConfidenceMatch.name} (${highConfidenceMatch.confidence}% match). Merge this data?`,
+          [
+            { text: 'Cancel', style: 'cancel', onPress: () => setIsSaving(false) },
+            { 
+              text: 'Merge', 
+              onPress: async () => {
+                try {
+                  const mergedData = { ...categorizedData, existing_individual_id: highConfidenceMatch.id };
+                  await api.saveIndividual(mergedData);
+                  Alert.alert('Success', 'Data merged successfully!');
+                  onSave(mergedData);
+                } catch (error) {
+                  Alert.alert('Error', error.message);
+                  setIsSaving(false);
+                }
+              }
             }
-          }
-        ]
-      );
-    } else if (mediumConfidenceMatch) {
-      // Full merge UI for 60-94% confidence
-      setSelectedMatch(mediumConfidenceMatch);
-      setShowMergeUI(true);
-    } else {
-      // No meaningful match (< 60% or no matches), save as new
-      onSave(categorizedData);
+          ]
+        );
+        return;
+      } else if (mediumConfidenceMatch) {
+        // Full merge UI for 60-94% confidence
+        setSelectedMatch(mediumConfidenceMatch);
+        setShowMergeUI(true);
+        setIsSaving(false);
+        return;
+      } else {
+        // No meaningful match (< 60% or no matches), save as new
+        await api.saveIndividual(categorizedData);
+        Alert.alert('Success', 'Data saved successfully!');
+        onSave(categorizedData);
+      }
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleMerge = (mergedData: Record<string, any>) => {
-    setShowMergeUI(false);
-    setSelectedMatch(null);
-    onSave(mergedData);
+  const handleMerge = async (mergedData: Record<string, any>) => {
+    try {
+      await api.saveIndividual(mergedData);
+      Alert.alert('Success', 'Data merged successfully!');
+      setShowMergeUI(false);
+      setSelectedMatch(null);
+      onSave(mergedData);
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
   };
 
-  const handleCreateNew = (data: Record<string, any>) => {
-    setShowMergeUI(false);
-    setSelectedMatch(null);
-    onSave(data);
+  const handleCreateNew = async (data: Record<string, any>) => {
+    try {
+      await api.saveIndividual(data);
+      Alert.alert('Success', 'New individual created successfully!');
+      setShowMergeUI(false);
+      setSelectedMatch(null);
+      onSave(data);
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
   };
 
   const handleMergeCancel = () => {
@@ -209,8 +245,14 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Save</Text>
+        <TouchableOpacity 
+          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} 
+          onPress={handleSave}
+          disabled={isSaving}
+        >
+          <Text style={styles.saveButtonText}>
+            {isSaving ? 'Saving...' : 'Save'}
+          </Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -344,6 +386,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#6c757d',
+    opacity: 0.6,
   },
   saveButtonText: {
     color: 'white',
