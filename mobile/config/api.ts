@@ -2,9 +2,8 @@
 // Update these values when backend becomes available
 
 export const API_CONFIG = {
-  // Backend API URL - replace with your Railway URL
-  // Format: https://[project-name].up.railway.app
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://sf10x-demo-test-production.up.railway.app',
+  // Backend API URL - using localhost for development
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8001',
   
   // Enable real API calls (set to false to use mock data only)
   USE_REAL_API: process.env.EXPO_PUBLIC_USE_REAL_API !== 'false',
@@ -32,7 +31,7 @@ export const API_CONFIG = {
   
   // Demo configuration
   DEMO: {
-    // Use mock data for demo
+    // Use mock data for demo (set to false to use real API)
     USE_MOCK_DATA: true,
     
     // Mock response delays (ms)

@@ -37,6 +37,135 @@ def get_supabase_client() -> Client:
     """Get Supabase client instance"""
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_SERVICE_KEY")
+    
+    # For demo/hackathon, use mock client if credentials are mock
+    if url == "mock" or key == "mock" or not url or not key:
+        print("Using mock Supabase client for demo")
+        # Return a mock client that returns demo data
+        class MockSupabaseClient:
+            def table(self, name):
+                return MockTable(name)
+        
+        class MockTable:
+            def __init__(self, table_name):
+                self.table_name = table_name
+                self.mock_data = self._get_mock_data()
+            
+            def _get_mock_data(self):
+                if self.table_name == "individuals":
+                    return [
+                        {
+                            "id": "550e8400-e29b-41d4-a716-446655440001",
+                            "name": "John Doe",
+                            "danger_score": 75,
+                            "danger_override": None,
+                            "data": {"age": 45, "height": 72, "weight": 180},
+                            "created_at": "2024-01-15T10:30:00Z",
+                            "updated_at": "2024-01-15T10:30:00Z"
+                        },
+                        {
+                            "id": "550e8400-e29b-41d4-a716-446655440002", 
+                            "name": "Sarah Smith",
+                            "danger_score": 20,
+                            "danger_override": 40,
+                            "data": {"age": 32, "height": 65, "weight": 140},
+                            "created_at": "2024-01-12T14:20:00Z",
+                            "updated_at": "2024-01-12T14:20:00Z"
+                        },
+                        {
+                            "id": "550e8400-e29b-41d4-a716-446655440003",
+                            "name": "Robert Johnson", 
+                            "danger_score": 90,
+                            "danger_override": None,
+                            "data": {"age": 58, "height": 70, "weight": 200},
+                            "created_at": "2024-01-16T09:15:00Z",
+                            "updated_at": "2024-01-16T09:15:00Z"
+                        }
+                    ]
+                elif self.table_name == "interactions":
+                    return [
+                        {
+                            "id": "550e8400-e29b-41d4-a716-446655440101",
+                            "individual_id": "550e8400-e29b-41d4-a716-446655440001",
+                            "user_id": "user1",
+                            "created_at": "2024-01-15T10:30:00Z",
+                            "location": {"lat": 37.7749, "lng": -122.4194, "address": "Market St & 5th"}
+                        },
+                        {
+                            "id": "550e8400-e29b-41d4-a716-446655440102", 
+                            "individual_id": "550e8400-e29b-41d4-a716-446655440002",
+                            "user_id": "user1", 
+                            "created_at": "2024-01-12T14:20:00Z",
+                            "location": {"lat": 37.7858, "lng": -122.4064, "address": "Ellis St & 6th"}
+                        }
+                    ]
+                elif self.table_name == "categories":
+                    return [
+                        {"id": "550e8400-e29b-41d4-a716-446655440201", "name": "name", "type": "text", "is_required": True},
+                        {"id": "550e8400-e29b-41d4-a716-446655440202", "name": "height", "type": "number", "is_required": True},
+                        {"id": "550e8400-e29b-41d4-a716-446655440203", "name": "weight", "type": "number", "is_required": True}
+                    ]
+                return []
+            
+            def select(self, *args):
+                return self
+            
+            def eq(self, field, value):
+                # Filter by field value
+                if field == "individual_id":
+                    self.mock_data = [item for item in self.mock_data if item.get("individual_id") == value]
+                return self
+            
+            def ilike(self, field, value):
+                # Filter by name (case insensitive)
+                if field == "name":
+                    search_term = value.replace("%", "").lower()
+                    self.mock_data = [item for item in self.mock_data if search_term in item.get("name", "").lower()]
+                return self
+            
+            def order(self, field, desc=False):
+                # Sort by field
+                reverse = desc
+                if field == "created_at":
+                    self.mock_data.sort(key=lambda x: x.get("created_at", ""), reverse=reverse)
+                elif field == "danger_score":
+                    self.mock_data.sort(key=lambda x: x.get("danger_score", 0), reverse=reverse)
+                elif field == "name":
+                    self.mock_data.sort(key=lambda x: x.get("name", ""), reverse=reverse)
+                return self
+            
+            def limit(self, count):
+                # Limit results
+                self.mock_data = self.mock_data[:count]
+                return self
+            
+            def update(self, data):
+                # Update the first matching record
+                if self.mock_data:
+                    self.mock_data[0].update(data)
+                return MockResponse(self.mock_data)
+            
+            def single(self):
+                # Return single result (for get by ID)
+                if self.mock_data:
+                    return MockResponse([self.mock_data[0]])
+                return MockResponse([])
+            
+            def execute(self):
+                return MockResponse(self.mock_data)
+        
+        class MockResponse:
+            def __init__(self, data):
+                self._data = data
+            
+            @property
+            def data(self):
+                return self._data
+            
+            def execute(self):
+                # MockResponse should also support execute() for consistency
+                return self
+    
     if not url or not key:
         raise ValueError("Supabase configuration missing")
     return create_client(url, key)

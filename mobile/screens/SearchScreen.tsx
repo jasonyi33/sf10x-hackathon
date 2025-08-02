@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { SearchResult } from '../types';
-import { searchIndividuals } from '../services/api';
+import { api } from '../services/api';
 import SearchResultItem from '../components/SearchResultItem';
 
 // NOTE: This component requires @react-navigation/stack to be installed
@@ -33,12 +33,10 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
-
-
   const performSearch = async () => {
     try {
       setIsLoading(true);
-      const results = await searchIndividuals(searchQuery);
+      const results = await api.searchIndividuals(searchQuery);
       setSearchResults(results);
     } catch (error) {
       console.error('Error searching individuals:', error);

@@ -16,6 +16,8 @@ export interface SearchResult {
   danger_override?: number | null;
   last_seen_days: number;
   last_interaction_date: string;
+  last_seen?: string;
+  abbreviated_address?: string;
 }
 
 export interface SearchScreenProps {

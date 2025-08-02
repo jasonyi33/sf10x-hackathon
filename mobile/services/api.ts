@@ -260,48 +260,56 @@ export const api = {
   
   // Transcribe audio - NEW FUNCTION
   transcribe: async (audioUrl: string): Promise<TranscriptionResult> => {
-    console.log('Sending audio URL for transcription:', audioUrl);
-    
     try {
-      // Try real API first
+      // Skip real API calls if disabled
+      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
+        console.log('Using mock transcription');
+        // Simulate transcription delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return mockTranscription(audioUrl);
+      }
+
       const result = await apiRequest('/api/transcribe', {
         method: 'POST',
         body: JSON.stringify({ audio_url: audioUrl }),
       });
       
-      console.log('Transcription result:', result);
-      ErrorHandler.showSuccess('Transcription completed successfully');
       return result;
     } catch (error) {
-      console.log('Backend not available, using mock transcription');
-      ErrorHandler.showInfo('Using mock transcription for demo');
-      // If backend fails, use mock for testing
+      console.error('Transcription error:', error);
+      // Fallback to mock data
       return mockTranscription(audioUrl);
     }
   },
 
   // Save individual (create new or update existing)
   saveIndividual: async (data: any) => {
-    console.log('Saving individual data:', data);
-    
     try {
-      // Try real API first
+      // Skip real API calls if disabled
+      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
+        console.log('Using mock save individual');
+        // Simulate save delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return {
+          id: 'mock-' + Date.now(),
+          success: true,
+          message: 'Data saved successfully (mock)'
+        };
+      }
+
       const result = await apiRequest('/api/individuals', {
         method: 'POST',
         body: JSON.stringify(data),
       });
       
-      console.log('Save result:', result);
-      ErrorHandler.showSuccess('Data saved successfully');
-      return result.data;
+      return result;
     } catch (error) {
-      console.log('Backend not available, using mock save');
-      ErrorHandler.showInfo('Using mock save for demo');
-      // Mock successful save for demo
+      console.error('Save individual error:', error);
+      // Fallback to mock success
       return {
         id: 'mock-' + Date.now(),
         success: true,
-        message: 'Data saved successfully (mock)'
+        message: 'Data saved successfully (mock fallback)'
       };
     }
   },
@@ -311,25 +319,129 @@ export const api = {
   // Search individuals
   searchIndividuals: async (query: string): Promise<SearchResult[]> => {
     try {
+      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
+        console.log('Using mock search data');
+        // Simulate search delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Mock search results with proper UUIDs
+        const mockResults: SearchResult[] = [
+          {
+            id: "550e8400-e29b-41d4-a716-446655440001",
+            name: "John Doe",
+            danger_score: 75,
+            last_seen: "2024-01-15T10:30:00Z",
+            last_seen_days: 2,
+            last_interaction_date: "2024-01-15T10:30:00Z",
+            abbreviated_address: "Market St & 5th"
+          },
+          {
+            id: "550e8400-e29b-41d4-a716-446655440002",
+            name: "Sarah Smith", 
+            danger_score: 20,
+            last_seen: "2024-01-12T14:20:00Z",
+            last_seen_days: 5,
+            last_interaction_date: "2024-01-12T14:20:00Z",
+            abbreviated_address: "Ellis St & 6th"
+          },
+          {
+            id: "550e8400-e29b-41d4-a716-446655440003",
+            name: "Robert Johnson",
+            danger_score: 90,
+            last_seen: "2024-01-16T09:15:00Z", 
+            last_seen_days: 1,
+            last_interaction_date: "2024-01-16T09:15:00Z",
+            abbreviated_address: "Golden Gate Park"
+          }
+        ];
+        
+        // Filter by query
+        return mockResults.filter(result => 
+          result.name.toLowerCase().includes(query.toLowerCase()) ||
+          (result.abbreviated_address && result.abbreviated_address.toLowerCase().includes(query.toLowerCase()))
+        );
+      }
+
       const result = await apiRequest(`/api/individuals?search=${encodeURIComponent(query)}`);
       return result.individuals || [];
     } catch (error) {
-      console.log('Using mock search data');
-      // Filter mock data based on query
-      return mockIndividuals.filter(individual =>
-        individual.name.toLowerCase().includes(query.toLowerCase())
-      );
+      console.error('Error searching individuals:', error);
+      return [];
     }
   },
 
   // Get individual profile
   getIndividualProfile: async (individualId: string): Promise<IndividualProfile | null> => {
     try {
+      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
+        console.log('Using mock individual profile data');
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Mock profile data with proper UUID
+        return {
+          id: individualId,
+          name: "John Doe",
+          danger_score: 75,
+          danger_override: null,
+          data: {
+            age: 45,
+            height: 72,
+            weight: 180,
+            skin_color: "Light",
+            gender: "Male",
+            substance_abuse_history: ["Moderate"],
+            medical_conditions: ["Diabetes"],
+            veteran_status: "Yes",
+            housing_priority: "High",
+            violent_behavior: "None"
+          },
+          created_at: "2024-01-15T10:30:00Z",
+          updated_at: "2024-01-15T10:30:00Z",
+          total_interactions: 3,
+          last_interaction_date: "2024-01-15T10:30:00Z",
+          interactions: [
+            {
+              id: "550e8400-e29b-41d4-a716-446655440101",
+              individual_id: individualId,
+              user_id: "user1",
+              transcription: "Met John near Market Street. About 45 years old, 6 feet tall, maybe 180 pounds. Light skin. Shows signs of moderate substance abuse, been on streets 3 months. Needs diabetes medication.",
+              data: {
+                name: "John",
+                age: 45,
+                height: 72,
+                weight: 180,
+                skin_color: "Light",
+                substance_abuse: "Moderate",
+                medical_conditions: "Diabetes"
+              },
+              location: { lat: 37.7749, lng: -122.4194 },
+              created_at: "2024-01-15T10:30:00Z",
+              worker_name: "Officer Johnson",
+              abbreviated_address: "Market St & 5th"
+            },
+            {
+              id: "550e8400-e29b-41d4-a716-446655440102",
+              individual_id: individualId,
+              user_id: "user1",
+              data: {
+                veteran_status: "Yes",
+                housing_priority: "High"
+              },
+              location: { lat: 37.7858, lng: -122.4064 },
+              created_at: "2024-01-12T14:20:00Z",
+              worker_name: "Officer Smith",
+              abbreviated_address: "Ellis St & 6th"
+            }
+          ]
+        };
+      }
+
       const result = await apiRequest(`/api/individuals/${individualId}`);
       return result;
     } catch (error) {
-      console.log('Using mock individual profile data');
-      return mockIndividualProfiles[individualId] || null;
+      console.error('Error fetching individual profile:', error);
+      return null;
     }
   },
 
@@ -350,71 +462,41 @@ export const api = {
   // Get categories
   getCategories: async (): Promise<any[]> => {
     try {
+      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
+        console.log('Using mock categories');
+        return [
+          { id: '1', name: 'Name', type: 'text', is_required: true, priority: 'high' },
+          { id: '2', name: 'Height', type: 'number', is_required: true, priority: 'medium' },
+          { id: '3', name: 'Weight', type: 'number', is_required: true, priority: 'medium' },
+          { id: '4', name: 'Skin Color', type: 'single-select', is_required: true, priority: 'high' },
+        ];
+      }
+
       const result = await apiRequest('/api/categories');
       return result.categories || [];
     } catch (error) {
-      console.log('Using mock categories');
-      return [
-        {
-          id: '1',
-          name: 'name',
-          type: 'text',
-          is_required: true,
-          is_preset: true,
-          priority: 'high',
-          danger_weight: 0,
-          auto_trigger: false,
-          options: null
-        },
-        {
-          id: '2',
-          name: 'height',
-          type: 'number',
-          is_required: true,
-          is_preset: true,
-          priority: 'medium',
-          danger_weight: 0,
-          auto_trigger: false,
-          options: null
-        },
-        {
-          id: '3',
-          name: 'weight',
-          type: 'number',
-          is_required: true,
-          is_preset: true,
-          priority: 'medium',
-          danger_weight: 0,
-          auto_trigger: false,
-          options: null
-        },
-        {
-          id: '4',
-          name: 'skin_color',
-          type: 'single_select',
-          is_required: true,
-          is_preset: true,
-          priority: 'medium',
-          danger_weight: 0,
-          auto_trigger: false,
-          options: [
-            { label: 'Light', value: 0 },
-            { label: 'Medium', value: 0 },
-            { label: 'Dark', value: 0 }
-          ]
-        },
-        {
-          id: '5',
-          name: 'substance_abuse_history',
-          type: 'multi_select',
-          is_required: false,
-          is_preset: true,
-          priority: 'high',
-          danger_weight: 0,
-          auto_trigger: false,
-          options: ['None', 'Mild', 'Moderate', 'Severe', 'In Recovery']
-        }
-      ];
+      console.error('Error fetching categories:', error);
+      return [];
+    }
+  },
+
+  // Export CSV
+  exportCSV: async (): Promise<string> => {
+    try {
+      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
+        console.log('Using mock CSV export');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return 'mock-csv-export-url';
+      }
+
+      const result = await apiRequest('/api/export', {
+        method: 'GET',
+      });
+      
+      return result.url || 'export-completed';
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      throw new Error('Failed to export CSV');
     }
   },
 
@@ -432,27 +514,46 @@ export const api = {
 
   // Legacy functions for backward compatibility
   uploadAudio: async (audioUri: string) => {
-    const token = await getAuthToken();
-    const formData = new FormData();
-    formData.append('file', {
-      uri: audioUri,
-      type: 'audio/m4a',
-      name: 'recording.m4a',
-    } as any);
+    try {
+      // Skip real API calls if disabled
+      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
+        console.log('Using mock audio upload');
+        // Simulate upload delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return {
+          url: 'mock-audio-url',
+          error: null
+        };
+      }
 
-    const response = await fetch(getApiUrl('/api/upload-audio'), {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
+      const token = await getAuthToken();
+      const formData = new FormData();
+      formData.append('file', {
+        uri: audioUri,
+        type: 'audio/m4a',
+        name: 'recording.m4a',
+      } as any);
 
-    if (!response.ok) {
-      throw new Error('Upload failed');
+      const response = await fetch(getApiUrl('/api/upload-audio'), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Upload error:', error);
+      return {
+        url: null,
+        error: 'Upload failed'
+      };
     }
-
-    return response.json();
   },
 
   // Create new individual (legacy)

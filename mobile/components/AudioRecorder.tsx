@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
@@ -16,16 +16,34 @@ interface AudioRecorderProps {
   onRecordingStop?: () => void;
 }
 
-export const AudioRecorder: React.FC<AudioRecorderProps> = ({
+export interface AudioRecorderRef {
+  resetRecording: () => void;
+}
+
+export const AudioRecorder = forwardRef<AudioRecorderRef, AudioRecorderProps>(({
   onRecordingComplete,
   onRecordingStart,
   onRecordingStop,
-}) => {
+}, ref) => {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const intervalRef = useRef<number | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Expose reset function to parent
+  useImperativeHandle(ref, () => ({
+    resetRecording: () => {
+      setRecording(null);
+      setIsRecording(false);
+      setIsPaused(false);
+      setDuration(0);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+  }));
 
   // Request permissions
   useEffect(() => {
@@ -137,6 +155,16 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     if (!recording) return;
 
     try {
+      // Check minimum recording duration (10 seconds)
+      if (duration < 10) {
+        Alert.alert(
+          'Recording Too Short',
+          'Recording must be at least 10 seconds long. Please continue recording.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
       // Clear interval
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -148,6 +176,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       setRecording(null);
       setIsRecording(false);
       setIsPaused(false);
+      setDuration(0); // Reset duration to 0
       onRecordingStop?.();
 
       if (uri) {
@@ -158,6 +187,18 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       console.error('Failed to stop recording', err);
       const error = ErrorHandler.handleRecordingError(err);
       ErrorHandler.showError(error);
+    }
+  };
+
+  // Reset recording state
+  const resetRecording = () => {
+    setRecording(null);
+    setIsRecording(false);
+    setIsPaused(false);
+    setDuration(0);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
   };
 
@@ -311,7 +352,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { AudioRecorder } from '../components/AudioRecorder';
 import { TranscriptionResults } from '../components/TranscriptionResults';
@@ -11,6 +11,7 @@ import { ErrorHandler } from '../utils/errorHandler';
 
 export const RecordScreen: React.FC = () => {
   const { user, loading } = useAuth();
+  const audioRecorderRef = useRef<any>(null);
   const [recordingUri, setRecordingUri] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
@@ -119,6 +120,11 @@ export const RecordScreen: React.FC = () => {
       setTranscriptionResult(null);
       setSelectedLocation(null);
       setShowManualEntry(false);
+      
+      // Reset audio recorder
+      if (audioRecorderRef.current) {
+        audioRecorderRef.current.resetRecording();
+      }
     } catch (error) {
       const appError = ErrorHandler.handleError(error, 'Save Transcription');
       ErrorHandler.showError(appError);
@@ -149,6 +155,11 @@ export const RecordScreen: React.FC = () => {
     setUploadedUrl(null);
     setRecordingUri(null);
     setSelectedLocation(null);
+    
+    // Reset audio recorder
+    if (audioRecorderRef.current) {
+      audioRecorderRef.current.resetRecording();
+    }
   };
 
   const handleCancelManualEntry = () => {
@@ -219,6 +230,7 @@ export const RecordScreen: React.FC = () => {
       {/* Audio Recorder */}
       <View style={styles.recorderContainer}>
         <AudioRecorder
+          ref={audioRecorderRef}
           onRecordingComplete={handleRecordingComplete}
           onRecordingStart={handleRecordingStart}
           onRecordingStop={handleRecordingStop}

@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { IndividualProfile, IndividualProfileScreenProps } from '../types';
-import { getIndividualProfile, updateDangerOverride } from '../services/api';
+import { api } from '../services/api';
 import { getDangerScoreColor, getDisplayDangerScore } from '../utils/dangerScore';
 import FieldDisplay from '../components/FieldDisplay';
 import InteractionHistoryItem from '../components/InteractionHistoryItem';
@@ -37,7 +37,7 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
   const loadProfile = async () => {
     try {
       setIsLoading(true);
-      const profileData = await getIndividualProfile(individualId);
+      const profileData = await api.getIndividualProfile(individualId);
       
       if (profileData) {
         setProfile(profileData);
@@ -77,7 +77,7 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
     if (!profile) return;
     
     try {
-      const success = await updateDangerOverride(profile.id, overrideValue);
+      const success = await api.updateDangerOverride(profile.id, overrideValue);
       if (success) {
         // Update local state
         setProfile({

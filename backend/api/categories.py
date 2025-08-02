@@ -3,8 +3,11 @@ Category management endpoints
 Minimal implementation for Task 2.0 prerequisite
 """
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from typing import List, Dict, Any
 import os
+import csv
+import io
 from supabase import create_client, Client
 from api.auth import get_current_user
 from db.models import CreateCategoryRequest, CategoryResponse
@@ -12,6 +15,94 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 router = APIRouter()
+
+@router.get("/api/export")
+async def export_csv(user_id: str = Depends(get_current_user)):
+    """
+    Export all individuals data as CSV file.
+    Returns CSV with columns: name, height, weight, skin_color, danger_score, last_seen
+    Multi-select values are comma-separated.
+    """
+    try:
+        # Initialize Supabase client
+        supabase: Client = create_client(
+            os.getenv("SUPABASE_URL"),
+            os.getenv("SUPABASE_SERVICE_KEY")
+        )
+        
+        # Get all individuals with their data
+        response = supabase.table("individuals").select("*").order("created_at", desc=True).execute()
+        
+        if not response.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No individuals found to export"
+            )
+        
+        # Create CSV content
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow([
+            'Name', 'Height', 'Weight', 'Skin Color', 'Danger Score', 'Last Seen',
+            'Age', 'Gender', 'Substance Abuse History', 'Medical Conditions',
+            'Veteran Status', 'Housing Priority', 'Violent Behavior'
+        ])
+        
+        # Write data rows
+        for individual in response.data:
+            data = individual.get("data", {})
+            
+            # Format multi-select values as comma-separated
+            substance_abuse = data.get("substance_abuse_history", "")
+            if isinstance(substance_abuse, list):
+                substance_abuse = ", ".join(substance_abuse)
+            
+            medical_conditions = data.get("medical_conditions", "")
+            if isinstance(medical_conditions, list):
+                medical_conditions = ", ".join(medical_conditions)
+            
+            # Calculate display danger score (override or calculated)
+            danger_score = individual.get("danger_override") or individual.get("danger_score", 0)
+            
+            writer.writerow([
+                individual.get("name", ""),
+                data.get("height", ""),
+                data.get("weight", ""),
+                data.get("skin_color", ""),
+                danger_score,
+                individual.get("updated_at", ""),
+                data.get("age", ""),
+                data.get("gender", ""),
+                substance_abuse,
+                medical_conditions,
+                data.get("veteran_status", ""),
+                data.get("housing_priority", ""),
+                data.get("violent_behavior", "")
+            ])
+        
+        # Prepare response
+        output.seek(0)
+        csv_content = output.getvalue()
+        
+        # Create streaming response
+        return StreamingResponse(
+            io.BytesIO(csv_content.encode('utf-8')),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": f"attachment; filename=individuals_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to export CSV: {str(e)}"
+        )
+
 
 @router.get("/api/categories", response_model=Dict[str, List[Dict[str, Any]]])
 async def get_categories(user_id: str = Depends(get_current_user)):
