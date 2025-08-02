@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 
 interface PotentialMatch {
@@ -24,26 +24,26 @@ export const MergeUI: React.FC<MergeUIProps> = ({
   onCreateNew,
   onCancel,
 }) => {
-  const [selectedFields, setSelectedFields] = useState<Record<string, 'new' | 'existing'>>({});
-
   // Initialize field selection - prefer new data for most fields
-  React.useEffect(() => {
-    const initialSelection: Record<string, 'new' | 'existing'> = {};
+  const initialSelection = useMemo(() => {
+    const selection: Record<string, 'new' | 'existing'> = {};
     const allFields = new Set([...Object.keys(newData), ...Object.keys(existingData)]);
     
     allFields.forEach(field => {
       // Prefer new data if it exists, otherwise use existing
       if (newData[field] !== undefined && newData[field] !== null && newData[field] !== '') {
-        initialSelection[field] = 'new';
+        selection[field] = 'new';
       } else if (existingData[field] !== undefined && existingData[field] !== null && existingData[field] !== '') {
-        initialSelection[field] = 'existing';
+        selection[field] = 'existing';
       } else {
-        initialSelection[field] = 'new'; // Default to new
+        selection[field] = 'new'; // Default to new
       }
     });
     
-    setSelectedFields(initialSelection);
+    return selection;
   }, [newData, existingData]);
+
+  const [selectedFields, setSelectedFields] = useState<Record<string, 'new' | 'existing'>>(initialSelection);
 
   const handleFieldSelection = (fieldName: string, source: 'new' | 'existing') => {
     setSelectedFields(prev => ({
