@@ -56,7 +56,7 @@ const mockTranscription = (audioUrl: string): TranscriptionResult => {
   console.log('Using mock transcription for:', audioUrl);
   
   // Test different confidence levels based on audio URL
-  let confidence = 87; // Default for testing merge UI (60-94% range)
+  let confidence = 45; // Default for testing merge UI (60-94% range)
   
   if (audioUrl.includes('high-confidence')) {
     confidence = 97; // Test streamlined confirmation (≥95%)
