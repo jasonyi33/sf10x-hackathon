@@ -253,7 +253,7 @@ GET    /api/export           - Generate CSV download
 - [ ] Add location capture
 - [ ] Write integration tests
 
-### Dev 3 (Frontend Data Management) - Hours 0-18
+### Dev 3 (Frontend Data Management) - Hours 0-18 - **YOU ARE HERE**
 - [ ] Set up tab navigation
 - [ ] Build SearchScreen
 - [ ] Create IndividualProfileScreen
