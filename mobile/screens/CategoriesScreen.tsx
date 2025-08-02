@@ -10,7 +10,7 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { exportCSV } from '../services/api';
+import { api } from '../services/api';
 
 interface Category {
   id: string;
@@ -109,7 +109,7 @@ export default function CategoriesScreen() {
       setIsExporting(true);
       
       // Use real API to export CSV
-      const csvUrl = await exportCSV();
+      const csvUrl = await api.exportCSV();
       
       Alert.alert(
         'Export Successful',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Modal } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 
@@ -27,6 +27,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   } | null>(initialLocation || null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [address, setAddress] = useState<string>('');
 
   useEffect(() => {
     getCurrentLocation();
@@ -73,6 +74,32 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   const handleMapPress = (event: any) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
     setSelectedLocation({ latitude, longitude });
+    updateAddress(latitude, longitude);
+  };
+
+  const handleMarkerDragEnd = (event: any) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    setSelectedLocation({ latitude, longitude });
+    updateAddress(latitude, longitude);
+  };
+
+  const updateAddress = async (latitude: number, longitude: number) => {
+    try {
+      const addressResponse = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude,
+      });
+
+      const address = addressResponse[0];
+      const addressString = address 
+        ? `${address.street || ''} ${address.city || ''} ${address.region || ''}`.trim()
+        : 'Unknown location';
+
+      setAddress(addressString);
+    } catch (err) {
+      console.error('Error getting address:', err);
+      setAddress('Address unavailable');
+    }
   };
 
   const handleConfirmLocation = async () => {
@@ -81,60 +108,77 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
       return;
     }
 
-    try {
-      // Get address from coordinates
-      const addressResponse = await Location.reverseGeocodeAsync({
-        latitude: selectedLocation.latitude,
-        longitude: selectedLocation.longitude,
-      });
-
-      const address = addressResponse[0];
-      const addressString = address 
-        ? `${address.street || ''} ${address.city || ''} ${address.region || ''}`.trim()
-        : 'Unknown location';
-
-      if (!addressString || addressString === 'Unknown location') {
-        Alert.alert('Error', 'Unable to get address for this location. Please try again.');
-        return;
-      }
-
-      onLocationSelected({
-        location: {
+    // Use the current address or get a fresh one
+    let finalAddress = address;
+    if (!finalAddress || finalAddress === 'Address unavailable') {
+      try {
+        const addressResponse = await Location.reverseGeocodeAsync({
           latitude: selectedLocation.latitude,
           longitude: selectedLocation.longitude,
-          address: addressString,
-        }
-      });
-    } catch (err) {
-      console.error('Error getting address:', err);
+        });
+
+        const address = addressResponse[0];
+        finalAddress = address 
+          ? `${address.street || ''} ${address.city || ''} ${address.region || ''}`.trim()
+          : 'Unknown location';
+      } catch (err) {
+        console.error('Error getting address:', err);
+        finalAddress = 'Unknown location';
+      }
+    }
+
+    if (!finalAddress || finalAddress === 'Unknown location') {
       Alert.alert('Error', 'Unable to get address for this location. Please try again.');
+      return;
+    }
+
+    onLocationSelected({
+      location: {
+        latitude: selectedLocation.latitude,
+        longitude: selectedLocation.longitude,
+        address: finalAddress,
+      }
+    });
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (location) {
+      setSelectedLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+      updateAddress(location.coords.latitude, location.coords.longitude);
     }
   };
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Getting your location...</Text>
+      <Modal visible={true} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Getting your location...</Text>
+          </View>
         </View>
-      </View>
+      </Modal>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>❌ {error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={getCurrentLocation}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
+      <Modal visible={true} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.button} onPress={getCurrentLocation}>
+              <Text style={styles.buttonText}>Try Again</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onCancel}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </Modal>
     );
   }
 
@@ -147,68 +191,73 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Select Location</Text>
-        <Text style={styles.subtitle}>
-          Tap and drag the pin to adjust the location
-        </Text>
-      </View>
-
-      <MapView
-        style={styles.map}
-        region={{
-          ...mapRegion,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }}
-        onPress={handleMapPress}
-        showsUserLocation={true}
-        showsMyLocationButton={true}
-      >
-        {selectedLocation && (
-          <Marker
-            coordinate={selectedLocation}
-            draggable={true}
-            onDragEnd={(event) => {
-              setSelectedLocation(event.nativeEvent.coordinate);
-            }}
-            pinColor="#007AFF"
-          />
-        )}
-      </MapView>
-
-      <View style={styles.infoContainer}>
-        <Text style={styles.infoText}>
-          📍 Current Location: {location ? 'Detected' : 'Not available'}
-        </Text>
-        <Text style={styles.infoText}>
-          🎯 Selected: {selectedLocation ? 'Pin placed' : 'Tap map to place pin'}
-        </Text>
-        {selectedLocation && (
-          <Text style={styles.coordinatesText}>
-            Lat: {selectedLocation.latitude.toFixed(6)}, 
-            Lng: {selectedLocation.longitude.toFixed(6)}
+    <Modal visible={true} animationType="slide">
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Select Location</Text>
+          <Text style={styles.subtitle}>
+            Tap and drag the pin to adjust the location
           </Text>
-        )}
-      </View>
+        </View>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[
-            styles.confirmButton,
-            !selectedLocation && styles.disabledButton
-          ]} 
-          onPress={handleConfirmLocation}
-          disabled={!selectedLocation}
+        <MapView
+          style={styles.map}
+          region={{
+            ...mapRegion,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          }}
+          onPress={handleMapPress}
+          showsUserLocation={true}
+          showsMyLocationButton={true}
         >
-          <Text style={styles.confirmButtonText}>Confirm Location</Text>
-        </TouchableOpacity>
+          {selectedLocation && (
+            <Marker
+              coordinate={selectedLocation}
+              draggable={true}
+              onDragEnd={handleMarkerDragEnd}
+              pinColor="#007AFF"
+            />
+          )}
+        </MapView>
+
+        <View style={styles.infoContainer}>
+          <Text style={styles.infoText}>
+            📍 Current Location: {location ? 'Detected' : 'Not available'}
+          </Text>
+          <Text style={styles.infoText}>
+            🎯 Selected: {selectedLocation ? 'Pin placed' : 'Tap map to place pin'}
+          </Text>
+          {selectedLocation && (
+            <Text style={styles.coordinatesText}>
+              Lat: {selectedLocation.latitude.toFixed(6)}, 
+              Lng: {selectedLocation.longitude.toFixed(6)}
+            </Text>
+          )}
+          {address && (
+            <Text style={styles.addressText}>
+              📍 Address: {address}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[
+              styles.confirmButton,
+              !selectedLocation && styles.disabledButton
+            ]} 
+            onPress={handleConfirmLocation}
+            disabled={!selectedLocation}
+          >
+            <Text style={styles.confirmButtonText}>Confirm Location</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </Modal>
   );
 };
 
@@ -232,40 +281,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 18,
-    color: '#666',
-    marginTop: 16,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#dc3545',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   map: {
     flex: 1,
   },
@@ -284,6 +299,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     fontFamily: 'monospace',
+    marginTop: 8,
+  },
+  addressText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
     marginTop: 8,
   },
   buttonContainer: {
@@ -317,5 +338,43 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: '#ccc',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 24,
+    margin: 20,
+    alignItems: 'center',
+    minWidth: 300,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#FF3B30',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

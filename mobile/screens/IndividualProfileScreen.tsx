@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { IndividualProfile, IndividualProfileScreenProps } from '../types';
-import { getIndividualProfile, updateDangerOverride } from '../services/api';
+import { api } from '../services/api';
 import { getDangerScoreColor, getDisplayDangerScore } from '../utils/dangerScore';
 import FieldDisplay from '../components/FieldDisplay';
 import InteractionHistoryItem from '../components/InteractionHistoryItem';
@@ -37,7 +37,7 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
   const loadProfile = async () => {
     try {
       setIsLoading(true);
-      const profileData = await getIndividualProfile(individualId);
+      const profileData = await api.getIndividualProfile(individualId);
       
       if (profileData) {
         setProfile(profileData);
@@ -76,18 +76,23 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
   const handleDangerOverrideChange = async (overrideValue: number | null) => {
     if (!profile) return;
     
+    // Immediately update local state for instant UI feedback
+    const updatedProfile = {
+      ...profile,
+      danger_override: overrideValue,
+    };
+    setProfile(updatedProfile);
+    
     try {
-      const success = await updateDangerOverride(profile.id, overrideValue);
-      if (success) {
-        // Update local state
-        setProfile({
-          ...profile,
-          danger_override: overrideValue,
-        });
-      } else {
+      const success = await api.updateDangerOverride(profile.id, overrideValue);
+      if (!success) {
+        // Revert the change if the API call failed
+        setProfile(profile);
         Alert.alert('Error', 'Failed to update danger override');
       }
     } catch (error) {
+      // Revert the change if there was an error
+      setProfile(profile);
       console.error('Error updating danger override:', error);
       Alert.alert('Error', 'Failed to update danger override');
     }
