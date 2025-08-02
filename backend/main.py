@@ -36,8 +36,9 @@ async def root():
     }
 
 # Import API routers
-from api import categories, transcription
+from api import categories, transcription, individuals
 
 # Register routers
 app.include_router(categories.router)
 app.include_router(transcription.router)
+app.include_router(individuals.router)

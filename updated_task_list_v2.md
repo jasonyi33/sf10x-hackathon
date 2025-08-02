@@ -282,14 +282,15 @@
     - Danger weight slider (0-100) only for number/single-select
     - Auto-trigger checkbox only for number/single-select
     - Required field checkbox
+    - **[Dev 1]** Backend validates that only number/single-select can have danger_weight > 0
   - [ ] 5.3 **[Dev 2]** Implement required field validation:
     - Highlight missing required fields in red
     - Toast message: "Please fill in required fields: Height, Weight, Skin Color"
     - Block save until required fields filled
   - [ ] 5.4 **[Dev 3]** Build CSV export with all individuals data:
-    - All fields as columns
-    - Danger score column
-    - Last interaction date
+    - **[Dev 1]** Backend: Basic CSV format (name, height, weight, skin_color, danger_score, last_seen)
+    - **[Dev 1]** No filtering - export all individuals
+    - **[Dev 3]** Frontend: Trigger download via GET /api/export
     - Multi-select values comma-separated
   - [ ] 5.5 **[All]** Write integration test for category creation → use in recording → danger calculation
   - [ ] 5.6 **[Dev 1]** Implement backend endpoints for Task 5:
@@ -298,18 +299,19 @@
 
 - [ ] 6.0 **[All]** Integration, testing, and demo preparation
   - [ ] 6.1 **[Dev 1]** Create demo data SQL with:
-    - 10 individuals with specific profiles:
-      - "John Doe" (danger: 75, no override)
-      - "Sarah Smith" (danger: 20, override: 40)
-      - "Robert Johnson" (danger: 90, no override)
-      - "Maria Garcia" (danger: 45, no override)
-      - "James Wilson" (danger: 60, override: 85)
-      - "Linda Davis" (danger: 30, no override)
-      - "Michael Brown" (danger: 55, no override)
-      - "Patricia Jones" (danger: 70, override: 50)
-      - "David Miller" (danger: 40, no override)
-      - "Jennifer Martinez" (danger: 85, no override)
-    - 20 interactions across SF locations:
+    - 20 individuals total with varied profiles
+    - 5 with manual danger overrides
+    - 3 with auto-triggered danger scores (weapon_possession = 100)
+    - Each individual has 1-10 interactions (randomized)
+    - Mix of danger scores across all ranges:
+      - Low (0-33): ~6 individuals
+      - Medium (34-66): ~8 individuals  
+      - High (67-100): ~6 individuals
+    - Create custom categories first:
+      - housing_status (single-select with danger weights)
+      - mental_health (single-select with danger weights)
+      - weapon_possession (single-select with auto-trigger)
+    - Varied interactions across SF locations:
       - Market Street, Mission District, Golden Gate Park
       - Tenderloin, SOMA, Haight-Ashbury
       - Mix of voice entries (with transcriptions) and manual entries

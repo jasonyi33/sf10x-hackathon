@@ -110,7 +110,7 @@ Always validate these fields are present:
 
 ### Duplicate Detection
 - LLM compares all attributes, returns confidence 0-100%
-- Auto-merge if confidence ≥ 95%
+- Auto-merge prompted to front end if confidence ≥ 95%
 - Show merge UI for confidence < 95%
 - Latest values override older values
 
