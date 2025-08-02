@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { RecordScreen } from './screens/RecordScreen';
 
@@ -94,6 +95,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppContent />
+      <Toast />
     </AuthProvider>
   );
 }

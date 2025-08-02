@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { API_CONFIG, getApiUrl, shouldUseRealApi } from '../config/api';
+import { ErrorHandler } from '../utils/errorHandler';
 
 // Helper function to get auth token
 const getAuthToken = async () => {
@@ -14,7 +15,9 @@ const apiRequest = async (
 ) => {
   // Skip real API calls if disabled
   if (!shouldUseRealApi()) {
-    throw new Error('Real API disabled for demo');
+    const error = ErrorHandler.handleApiError(new Error('Real API disabled for demo'));
+    ErrorHandler.showError(error);
+    throw error;
   }
 
   const token = await getAuthToken();
@@ -36,15 +39,18 @@ const apiRequest = async (
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`API Error ${response.status}:`, errorText);
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      const error = ErrorHandler.handleApiError(new Error(`API request failed: ${response.status} ${response.statusText}`));
+      ErrorHandler.showError(error);
+      throw error;
     }
     
     const result = await response.json();
     console.log(`API response from ${endpoint}:`, result);
     return result;
   } catch (error) {
-    console.error('API request error:', error);
-    throw error;
+    const appError = ErrorHandler.handleError(error, `API Request to ${endpoint}`);
+    ErrorHandler.showError(appError);
+    throw appError;
   }
 };
 
@@ -137,9 +143,11 @@ export const api = {
       });
       
       console.log('Transcription result:', result);
+      ErrorHandler.showSuccess('Transcription completed successfully');
       return result;
     } catch (error) {
       console.log('Backend not available, using mock transcription');
+      ErrorHandler.showInfo('Using mock transcription for demo');
       // If backend fails, use mock for testing
       return mockTranscription(audioUrl);
     }
@@ -168,9 +176,11 @@ export const api = {
       });
       
       console.log('Save result:', result);
+      ErrorHandler.showSuccess('Data saved successfully');
       return result.data;
     } catch (error) {
       console.log('Backend not available, using mock save');
+      ErrorHandler.showInfo('Using mock save for demo');
       // Mock successful save for demo
       return {
         id: 'mock-' + Date.now(),

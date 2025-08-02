@@ -7,6 +7,7 @@ import { LocationPicker } from '../components/LocationPicker';
 import { useAuth } from '../contexts/AuthContext';
 import { uploadAudio } from '../services/supabase';
 import { api, TranscriptionResult } from '../services/api';
+import { ErrorHandler } from '../utils/errorHandler';
 
 export const RecordScreen: React.FC = () => {
   const { user, loading } = useAuth();
@@ -59,10 +60,12 @@ export const RecordScreen: React.FC = () => {
       if (result.error) {
         console.error('Upload failed:', result.error);
         setUploadError(result.error);
-        Alert.alert('Upload Failed', result.error);
+        const error = ErrorHandler.handleError(new Error(result.error), 'Audio Upload');
+        ErrorHandler.showError(error);
       } else if (result.url) {
         console.log('Upload successful:', result.url);
         setUploadedUrl(result.url);
+        ErrorHandler.showSuccess('Audio uploaded successfully');
         
         // Start transcription immediately after upload
         await transcribeAudio(result.url);
@@ -70,7 +73,8 @@ export const RecordScreen: React.FC = () => {
     } catch (error) {
       console.error('Upload error:', error);
       setUploadError('Upload failed');
-      Alert.alert('Error', 'Failed to upload audio file');
+      const appError = ErrorHandler.handleError(error, 'Audio Upload');
+      ErrorHandler.showError(appError);
     } finally {
       setIsUploading(false);
     }
@@ -87,15 +91,12 @@ export const RecordScreen: React.FC = () => {
       console.log('Transcription completed:', result);
       setTranscriptionResult(result);
       
-      Alert.alert(
-        'Transcription Complete',
-        'Audio has been transcribed and categorized successfully!',
-        [{ text: 'OK' }]
-      );
+      ErrorHandler.showSuccess('Transcription completed successfully');
     } catch (error) {
       console.error('Transcription error:', error);
       setTranscriptionError('Transcription failed');
-      Alert.alert('Error', 'Failed to transcribe audio');
+      const appError = ErrorHandler.handleError(error, 'Audio Transcription');
+      ErrorHandler.showError(appError);
     } finally {
       setIsTranscribing(false);
     }
@@ -105,27 +106,28 @@ export const RecordScreen: React.FC = () => {
     try {
       console.log('Saving transcription data:', data);
       
-      // TODO: Save to backend - this will be implemented in next steps
-      Alert.alert(
-        'Save Successful',
-        'Transcription data saved successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Reset everything for new recording
-              setRecordingUri(null);
-              setUploadedUrl(null);
-              setTranscriptionResult(null);
-              setUploadError(null);
-              setTranscriptionError(null);
-            }
-          }
-        ]
-      );
+      // Include location data if available
+      const dataToSave = selectedLocation ? {
+        ...data,
+        location: selectedLocation.location
+      } : data;
+      
+      // Save using the API (already handled in TranscriptionResults)
+      console.log('Final data to save:', dataToSave);
+      
+      ErrorHandler.showSuccess('Transcription data saved successfully');
+      
+      // Reset everything for new recording
+      setRecordingUri(null);
+      setUploadedUrl(null);
+      setTranscriptionResult(null);
+      setUploadError(null);
+      setTranscriptionError(null);
+      setSelectedLocation(null);
     } catch (error) {
       console.error('Save error:', error);
-      Alert.alert('Error', 'Failed to save transcription data');
+      const appError = ErrorHandler.handleError(error, 'Transcription Save');
+      ErrorHandler.showError(appError);
     }
   };
 
@@ -133,28 +135,29 @@ export const RecordScreen: React.FC = () => {
     try {
       console.log('Saving manual entry data:', data);
       
-      // TODO: Save to backend - this will be implemented in next steps
-      Alert.alert(
-        'Save Successful',
-        'Manual entry data saved successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Reset everything for new entry
-              setShowManualEntry(false);
-              setRecordingUri(null);
-              setUploadedUrl(null);
-              setTranscriptionResult(null);
-              setUploadError(null);
-              setTranscriptionError(null);
-            }
-          }
-        ]
-      );
+      // Include location data if available
+      const dataToSave = selectedLocation ? {
+        ...data,
+        location: selectedLocation.location
+      } : data;
+      
+      // Save using the API
+      await api.saveIndividual(dataToSave);
+      
+      ErrorHandler.showSuccess('Manual entry data saved successfully');
+      
+      // Reset everything for new entry
+      setShowManualEntry(false);
+      setRecordingUri(null);
+      setUploadedUrl(null);
+      setTranscriptionResult(null);
+      setUploadError(null);
+      setTranscriptionError(null);
+      setSelectedLocation(null);
     } catch (error) {
       console.error('Save error:', error);
-      Alert.alert('Error', 'Failed to save manual entry data');
+      const appError = ErrorHandler.handleError(error, 'Manual Entry Save');
+      ErrorHandler.showError(appError);
     }
   };
 

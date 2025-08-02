@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { TranscriptionResult, api } from '../services/api';
 import { MergeUI } from './MergeUI';
 
@@ -70,7 +71,11 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
                 try {
                   const mergedData = { ...categorizedData, existing_individual_id: highConfidenceMatch.id };
                   await api.saveIndividual(mergedData);
-                  Alert.alert('Success', 'Data merged successfully!');
+                  Toast.show({
+                    type: 'success',
+                    text1: 'Success',
+                    text2: 'Data merged successfully!'
+                  });
                   onSave(mergedData);
                 } catch (error) {
                   Alert.alert('Error', error.message);
@@ -90,7 +95,11 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
       } else {
         // No meaningful match (< 60% or no matches), save as new
         await api.saveIndividual(categorizedData);
-        Alert.alert('Success', 'Data saved successfully!');
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Data saved successfully!'
+        });
         onSave(categorizedData);
       }
     } catch (error) {
@@ -103,24 +112,40 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
   const handleMerge = async (mergedData: Record<string, any>) => {
     try {
       await api.saveIndividual(mergedData);
-      Alert.alert('Success', 'Data merged successfully!');
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Data merged successfully!'
+      });
       setShowMergeUI(false);
       setSelectedMatch(null);
       onSave(mergedData);
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message
+      });
     }
   };
 
   const handleCreateNew = async (data: Record<string, any>) => {
     try {
       await api.saveIndividual(data);
-      Alert.alert('Success', 'New individual created successfully!');
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'New individual created successfully!'
+      });
       setShowMergeUI(false);
       setSelectedMatch(null);
       onSave(data);
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message
+      });
     }
   };
 

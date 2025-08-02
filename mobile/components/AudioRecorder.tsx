@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
+import { ErrorHandler } from '../utils/errorHandler';
 
 interface AudioRecorderProps {
   onRecordingComplete: (uri: string, location?: { 
@@ -29,9 +30,15 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   // Request permissions
   useEffect(() => {
     (async () => {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Audio recording permission is required to use this feature.');
+      try {
+        const { status } = await Audio.requestPermissionsAsync();
+        if (status !== 'granted') {
+          const error = ErrorHandler.handleRecordingError(new Error('Recording permission denied'));
+          ErrorHandler.showError(error);
+        }
+      } catch (error) {
+        const appError = ErrorHandler.handleError(error, 'Audio Permission Request');
+        ErrorHandler.showError(appError);
       }
     })();
   }, []);
@@ -80,6 +87,8 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
         }
       } catch (locationErr) {
         console.log('Location capture failed, continuing without location:', locationErr);
+        const error = ErrorHandler.handleLocationError(locationErr);
+        ErrorHandler.showError(error);
       }
 
       // Use default recording options for hackathon
@@ -118,7 +127,8 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       }, 1000);
     } catch (err) {
       console.error('Failed to start recording', err);
-      Alert.alert('Error', 'Failed to start recording');
+      const error = ErrorHandler.handleRecordingError(err);
+      ErrorHandler.showError(error);
     }
   };
 
@@ -146,7 +156,8 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       }
     } catch (err) {
       console.error('Failed to stop recording', err);
-      Alert.alert('Error', 'Failed to stop recording');
+      const error = ErrorHandler.handleRecordingError(err);
+      ErrorHandler.showError(error);
     }
   };
 
@@ -165,6 +176,8 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       }
     } catch (err) {
       console.error('Failed to pause recording', err);
+      const error = ErrorHandler.handleRecordingError(err);
+      ErrorHandler.showError(error);
     }
   };
 
