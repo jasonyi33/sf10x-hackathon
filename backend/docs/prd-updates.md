@@ -126,3 +126,257 @@ This document tracks implementation decisions and clarifications made during dev
 - All decisions prioritize hackathon timeline (36 hours)
 - "Keep it simple" principle from CLAUDE.md is followed
 - No over-engineering or future-proofing beyond MVP requirements
+
+## Task 3-4 Backend Support Implementation Plan
+
+### Overview
+While Tasks 3-4 are assigned to frontend developers, critical backend endpoints are needed for the frontend to function. These endpoints handle individual data persistence, search, and interaction tracking.
+
+### Required Endpoints
+
+#### 1. POST /api/individuals - Create/Update Individual
+**Purpose**: Save new individuals or update existing ones after transcription
+**When Used**: 
+- After user confirms transcription results
+- After manual data entry
+- When merging duplicates
+
+**Request Structure**:
+```json
+{
+  "data": {
+    "name": "John Doe",
+    "height": 72,
+    "weight": 180,
+    "skin_color": "Light",
+    // ... all other categorized fields
+  },
+  "merge_with_id": "uuid-of-existing",  // Optional: for merging
+  "location": {
+    "latitude": 37.7749,
+    "longitude": -122.4194
+  },
+  "transcription": "original audio text",  // Optional: only for voice entries
+  "audio_url": "https://..."  // Optional: reference to audio file
+}
+```
+
+**Response**:
+```json
+{
+  "individual": {
+    "id": "uuid",
+    "name": "John Doe",
+    "danger_score": 45,
+    "danger_override": null,
+    "data": {...},
+    "created_at": "2024-01-20T10:30:00Z",
+    "updated_at": "2024-01-20T10:30:00Z"
+  },
+  "interaction": {
+    "id": "uuid",
+    "created_at": "2024-01-20T10:30:00Z"
+  }
+}
+```
+
+**Implementation Steps**:
+1. Validate incoming data using existing validation_helper
+2. Calculate danger score using danger_calculator
+3. If merge_with_id provided:
+   - Update existing individual with new data
+   - Create interaction record with only changed fields
+4. If new individual:
+   - Create individual record with all data
+   - Create interaction record with all fields
+5. Handle location data (store in interaction)
+6. Delete audio file from storage after successful save
+
+#### 2. GET /api/individuals - List/Search Individuals
+**Purpose**: Power the search screen and recent individuals list
+**When Used**: 
+- Search screen initial load
+- User types in search bar
+- Recent individuals display
+
+**Query Parameters**:
+- `search`: Search term (searches name field)
+- `limit`: Max results (default 20)
+- `offset`: Pagination offset
+- `sort_by`: "last_seen" | "danger_score" | "name" (default: "last_seen")
+- `sort_order`: "asc" | "desc" (default: "desc")
+
+**Response**:
+```json
+{
+  "individuals": [
+    {
+      "id": "uuid",
+      "name": "John Doe",
+      "danger_score": 75,
+      "danger_override": null,
+      "last_seen": "2024-01-20T10:30:00Z",
+      "last_location": {
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "address": "Market St & 5th"  // Abbreviated
+      }
+    }
+  ],
+  "total": 150,
+  "offset": 0,
+  "limit": 20
+}
+```
+
+**Implementation Steps**:
+1. Build query with search filters
+2. Join with interactions to get last_seen timestamp
+3. Calculate display danger score (override or calculated)
+4. Return paginated results
+
+#### 3. GET /api/individuals/{id} - Get Individual Details
+**Purpose**: Display full individual profile
+**When Used**: User taps on individual from search results
+
+**Response**:
+```json
+{
+  "individual": {
+    "id": "uuid",
+    "name": "John Doe",
+    "danger_score": 75,
+    "danger_override": null,
+    "data": {
+      // All fields with current values
+    },
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-20T10:30:00Z"
+  },
+  "recent_interactions": [
+    {
+      "id": "uuid",
+      "created_at": "2024-01-20T10:30:00Z",
+      "user_name": "Demo User",
+      "location": {
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "address": "Market St & 5th"
+      },
+      "has_transcription": true
+    }
+  ]
+}
+```
+
+#### 4. PUT /api/individuals/{id}/danger-override
+**Purpose**: Update manual danger score override
+**When Used**: User adjusts danger score slider
+
+**Request**:
+```json
+{
+  "danger_override": 85  // null to remove override
+}
+```
+
+**Response**:
+```json
+{
+  "danger_score": 75,
+  "danger_override": 85,
+  "display_score": 85  // What to show in UI
+}
+```
+
+#### 5. GET /api/individuals/{id}/interactions
+**Purpose**: Get detailed interaction history
+**When Used**: User views interaction history tab
+
+**Response**:
+```json
+{
+  "interactions": [
+    {
+      "id": "uuid",
+      "created_at": "2024-01-20T10:30:00Z",
+      "user_name": "Demo User",
+      "transcription": "Met John near Market...",  // If voice entry
+      "location": {
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "address": "123 Market Street, San Francisco, CA"  // Full address
+      },
+      "changes": {
+        "height": 72,
+        "weight": 180
+        // Only fields that changed in this interaction
+      },
+      "categories_snapshot": [
+        // Category definitions at time of interaction
+      ]
+    }
+  ]
+}
+```
+
+### Implementation Strategy
+
+#### Phase 1: Core Data Models (Do First)
+1. Create Pydantic models for all request/response structures
+2. Create database query functions in db/models.py
+3. Implement helper functions for:
+   - Merging individual data
+   - Tracking field changes
+   - Address abbreviation
+
+#### Phase 2: Individual Management (Critical Path)
+1. Implement POST /api/individuals
+2. Add comprehensive validation
+3. Handle merge logic (confidence >= 95% auto-merge)
+4. Create interaction records properly
+
+#### Phase 3: Search and Display
+1. Implement GET /api/individuals with search
+2. Add pagination support
+3. Implement GET /api/individuals/{id}
+4. Add danger override endpoint
+
+#### Phase 4: History and Details
+1. Implement interactions endpoint
+2. Add location/address formatting
+3. Ensure proper data aggregation
+
+### Testing Strategy
+
+1. **Unit Tests**: Each endpoint individually
+2. **Integration Tests**: Full flow from transcribe → save → search → view
+3. **Data Integrity Tests**: Ensure interactions track changes correctly
+4. **Performance Tests**: Search with 100+ individuals
+
+### Potential Issues to Avoid
+
+1. **Race Conditions**: Use database transactions for save operations
+2. **Data Loss**: Never delete data, only add interactions
+3. **Performance**: Index name field for search, created_at for sorting
+4. **Validation**: Reuse existing validation_helper for consistency
+5. **Audio Cleanup**: Delete audio files AFTER successful save
+
+### Dependencies on Existing Code
+
+- **validation_helper.py**: Reuse for data validation
+- **danger_calculator.py**: Use for score calculation
+- **auth.py**: All endpoints require authentication
+- **Supabase client**: Use existing connection
+
+### Migration Considerations
+
+None needed - using existing database schema from Task 1.0
+
+### Frontend Integration Points
+
+1. **After transcription**: Frontend calls POST /api/individuals
+2. **Search screen**: Polls GET /api/individuals
+3. **Profile screen**: Calls GET /api/individuals/{id}
+4. **Danger slider**: Updates via PUT endpoint
+5. **History tab**: Loads interactions on demand
