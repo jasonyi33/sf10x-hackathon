@@ -111,3 +111,65 @@ class DangerOverrideResponse(BaseModel):
 class InteractionsResponse(BaseModel):
     """List of detailed interactions"""
     interactions: List[InteractionDetail]
+
+
+# Category Models
+class CreateCategoryRequest(BaseModel):
+    """Request to create a new custom category"""
+    name: str  # Required, will be capitalized
+    type: str = Field(..., pattern="^(text|number|single_select|multi_select|date|location)$")
+    priority: Optional[str] = Field("medium", pattern="^(high|medium|low)$")
+    danger_weight: Optional[int] = Field(0, ge=0, le=100)
+    auto_trigger: Optional[bool] = False
+    is_required: Optional[bool] = False
+    options: Optional[List[Any]] = None  # List[Dict] for single_select, List[str] for multi_select
+    
+    @field_validator('name')
+    def capitalize_name(cls, v):
+        """Capitalize first letter, lowercase rest"""
+        return v.strip().capitalize() if v else v
+    
+    @field_validator('options')
+    def validate_options_format(cls, v, values):
+        """Validate options format based on type"""
+        if 'type' in values.data:
+            field_type = values.data['type']
+            if field_type == 'single_select' and v is not None:
+                # Must be list of dicts with label and value
+                if not isinstance(v, list) or not all(
+                    isinstance(opt, dict) and 'label' in opt and 'value' in opt 
+                    for opt in v
+                ):
+                    raise ValueError("Single-select options must be list of objects with 'label' and 'value'")
+            elif field_type == 'multi_select' and v is not None:
+                # Must be list of strings
+                if not isinstance(v, list) or not all(isinstance(opt, str) for opt in v):
+                    raise ValueError("Multi-select options must be list of strings")
+            elif field_type not in ['single_select', 'multi_select'] and v is not None:
+                raise ValueError(f"Options not allowed for type {field_type}")
+        return v
+    
+    def model_post_init(self, __context):
+        """Additional validation after model creation"""
+        # Validate danger_weight only for number/single_select
+        if self.type not in ['number', 'single_select'] and self.danger_weight > 0:
+            raise ValueError(f"danger_weight must be 0 for type {self.type}")
+        
+        # Validate auto_trigger only for number/single_select
+        if self.type not in ['number', 'single_select'] and self.auto_trigger:
+            raise ValueError(f"auto_trigger not allowed for type {self.type}")
+
+
+class CategoryResponse(BaseModel):
+    """Category data returned from API"""
+    id: UUID
+    name: str
+    type: str
+    is_required: bool
+    is_preset: bool
+    priority: str
+    danger_weight: int
+    auto_trigger: bool
+    options: Optional[List[Any]]
+    created_at: datetime
+    updated_at: datetime
