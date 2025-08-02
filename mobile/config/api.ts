@@ -6,7 +6,7 @@ export const API_CONFIG = {
   BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8001',
   
   // Enable real API calls (set to false to use mock data only)
-  USE_REAL_API: process.env.EXPO_PUBLIC_USE_REAL_API !== 'false',
+  USE_REAL_API: false, // Set to false to use mock data only
   
   // Supabase Configuration (for direct frontend access if needed)
   SUPABASE: {

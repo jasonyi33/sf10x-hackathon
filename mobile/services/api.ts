@@ -204,6 +204,114 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
   },
 };
 
+// Mock data store for persistence
+const mockDataStore = {
+  individuals: {
+    "550e8400-e29b-41d4-a716-446655440001": {
+      id: "550e8400-e29b-41d4-a716-446655440001",
+      name: "John Doe",
+      danger_score: 75,
+      danger_override: null,
+      data: {
+        age: 45,
+        height: 72,
+        weight: 180,
+        skin_color: "Light",
+        gender: "Male",
+        substance_abuse_history: ["Moderate"],
+        medical_conditions: ["Diabetes"],
+        veteran_status: "Yes",
+        housing_priority: "High",
+        violent_behavior: "None"
+      },
+      created_at: "2024-01-15T10:30:00Z",
+      updated_at: "2024-01-15T10:30:00Z",
+      total_interactions: 3,
+      last_interaction_date: "2024-01-15T10:30:00Z",
+      interactions: [
+        {
+          id: "550e8400-e29b-41d4-a716-446655440101",
+          individual_id: "550e8400-e29b-41d4-a716-446655440001",
+          user_id: "user1",
+          transcription: "Met John near Market Street. About 45 years old, 6 feet tall, maybe 180 pounds. Light skin. Shows signs of moderate substance abuse, been on streets 3 months. Needs diabetes medication.",
+          data: {
+            name: "John",
+            age: 45,
+            height: 72,
+            weight: 180,
+            skin_color: "Light",
+            substance_abuse: "Moderate",
+            medical_conditions: "Diabetes"
+          },
+          location: { lat: 37.7749, lng: -122.4194 },
+          created_at: "2024-01-15T10:30:00Z",
+          worker_name: "Officer Johnson",
+          abbreviated_address: "Market St & 5th"
+        },
+        {
+          id: "550e8400-e29b-41d4-a716-446655440102",
+          individual_id: "550e8400-e29b-41d4-a716-446655440001",
+          user_id: "user1",
+          data: {
+            veteran_status: "Yes",
+            housing_priority: "High"
+          },
+          location: { lat: 37.7858, lng: -122.4064 },
+          created_at: "2024-01-12T14:20:00Z",
+          worker_name: "Officer Smith",
+          abbreviated_address: "Ellis St & 6th"
+        }
+      ]
+    },
+    "550e8400-e29b-41d4-a716-446655440002": {
+      id: "550e8400-e29b-41d4-a716-446655440002",
+      name: "Sarah Smith",
+      danger_score: 20,
+      danger_override: null,
+      data: {
+        age: 32,
+        height: 65,
+        weight: 140,
+        skin_color: "Medium",
+        gender: "Female",
+        substance_abuse_history: ["None"],
+        medical_conditions: ["Anxiety"],
+        veteran_status: "No",
+        housing_priority: "Medium",
+        violent_behavior: "None"
+      },
+      created_at: "2024-01-12T14:20:00Z",
+      updated_at: "2024-01-12T14:20:00Z",
+      total_interactions: 2,
+      last_interaction_date: "2024-01-12T14:20:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440003": {
+      id: "550e8400-e29b-41d4-a716-446655440003",
+      name: "Robert Johnson",
+      danger_score: 90,
+      danger_override: null,
+      data: {
+        age: 58,
+        height: 70,
+        weight: 200,
+        skin_color: "Dark",
+        gender: "Male",
+        substance_abuse_history: ["Severe"],
+        medical_conditions: ["Schizophrenia"],
+        veteran_status: "Yes",
+        housing_priority: "Critical",
+        violent_behavior: "History"
+      },
+      created_at: "2024-01-16T09:15:00Z",
+      updated_at: "2024-01-16T09:15:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-16T09:15:00Z",
+      interactions: []
+    }
+  }
+};
+
 // Transcription response types
 export interface TranscriptionResult {
   transcription: string;
@@ -324,36 +432,23 @@ export const api = {
         // Simulate search delay
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Mock search results with proper UUIDs
-        const mockResults: SearchResult[] = [
-          {
-            id: "550e8400-e29b-41d4-a716-446655440001",
-            name: "John Doe",
-            danger_score: 75,
-            last_seen: "2024-01-15T10:30:00Z",
-            last_seen_days: 2,
-            last_interaction_date: "2024-01-15T10:30:00Z",
-            abbreviated_address: "Market St & 5th"
-          },
-          {
-            id: "550e8400-e29b-41d4-a716-446655440002",
-            name: "Sarah Smith", 
-            danger_score: 20,
-            last_seen: "2024-01-12T14:20:00Z",
-            last_seen_days: 5,
-            last_interaction_date: "2024-01-12T14:20:00Z",
-            abbreviated_address: "Ellis St & 6th"
-          },
-          {
-            id: "550e8400-e29b-41d4-a716-446655440003",
-            name: "Robert Johnson",
-            danger_score: 90,
-            last_seen: "2024-01-16T09:15:00Z", 
-            last_seen_days: 1,
-            last_interaction_date: "2024-01-16T09:15:00Z",
-            abbreviated_address: "Golden Gate Park"
-          }
-        ];
+        // Convert mock data store to search results with display scores
+        const mockResults: SearchResult[] = Object.values(mockDataStore.individuals).map(individual => {
+          // Calculate display score (override or calculated)
+          const displayScore = individual.danger_override !== null && individual.danger_override !== undefined 
+            ? individual.danger_override 
+            : individual.danger_score;
+          
+          return {
+            id: individual.id,
+            name: individual.name,
+            danger_score: displayScore, // Use display score instead of original
+            last_seen: individual.last_interaction_date,
+            last_seen_days: 2, // Mock value
+            last_interaction_date: individual.last_interaction_date,
+            abbreviated_address: "Market St & 5th" // Mock address
+          };
+        });
         
         // Filter by query
         return mockResults.filter(result => 
@@ -378,63 +473,13 @@ export const api = {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Mock profile data with proper UUID
-        return {
-          id: individualId,
-          name: "John Doe",
-          danger_score: 75,
-          danger_override: null,
-          data: {
-            age: 45,
-            height: 72,
-            weight: 180,
-            skin_color: "Light",
-            gender: "Male",
-            substance_abuse_history: ["Moderate"],
-            medical_conditions: ["Diabetes"],
-            veteran_status: "Yes",
-            housing_priority: "High",
-            violent_behavior: "None"
-          },
-          created_at: "2024-01-15T10:30:00Z",
-          updated_at: "2024-01-15T10:30:00Z",
-          total_interactions: 3,
-          last_interaction_date: "2024-01-15T10:30:00Z",
-          interactions: [
-            {
-              id: "550e8400-e29b-41d4-a716-446655440101",
-              individual_id: individualId,
-              user_id: "user1",
-              transcription: "Met John near Market Street. About 45 years old, 6 feet tall, maybe 180 pounds. Light skin. Shows signs of moderate substance abuse, been on streets 3 months. Needs diabetes medication.",
-              data: {
-                name: "John",
-                age: 45,
-                height: 72,
-                weight: 180,
-                skin_color: "Light",
-                substance_abuse: "Moderate",
-                medical_conditions: "Diabetes"
-              },
-              location: { lat: 37.7749, lng: -122.4194 },
-              created_at: "2024-01-15T10:30:00Z",
-              worker_name: "Officer Johnson",
-              abbreviated_address: "Market St & 5th"
-            },
-            {
-              id: "550e8400-e29b-41d4-a716-446655440102",
-              individual_id: individualId,
-              user_id: "user1",
-              data: {
-                veteran_status: "Yes",
-                housing_priority: "High"
-              },
-              location: { lat: 37.7858, lng: -122.4064 },
-              created_at: "2024-01-12T14:20:00Z",
-              worker_name: "Officer Smith",
-              abbreviated_address: "Ellis St & 6th"
-            }
-          ]
-        };
+        // Get from mock data store
+        const mockProfile = mockDataStore.individuals[individualId];
+        if (!mockProfile) {
+          return null;
+        }
+        
+        return mockProfile;
       }
 
       const result = await apiRequest(`/api/individuals/${individualId}`);
@@ -448,6 +493,22 @@ export const api = {
   // Update danger override
   updateDangerOverride: async (individualId: string, overrideValue: number | null): Promise<boolean> => {
     try {
+      // Skip real API calls if disabled
+      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
+        console.log('Mock danger override update');
+        // Simulate update delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Update the mock data store
+        if (mockDataStore.individuals[individualId]) {
+          mockDataStore.individuals[individualId].danger_override = overrideValue;
+          mockDataStore.individuals[individualId].updated_at = new Date().toISOString();
+          console.log(`Updated danger override for ${individualId} to ${overrideValue}`);
+        }
+        
+        return true;
+      }
+
       await apiRequest(`/api/individuals/${individualId}/danger-override`, {
         method: 'PUT',
         body: JSON.stringify({ danger_override: overrideValue }),

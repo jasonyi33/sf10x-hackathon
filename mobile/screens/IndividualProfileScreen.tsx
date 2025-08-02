@@ -76,18 +76,23 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
   const handleDangerOverrideChange = async (overrideValue: number | null) => {
     if (!profile) return;
     
+    // Immediately update local state for instant UI feedback
+    const updatedProfile = {
+      ...profile,
+      danger_override: overrideValue,
+    };
+    setProfile(updatedProfile);
+    
     try {
       const success = await api.updateDangerOverride(profile.id, overrideValue);
-      if (success) {
-        // Update local state
-        setProfile({
-          ...profile,
-          danger_override: overrideValue,
-        });
-      } else {
+      if (!success) {
+        // Revert the change if the API call failed
+        setProfile(profile);
         Alert.alert('Error', 'Failed to update danger override');
       }
     } catch (error) {
+      // Revert the change if there was an error
+      setProfile(profile);
       console.error('Error updating danger override:', error);
       Alert.alert('Error', 'Failed to update danger override');
     }
