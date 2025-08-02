@@ -4,7 +4,7 @@
 export const API_CONFIG = {
   // Backend API URL - replace with your Railway URL
   // Format: https://[project-name].up.railway.app
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://your-railway-app.railway.app',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://sf10x-demo-test-production.up.railway.app',
   
   // Enable real API calls (set to false to use mock data only)
   USE_REAL_API: process.env.EXPO_PUBLIC_USE_REAL_API !== 'false',
