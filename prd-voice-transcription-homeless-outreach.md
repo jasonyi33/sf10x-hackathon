@@ -204,7 +204,13 @@ This product is a mobile voice transcription application designed for San Franci
     - Include danger score
     - Include last interaction date
     - Multi-select values as comma-separated
-- 10.3 Pre-populate demo data via SQL script
+- 10.3 Pre-populate demo data via SQL script:
+    - 20 individuals with varied characteristics
+    - 5 with manual danger overrides
+    - 3 with auto-triggered danger scores (weapon_possession = 100)
+    - Each individual has 1-10 interactions (randomized)
+    - Custom categories added: housing_status, mental_health, weapon_possession
+    - Danger scores distributed across all ranges (low/medium/high)
 
 ### 11. Authentication & User Management
 - 11.1 Use Supabase Auth with email/password
@@ -560,6 +566,7 @@ Authorization: Bearer <token>
 
 #### POST /api/categories
 **Purpose**: Create new custom category
+**Validation**: Returns 400 error if non-numeric/non-single-select types have danger_weight > 0
 **Request**:
 ```json
 {
@@ -577,14 +584,31 @@ Authorization: Bearer <token>
   ]
 }
 ```
+**Response**:
+```json
+{
+  "id": "uuid",
+  "name": "housing_status",
+  "type": "single_select",
+  "priority": "high",
+  "danger_weight": 50,
+  "auto_trigger": false,
+  "is_required": false,
+  "is_preset": false,
+  "options": [...],
+  "created_at": "2024-01-20T10:30:00Z"
+}
+```
 
 #### GET /api/export
-**Purpose**: Export all individuals to CSV
-**Response**: File download with headers:
-- All category names as columns
-- danger_score column
-- last_interaction_date column
-- Multi-select values comma-separated
+**Purpose**: Export all individuals to CSV (no filtering for MVP)
+**Format**: Basic CSV with essential fields only
+**Response**: File download with:
+- Headers: name, height, weight, skin_color, danger_score, last_seen
+- Multi-select values comma-separated (e.g., "Moderate, In Recovery")
+- All individuals included (no filtering)
+- Content-Type: text/csv
+- Content-Disposition: attachment; filename="individuals_export.csv"
 
 ## Database Schema
 
