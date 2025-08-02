@@ -9,7 +9,7 @@ const calculateDaysAgo = (dateString: string): number => {
   return diffDays;
 };
 
-// Mock data for development
+// Mock data for development (until backend is deployed)
 const mockIndividuals: SearchResult[] = [
   {
     id: '1',
@@ -67,10 +67,6 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
       skin_color: 'Light',
       gender: 'Male',
       substance_abuse_history: ['Moderate'],
-      age: 45,
-      veteran_status: 'Yes',
-      medical_conditions: ['Diabetes'],
-      housing_priority: 'High',
     },
     created_at: '2024-01-10T10:00:00Z',
     updated_at: '2024-01-15T10:30:00Z',
@@ -92,7 +88,7 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
         id: 'int2',
         individual_id: '1',
         user_id: 'user2',
-        data: { substance_abuse_history: ['Moderate'], veteran_status: 'Yes' },
+        data: { substance_abuse_history: ['Moderate'] },
         location: { lat: 37.7849, lng: -122.4094 },
         created_at: '2024-01-12T14:20:00Z',
         worker_name: 'Officer Johnson',
@@ -102,7 +98,7 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
         id: 'int3',
         individual_id: '1',
         user_id: 'user1',
-        data: { medical_conditions: ['Diabetes'], housing_priority: 'High' },
+        data: { },
         location: { lat: 37.7649, lng: -122.4294 },
         created_at: '2024-01-10T16:45:00Z',
         worker_name: 'Officer Smith',
@@ -122,10 +118,6 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
       skin_color: 'Dark',
       gender: 'Female',
       substance_abuse_history: ['In Recovery'],
-      age: 35,
-      veteran_status: 'No',
-      medical_conditions: [],
-      housing_priority: 'Medium',
     },
     created_at: '2024-01-08T09:00:00Z',
     updated_at: '2024-01-12T14:20:00Z',
@@ -147,7 +139,7 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
         id: 'int5',
         individual_id: '2',
         user_id: 'user2',
-        data: { substance_abuse_history: ['In Recovery'], housing_priority: 'Medium' },
+        data: { substance_abuse_history: ['In Recovery'] },
         location: { lat: 37.7849, lng: -122.4094 },
         created_at: '2024-01-08T16:30:00Z',
         worker_name: 'Officer Johnson',
@@ -157,6 +149,7 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
   },
 };
 
+// Mock API functions (until backend is deployed)
 export const searchIndividuals = async (query: string): Promise<SearchResult[]> => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 300));
@@ -165,22 +158,33 @@ export const searchIndividuals = async (query: string): Promise<SearchResult[]> 
     return [];
   }
   
-  const filtered = mockIndividuals.filter(individual =>
-    individual.name.toLowerCase().includes(query.toLowerCase())
-  );
+  // Search across multiple fields (name, data fields, etc.)
+  const filtered = mockIndividuals.filter(individual => {
+    const searchTerm = query.toLowerCase();
+    
+    // Search in name
+    if (individual.name.toLowerCase().includes(searchTerm)) {
+      return true;
+    }
+    
+    // Search in profile data fields (when backend is connected, this will be more comprehensive)
+    const profile = mockIndividualProfiles[individual.id];
+    if (profile && profile.data) {
+      // Search in data fields like height, weight, skin_color, etc.
+      const dataString = JSON.stringify(profile.data).toLowerCase();
+      if (dataString.includes(searchTerm)) {
+        return true;
+      }
+    }
+    
+    return false;
+  });
   
   return filtered;
 };
 
-export const getRecentIndividuals = async (): Promise<SearchResult[]> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 200));
-  
-  // Return last 10 viewed (for now, just return all mock data)
-  return mockIndividuals.slice(0, 10);
-};
 
-// New function to get individual profile
+
 export const getIndividualProfile = async (individualId: string): Promise<IndividualProfile | null> => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 400));
@@ -189,7 +193,6 @@ export const getIndividualProfile = async (individualId: string): Promise<Indivi
   return profile || null;
 };
 
-// Function to update danger override
 export const updateDangerOverride = async (individualId: string, overrideValue: number | null): Promise<boolean> => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 300));
@@ -201,4 +204,28 @@ export const updateDangerOverride = async (individualId: string, overrideValue: 
   }
   
   return false;
+};
+
+// Mock function to get categories
+export const getCategories = async (): Promise<any[]> => {
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 200));
+  
+  return [
+    { id: '1', name: 'Name', type: 'text', required: true, priority: 'high', active: true },
+    { id: '2', name: 'Gender', type: 'single-select', required: false, priority: 'medium', danger_weight: 0, auto_trigger: false, active: true },
+    { id: '3', name: 'Height', type: 'number', required: true, priority: 'medium', danger_weight: 0, auto_trigger: false, active: true },
+    { id: '4', name: 'Weight', type: 'number', required: true, priority: 'medium', danger_weight: 0, auto_trigger: false, active: true },
+    { id: '5', name: 'Skin Color', type: 'single-select', required: true, priority: 'high', danger_weight: 0, auto_trigger: false, active: true },
+    { id: '6', name: 'Substance Abuse History', type: 'multi-select', required: false, priority: 'low', active: true },
+  ];
+};
+
+// Mock function to export CSV
+export const exportCSV = async (): Promise<string> => {
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  // Return mock URL
+  return 'mock-csv-export-url';
 }; 

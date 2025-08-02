@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 
@@ -9,8 +10,28 @@ import RecordScreen from './screens/RecordScreen';
 import SearchScreen from './screens/SearchScreen';
 import CategoriesScreen from './screens/CategoriesScreen';
 import UserProfileScreen from './screens/UserProfileScreen';
+import IndividualProfileScreen from './screens/IndividualProfileScreen';
 
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
+
+// Stack navigator for Search tab
+function SearchStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen 
+        name="SearchMain" 
+        component={SearchScreen}
+        options={{ title: 'Search' }}
+      />
+      <Stack.Screen 
+        name="IndividualProfile" 
+        component={IndividualProfileScreen}
+        options={{ title: 'Individual Profile' }}
+      />
+    </Stack.Navigator>
+  );
+}
 
 export default function App() {
   return (
@@ -47,8 +68,8 @@ export default function App() {
         />
         <Tab.Screen 
           name="Search" 
-          component={SearchScreen}
-          options={{ title: 'Search' }}
+          component={SearchStack}
+          options={{ title: 'Search', headerShown: false }}
         />
         <Tab.Screen 
           name="Categories" 

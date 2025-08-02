@@ -10,13 +10,17 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { exportCSV } from '../services/api';
 
 interface Category {
   id: string;
   name: string;
-  type: 'text' | 'number' | 'select' | 'boolean';
+  type: 'text' | 'number' | 'single-select' | 'multi-select' | 'date' | 'location';
   required: boolean;
-  options?: string[];
+  priority: 'high' | 'medium' | 'low';
+  danger_weight?: number; // 0-100, only for number/single-select
+  auto_trigger?: boolean; // only for number/single-select
+  options?: string[] | Array<{label: string, value: number}>;
   active: boolean;
 }
 
@@ -27,13 +31,23 @@ export default function CategoriesScreen() {
       name: 'Name',
       type: 'text',
       required: true,
+      priority: 'high',
       active: true,
     },
     {
       id: '2',
-      name: 'Age',
-      type: 'number',
-      required: true,
+      name: 'Gender',
+      type: 'single-select',
+      required: false,
+      priority: 'medium',
+      danger_weight: 0,
+      auto_trigger: false,
+      options: [
+        {label: 'Male', value: 0},
+        {label: 'Female', value: 0},
+        {label: 'Other', value: 0},
+        {label: 'Unknown', value: 0}
+      ],
       active: true,
     },
     {
@@ -41,6 +55,9 @@ export default function CategoriesScreen() {
       name: 'Height',
       type: 'number',
       required: true,
+      priority: 'medium',
+      danger_weight: 0,
+      auto_trigger: false,
       active: true,
     },
     {
@@ -48,64 +65,66 @@ export default function CategoriesScreen() {
       name: 'Weight',
       type: 'number',
       required: true,
+      priority: 'medium',
+      danger_weight: 0,
+      auto_trigger: false,
       active: true,
     },
     {
       id: '5',
       name: 'Skin Color',
-      type: 'select',
+      type: 'single-select',
       required: true,
-      options: ['Light', 'Medium', 'Dark'],
+      priority: 'high',
+      danger_weight: 0,
+      auto_trigger: false,
+      options: [
+        {label: 'Light', value: 0},
+        {label: 'Medium', value: 0},
+        {label: 'Dark', value: 0}
+      ],
       active: true,
     },
     {
       id: '6',
-      name: 'Veteran Status',
-      type: 'boolean',
+      name: 'Substance Abuse History',
+      type: 'multi-select',
       required: false,
-      active: true,
-    },
-    {
-      id: '7',
-      name: 'Medical Conditions',
-      type: 'select',
-      required: false,
-      options: ['Diabetes', 'Hypertension', 'Mental Health', 'Substance Abuse', 'None'],
-      active: true,
-    },
-    {
-      id: '8',
-      name: 'Housing Priority',
-      type: 'select',
-      required: false,
-      options: ['High', 'Medium', 'Low'],
+      priority: 'low',
+      options: ['None', 'Mild', 'Moderate', 'Severe', 'In Recovery'],
       active: true,
     },
   ]);
 
   const [isExporting, setIsExporting] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryType, setNewCategoryType] = useState<'text' | 'number' | 'select' | 'boolean'>('text');
+  const [newCategoryType, setNewCategoryType] = useState<'text' | 'number' | 'single-select' | 'multi-select' | 'date' | 'location'>('text');
+  const [newCategoryPriority, setNewCategoryPriority] = useState<'high' | 'medium' | 'low'>('medium');
+  const [newCategoryDangerWeight, setNewCategoryDangerWeight] = useState(0);
+  const [newCategoryAutoTrigger, setNewCategoryAutoTrigger] = useState(false);
+  const [newCategoryOptions, setNewCategoryOptions] = useState<string[]>([]);
 
   const handleExportCSV = async () => {
     try {
       setIsExporting(true);
       
-      // Simulate API call to export CSV
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock CSV data
-      const csvData = generateMockCSV();
+      // Use real API to export CSV
+      const csvUrl = await exportCSV();
       
       Alert.alert(
         'Export Successful',
-        `CSV file downloaded with ${csvData.length} individuals and ${categories.filter(c => c.active).length} categories.`,
+        'CSV file has been generated and is ready for download.',
         [
           {
-            text: 'OK',
+            text: 'Download',
             onPress: () => {
-              console.log('CSV Export completed');
+              // In a real app, you would trigger a download here
+              console.log('CSV Export completed:', csvUrl);
             }
+          },
+          {
+            text: 'OK',
+            style: 'cancel'
           }
         ]
       );
@@ -172,17 +191,37 @@ export default function CategoriesScreen() {
     );
   };
 
-  const addNewCategory = () => {
+  const validateNewCategory = () => {
     if (!newCategoryName.trim()) {
-      Alert.alert('Error', 'Please enter a category name');
-      return;
+      Alert.alert('Error', 'Category name is required');
+      return false;
     }
+
+    if (newCategoryType === 'single-select' && (!newCategoryOptions || newCategoryOptions.length === 0)) {
+      Alert.alert('Error', 'Single-select categories require options');
+      return false;
+    }
+
+    if (newCategoryType === 'multi-select' && (!newCategoryOptions || newCategoryOptions.length === 0)) {
+      Alert.alert('Error', 'Multi-select categories require options');
+      return false;
+    }
+
+    return true;
+  };
+
+  const addNewCategory = () => {
+    if (!validateNewCategory()) return;
 
     const newCategory: Category = {
       id: Date.now().toString(),
       name: newCategoryName.trim(),
       type: newCategoryType,
       required: false,
+      priority: newCategoryPriority,
+      danger_weight: (newCategoryType === 'number' || newCategoryType === 'single-select') ? newCategoryDangerWeight : undefined,
+      auto_trigger: (newCategoryType === 'number' || newCategoryType === 'single-select') ? newCategoryAutoTrigger : undefined,
+      options: (newCategoryType === 'single-select' || newCategoryType === 'multi-select') ? newCategoryOptions : undefined,
       active: true,
     };
 
@@ -193,6 +232,14 @@ export default function CategoriesScreen() {
 
   const getActiveCategoriesCount = () => {
     return categories.filter(cat => cat.active).length;
+  };
+
+  const getPriorityDistribution = () => {
+    const active = categories.filter(cat => cat.active);
+    const high = active.filter(cat => cat.priority === 'high').length;
+    const medium = active.filter(cat => cat.priority === 'medium').length;
+    const low = active.filter(cat => cat.priority === 'low').length;
+    return { high, medium, low };
   };
 
   return (
@@ -230,17 +277,26 @@ export default function CategoriesScreen() {
       {/* Categories List */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Active Categories</Text>
-        <Text style={styles.categoryCount}>
-          {getActiveCategoriesCount()} of {categories.length} categories active
-        </Text>
+        {(() => {
+          const priorityDist = getPriorityDistribution();
+          return (
+            <Text style={styles.categoryCount}>
+              {getActiveCategoriesCount()} active categories (High: {priorityDist.high}, Medium: {priorityDist.medium}, Low: {priorityDist.low})
+            </Text>
+          );
+        })()}
         
         {categories.map(category => (
           <View key={category.id} style={styles.categoryItem}>
             <View style={styles.categoryInfo}>
               <Text style={styles.categoryName}>{category.name}</Text>
               <Text style={styles.categoryType}>{category.type}</Text>
+              <Text style={styles.categoryPriority}>Priority: {category.priority}</Text>
               {category.required && (
                 <Text style={styles.requiredBadge}>Required</Text>
+              )}
+              {(category.type === 'number' || category.type === 'single-select') && category.danger_weight !== undefined && (
+                <Text style={styles.dangerWeightBadge}>Danger: {category.danger_weight}</Text>
               )}
             </View>
             <TouchableOpacity
@@ -267,14 +323,37 @@ export default function CategoriesScreen() {
             onChangeText={setNewCategoryName}
           />
           <TouchableOpacity style={styles.typeButton} onPress={() => {
-            const types: Array<'text' | 'number' | 'select' | 'boolean'> = ['text', 'number', 'select', 'boolean'];
+            const types: Array<'text' | 'number' | 'single-select' | 'multi-select' | 'date' | 'location'> = 
+              ['text', 'number', 'single-select', 'multi-select', 'date', 'location'];
             const currentIndex = types.indexOf(newCategoryType);
             const nextIndex = (currentIndex + 1) % types.length;
             setNewCategoryType(types[nextIndex]);
           }}>
             <Text style={styles.typeButtonText}>{newCategoryType}</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.priorityButton} onPress={() => {
+            const priorities: Array<'high' | 'medium' | 'low'> = ['high', 'medium', 'low'];
+            const currentIndex = priorities.indexOf(newCategoryPriority);
+            const nextIndex = (currentIndex + 1) % priorities.length;
+            setNewCategoryPriority(priorities[nextIndex]);
+          }}>
+            <Text style={styles.priorityButtonText}>{newCategoryPriority}</Text>
+          </TouchableOpacity>
         </View>
+        
+        {(newCategoryType === 'number' || newCategoryType === 'single-select') && (
+          <View style={styles.dangerWeightContainer}>
+            <Text style={styles.dangerWeightLabel}>Danger Weight: {newCategoryDangerWeight}</Text>
+            <TouchableOpacity 
+              style={[styles.autoTriggerButton, newCategoryAutoTrigger && styles.autoTriggerButtonActive]}
+              onPress={() => setNewCategoryAutoTrigger(!newCategoryAutoTrigger)}
+            >
+              <Text style={styles.autoTriggerText}>
+                Auto-Trigger Danger: {newCategoryAutoTrigger ? 'ON' : 'OFF'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
         
         <TouchableOpacity 
           style={styles.addButton}
@@ -389,6 +468,20 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 2,
   },
+  categoryPriority: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  dangerWeightBadge: {
+    fontSize: 10,
+    color: '#DC2626',
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 2,
+  },
   requiredBadge: {
     fontSize: 12,
     color: '#EF4444',
@@ -438,6 +531,44 @@ const styles = StyleSheet.create({
   typeButtonText: {
     fontSize: 14,
     fontWeight: '500',
+    color: '#374151',
+  },
+  priorityButton: {
+    backgroundColor: '#E5E7EB',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  priorityButtonText: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  dangerWeightContainer: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+  },
+  dangerWeightLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 5,
+  },
+  autoTriggerButton: {
+    marginTop: 10,
+    padding: 8,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  autoTriggerButtonActive: {
+    backgroundColor: '#DC2626',
+  },
+  autoTriggerText: {
+    fontSize: 12,
     color: '#374151',
   },
   addButton: {

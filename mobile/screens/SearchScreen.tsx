@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { SearchResult } from '../types';
-import { searchIndividuals, getRecentIndividuals } from '../services/api';
+import { searchIndividuals } from '../services/api';
 import SearchResultItem from '../components/SearchResultItem';
 
 // NOTE: This component requires @react-navigation/stack to be installed
@@ -18,14 +18,7 @@ import SearchResultItem from '../components/SearchResultItem';
 export default function SearchScreen({ navigation }: { navigation: any }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [recentIndividuals, setRecentIndividuals] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingRecent, setIsLoadingRecent] = useState(true);
-
-  // Load recent individuals on component mount
-  useEffect(() => {
-    loadRecentIndividuals();
-  }, []);
 
   // Search as user types (with debounce)
   useEffect(() => {
@@ -40,17 +33,7 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  const loadRecentIndividuals = async () => {
-    try {
-      setIsLoadingRecent(true);
-      const recent = await getRecentIndividuals();
-      setRecentIndividuals(recent);
-    } catch (error) {
-      console.error('Error loading recent individuals:', error);
-    } finally {
-      setIsLoadingRecent(false);
-    }
-  };
+
 
   const performSearch = async () => {
     try {
@@ -67,27 +50,14 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
 
   const handleResultPress = (result: SearchResult) => {
     // Navigate to IndividualProfileScreen with the individual's data
-    // Note: This will work with the current tab navigation structure
-    // When Tasks 1, 2, 3 are completed, this will use proper stack navigation
-    Alert.alert(
-      'Individual Profile',
-      `Name: ${result.name}\nDanger Score: ${result.danger_score}\nLast Seen: ${result.last_seen_days} days ago\n\nIndividual Profile Screen is available but navigation requires Tasks 1, 2, 3 completion for full stack navigation.`,
-      [
-        { text: 'OK', style: 'default' }
-      ]
-    );
-    
-    // TODO: When Tasks 1, 2, 3 are completed, uncomment this navigation:
-    // navigation.navigate('IndividualProfile', { individualId: result.id });
+    navigation.navigate('IndividualProfile', { individualId: result.id });
   };
 
   const renderSearchResult = ({ item }: { item: SearchResult }) => (
     <SearchResultItem result={item} onPress={handleResultPress} />
   );
 
-  const renderRecentItem = ({ item }: { item: SearchResult }) => (
-    <SearchResultItem result={item} onPress={handleResultPress} />
-  );
+
 
   const renderSectionHeader = (title: string) => (
     <View style={styles.sectionHeader}>
@@ -101,7 +71,7 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by name..."
+          placeholder="Search individuals..."
           value={searchQuery}
           onChangeText={setSearchQuery}
           autoCapitalize="none"
@@ -127,21 +97,8 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
           )}
         </View>
       ) : (
-        /* Recent Individuals */
         <View style={styles.resultsContainer}>
-          {renderSectionHeader('Recent Individuals')}
-          {isLoadingRecent ? (
-            <ActivityIndicator style={styles.loader} size="large" color="#007AFF" />
-          ) : recentIndividuals.length > 0 ? (
-            <FlatList
-              data={recentIndividuals}
-              renderItem={renderRecentItem}
-              keyExtractor={(item) => item.id}
-              showsVerticalScrollIndicator={false}
-            />
-          ) : (
-            <Text style={styles.noResults}>No recent individuals</Text>
-          )}
+          <Text style={styles.noResults}>Enter a search term to find individuals</Text>
         </View>
       )}
     </View>
