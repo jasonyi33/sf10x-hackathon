@@ -29,13 +29,13 @@ This is a Voice Transcription App for SF Homeless Outreach - a mobile app for so
 ### Backend (FastAPI)
 ```bash
 # Start development server
-cd backend && uvicorn main:app --reload --port 8000
+cd backend && uvicorn main:app --reload --port 8001
 
 # Run tests
 cd backend && pytest tests/test_api_integration.py
 
 # Install dependencies
-cd backend && pip install -r requirements.txt
+cd backend && python3 -m pip install -r requirements.txt
 
 # Deploy to Railway
 railway up
@@ -209,3 +209,10 @@ When working through tasks, follow this strict protocol:
      - Example: `git commit -m "feat: add payment validation logic" -m "- Validates card type and expiry" -m "- Adds unit tests for edge cases" -m "Related to T123 in PRD"`
 
 3. **Once all the subtasks are marked completed and changes have been committed**, mark the parent task as completed with `[x]`
+
+## Dev Environment Best Practices
+
+### Running Commands
+- Always use port 8001 instead of port 8000
+- Always use python3 instead of pip or python
+- When testing, make sure to add a reasonable exit case so that it does not stay stuck in the test

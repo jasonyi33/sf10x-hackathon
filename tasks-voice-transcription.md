@@ -47,11 +47,11 @@
 
 ## Tasks
 
-- [ ] 1.0 **[Dev 1]** Set up project infrastructure, database, and core backend APIs
-  - [ ] 1.1 Initialize FastAPI project with dependencies (fastapi, uvicorn, python-jose, httpx, openai, python-multipart, pytest-asyncio)
-  - [ ] 1.2 Create Supabase project and configure environment variables in `.env` files
-  - [ ] 1.3 Write and run initial schema migration from PRD (individuals, interactions, categories tables with all indexes)
-  - [ ] 1.4 Run preset categories migration with exact SQL from PRD:
+- [x] 1.0 **[Dev 1]** Set up project infrastructure, database, and core backend APIs
+  - [x] 1.1 Initialize FastAPI project with dependencies (fastapi, uvicorn, python-jose, httpx, openai, python-multipart, pytest-asyncio)
+  - [x] 1.2 Create Supabase project and configure environment variables in `.env` files
+  - [x] 1.3 Write and run initial schema migration from PRD (individuals, interactions, categories tables with all indexes)
+  - [x] 1.4 Run preset categories migration with exact SQL from PRD:
     ```sql
     INSERT INTO categories (name, type, is_required, is_preset, options) VALUES
     ('name', 'text', true, true, null),
@@ -64,11 +64,11 @@
     ('substance_abuse_history', 'multi_select', false, true,
      '["None", "Mild", "Moderate", "Severe", "In Recovery"]'::jsonb);
     ```
-  - [ ] 1.5 Create demo user in Supabase Auth dashboard (demo@sfgov.org / demo123456)
-  - [ ] 1.6 Set up Supabase Storage bucket `audio` with lifecycle rule: delete files older than 24 hours
-  - [ ] 1.7 Implement simplified JWT validation middleware (no signature verification for hackathon)
-  - [ ] 1.8 Create basic CORS configuration allowing all origins for demo
-  - [ ] 1.9 Deploy to Railway.app and verify deployment with health check endpoint
+  - [x] 1.5 Create demo user in Supabase Auth dashboard (demo@sfgov.org / demo123456)
+  - [x] 1.6 Set up Supabase Storage bucket `audio` with lifecycle rule: delete files older than 24 hours
+  - [x] 1.7 Implement simplified JWT validation middleware (no signature verification for hackathon)
+  - [x] 1.8 Create basic CORS configuration allowing all origins for demo
+  - [x] 1.9 Deploy to Railway.app and verify deployment with health check endpoint
 
 - [ ] 2.0 **[Dev 1]** Implement AI transcription and categorization services
   - [ ] 2.1 Create OpenAI service with Whisper transcription supporting M4A format from Supabase URL
