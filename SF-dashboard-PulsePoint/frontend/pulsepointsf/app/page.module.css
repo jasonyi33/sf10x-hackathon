@@ -32,6 +32,8 @@
   flex-direction: column;
   gap: 32px;
   grid-row-start: 2;
+  width: 100%;
+  max-width: 1200px;
 }
 
 .main ol {
@@ -165,3 +167,6 @@ a.secondary {
     filter: invert();
   }
 }
+
+
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
