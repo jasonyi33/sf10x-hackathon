@@ -35,4 +35,9 @@ async def root():
         "note": "If you see Flask errors, Railway deployed the wrong project!"
     }
 
-# API endpoint stubs will be added in Task 2.0
+# Import API routers
+from api import categories, transcription
+
+# Register routers
+app.include_router(categories.router)
+app.include_router(transcription.router)

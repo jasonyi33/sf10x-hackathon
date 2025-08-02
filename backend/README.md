@@ -52,16 +52,16 @@ This backend provides APIs for:
 
 ## API Endpoints
 
-### Currently Implemented (Task 1.0)
+### Currently Implemented
 - `GET /` - API info and status
 - `GET /health` - Health check endpoint
 - `GET /docs` - Interactive API documentation
+- `GET /api/categories` - List all categories (requires auth)
+- `POST /api/transcribe` - Transcribe audio and categorize (requires auth)
 
-### To Be Implemented (Task 2.0+)
-- `POST /api/transcribe` - Transcribe audio and categorize
+### To Be Implemented (Task 3.0+)
 - `GET /api/individuals` - List individuals
 - `POST /api/individuals` - Create/update individual
-- `GET /api/categories` - List categories
 - `POST /api/categories` - Create category
 - `GET /api/export` - Export to CSV
 
@@ -149,8 +149,15 @@ pytest tests/test_api_integration.py
 - CORS configuration
 - Railway deployment
 
-🚧 Task 2.0 Next - AI Integration
-- OpenAI Whisper transcription
-- GPT-4 categorization
-- Danger score calculation
-- Duplicate detection
+✅ Task 2.0 Complete - AI Integration
+- OpenAI Whisper transcription for M4A audio files
+- GPT-4o categorization with dynamic prompts
+- Danger score calculation service
+- Duplicate detection with LLM confidence scoring
+- Validation helper for required fields
+- Full integration tests passing
+
+🚧 Task 3.0 Next - Individual Management
+- Save/update individuals endpoints
+- Interaction history tracking
+- Auto-merge functionality
