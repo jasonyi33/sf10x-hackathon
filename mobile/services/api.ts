@@ -55,6 +55,17 @@ export interface TranscriptionResult {
 const mockTranscription = (audioUrl: string): TranscriptionResult => {
   console.log('Using mock transcription for:', audioUrl);
   
+  // Test different confidence levels based on audio URL
+  let confidence = 87; // Default for testing merge UI (60-94% range)
+  
+  if (audioUrl.includes('high-confidence')) {
+    confidence = 97; // Test streamlined confirmation (≥95%)
+  } else if (audioUrl.includes('low-confidence')) {
+    confidence = 45; // Test no merge UI (<60%)
+  } else if (audioUrl.includes('no-match')) {
+    confidence = 0; // Test no matches
+  }
+  
   return {
     transcription: "Met John near Market Street. About 45 years old, 6 feet tall, maybe 180 pounds. Light skin. Shows signs of moderate substance abuse, been on streets 3 months. Needs diabetes medication.",
     categorized_data: {
@@ -68,13 +79,13 @@ const mockTranscription = (audioUrl: string): TranscriptionResult => {
       location: "Market Street"
     },
     missing_required: ["height", "weight", "skin_color"],
-    potential_matches: [
+    potential_matches: confidence > 0 ? [
       {
         id: "123",
-        confidence: 87,
+        confidence: confidence,
         name: "John Smith"
       }
-    ]
+    ] : []
   };
 };
 

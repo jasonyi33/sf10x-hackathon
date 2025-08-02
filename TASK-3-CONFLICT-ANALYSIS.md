@@ -6,26 +6,38 @@
 **Current Status**: Task 3 (AI Transcription & Categorization) is **90% complete** but has **critical conflicts** with updated requirements that must be addressed before hackathon demo.
 
 **Key Conflicts Identified**:
-1. **Merge UI Threshold**: Current shows merge UI for all matches, updated requires 60% minimum
+1. **Merge UI Threshold**: ✅ **RESOLVED** - Now shows merge UI only for confidence ≥60%
 2. **Location Data Format**: Current sends coordinates only, updated requires address string
 3. **Backend Integration**: Current uses mocks, updated requires real API endpoints
 4. **Save Flow**: Current missing save functionality, updated requires complete save flow
 5. **Error Handling**: Current basic, updated requires comprehensive error handling
 
-**Priority**: **HIGH** - These conflicts will prevent successful demo and integration with other teams.
+**Priority**: **HIGH** - Remaining conflicts will prevent successful demo and integration with other teams.
+
+**Progress**: 1/5 critical conflicts resolved (20% complete)
 
 ---
 
 ## Detailed Conflict Analysis
 
-### 1. Merge UI Confidence Threshold (CRITICAL)
+### 1. Merge UI Confidence Threshold (CRITICAL) ✅ **RESOLVED**
 
 **Current Implementation**:
 ```typescript
-// MergeUI shows for ALL confidence levels
-if (lowConfidenceMatch) {
-  setSelectedMatch(lowConfidenceMatch);
+// Updated logic with proper thresholds
+const highConfidenceMatch = result.potential_matches?.find(match => match.confidence >= 95);
+const mediumConfidenceMatch = result.potential_matches?.find(match => match.confidence >= 60 && match.confidence < 95);
+const lowConfidenceMatch = result.potential_matches?.find(match => match.confidence < 60);
+
+if (highConfidenceMatch) {
+  // Streamlined confirmation for >= 95%
+  Alert.alert('High Confidence Match Found', ...);
+} else if (mediumConfidenceMatch) {
+  // Full merge UI for 60-94%
   setShowMergeUI(true);
+} else {
+  // No meaningful match (< 60%), save as new
+  onSave(categorizedData);
 }
 ```
 
@@ -35,12 +47,14 @@ if (lowConfidenceMatch) {
 - For confidence ≥ 95%: Streamlined confirmation dialog
 - For confidence 60-94%: Full side-by-side field comparison UI
 
-**Conflict Level**: 🔴 **CRITICAL**
+**Status**: ✅ **IMPLEMENTED**
 
-**Impact**: 
-- Current implementation shows merge UI for all matches (even 10% confidence)
-- This creates poor user experience and confusion
-- Violates updated PRD requirements
+**Changes Made**:
+- Updated `handleSave()` logic in `TranscriptionResults.tsx`
+- Added proper confidence thresholds (≥95%, 60-94%, <60%)
+- Updated potential matches display with new styling
+- Added test script to verify logic
+- Updated mock data to test different confidence levels
 
 ### 2. Location Data Format (CRITICAL)
 

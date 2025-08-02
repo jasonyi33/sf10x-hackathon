@@ -45,15 +45,16 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
       return;
     }
 
-    // Check for potential matches with confidence < 95%
+    // Check for potential matches with updated confidence thresholds
     const highConfidenceMatch = result.potential_matches?.find(match => match.confidence >= 95);
-    const lowConfidenceMatch = result.potential_matches?.find(match => match.confidence < 95);
+    const mediumConfidenceMatch = result.potential_matches?.find(match => match.confidence >= 60 && match.confidence < 95);
+    const lowConfidenceMatch = result.potential_matches?.find(match => match.confidence < 60);
 
     if (highConfidenceMatch) {
-      // Auto-merge for high confidence matches
+      // Streamlined confirmation for >= 95% confidence
       Alert.alert(
-        'Auto-Merge',
-        `High confidence match found (${highConfidenceMatch.confidence}%). Automatically merging with existing individual: ${highConfidenceMatch.name}`,
+        'High Confidence Match Found',
+        `We found a similar individual: ${highConfidenceMatch.name} (${highConfidenceMatch.confidence}% match). Merge this data?`,
         [
           { text: 'Cancel', style: 'cancel' },
           { 
@@ -65,12 +66,12 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
           }
         ]
       );
-    } else if (lowConfidenceMatch) {
-      // Show merge UI for low confidence matches
-      setSelectedMatch(lowConfidenceMatch);
+    } else if (mediumConfidenceMatch) {
+      // Full merge UI for 60-94% confidence
+      setSelectedMatch(mediumConfidenceMatch);
       setShowMergeUI(true);
     } else {
-      // No matches, save as new
+      // No meaningful match (< 60% or no matches), save as new
       onSave(categorizedData);
     }
   };
@@ -183,16 +184,20 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
             <View key={index} style={[
               styles.matchContainer,
               match.confidence >= 95 && styles.highConfidenceMatch,
-              match.confidence < 95 && styles.lowConfidenceMatch
+              match.confidence >= 60 && match.confidence < 95 && styles.mediumConfidenceMatch,
+              match.confidence < 60 && styles.lowConfidenceMatch
             ]}>
               <Text style={styles.matchName}>{match.name}</Text>
               <Text style={[
                 styles.matchConfidence,
                 match.confidence >= 95 && styles.highConfidenceText,
-                match.confidence < 95 && styles.lowConfidenceText
+                match.confidence >= 60 && match.confidence < 95 && styles.mediumConfidenceText,
+                match.confidence < 60 && styles.lowConfidenceText
               ]}>
                 {match.confidence}% match
-                {match.confidence >= 95 ? ' (Auto-merge)' : ' (Manual review)'}
+                {match.confidence >= 95 ? ' (Streamlined confirmation)' : 
+                 match.confidence >= 60 ? ' (Manual review)' : 
+                 ' (Too low - no merge UI)'}
               </Text>
             </View>
           ))}
@@ -299,15 +304,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#d4edda',
     borderLeftColor: '#28a745',
   },
-  lowConfidenceMatch: {
+  mediumConfidenceMatch: {
     backgroundColor: '#fff3cd',
     borderLeftColor: '#ffc107',
+  },
+  lowConfidenceMatch: {
+    backgroundColor: '#f8d7da',
+    borderLeftColor: '#dc3545',
   },
   highConfidenceText: {
     color: '#155724',
   },
-  lowConfidenceText: {
+  mediumConfidenceText: {
     color: '#856404',
+  },
+  lowConfidenceText: {
+    color: '#721c24',
   },
   buttonContainer: {
     flexDirection: 'row',
