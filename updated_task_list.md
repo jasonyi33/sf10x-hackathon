@@ -1,4 +1,5 @@
-# Tasks: Voice Transcription App for SF Homeless Outreach
+# Updated Tasks: Voice Transcription App for SF Homeless Outreach
+*Version 2.0 - With Backend Individual Management APIs*
 
 ## Relevant Files
 
@@ -11,6 +12,7 @@
 - `backend/api/categories.py` - Category management endpoints
 - `backend/services/openai_service.py` - OpenAI API integration (Whisper/GPT-4o)
 - `backend/services/danger_calculator.py` - Danger score calculation logic
+- `backend/services/individual_service.py` - Individual management business logic (NEW)
 - `backend/db/models.py` - Database models and schemas
 
 ### Frontend (React Native Expo)
@@ -44,6 +46,8 @@
 - Frontend tests use Jest: `npm test` 
 - Team split: Dev 1 (Backend), Dev 2 (Frontend Recording), Dev 3 (Frontend Data Management)
 - Railway deployment provides instant URL for API access
+- **Important Merge Logic**: Frontend sends complete merged data with `merge_with_id` field when merging individuals. Backend simply updates the existing record with the provided data (no merge logic in backend)
+- **Categories Snapshot**: Skip storing categories_snapshot with interactions for MVP - reduces complexity without affecting core functionality
 
 ## Tasks
 
@@ -53,15 +57,15 @@
   - [x] 1.3 Write and run initial schema migration from PRD (individuals, interactions, categories tables with all indexes)
   - [x] 1.4 Run preset categories migration with exact SQL from PRD:
     ```sql
-    INSERT INTO categories (name, type, is_required, is_preset, options) VALUES
-    ('name', 'text', true, true, null),
-    ('height', 'number', true, true, null),
-    ('weight', 'number', true, true, null),
-    ('skin_color', 'single_select', true, true, 
+    INSERT INTO categories (name, type, is_required, is_preset, priority, danger_weight, auto_trigger, options) VALUES
+    ('name', 'text', true, true, 'high', 0, false, null),
+    ('height', 'number', true, true, 'medium', 0, false, null),
+    ('weight', 'number', true, true, 'medium', 0, false, null),
+    ('skin_color', 'single_select', true, true, 'high', 0, false,
      '[{"label": "Light", "value": 0}, {"label": "Medium", "value": 0}, {"label": "Dark", "value": 0}]'::jsonb),
-    ('gender', 'single_select', false, true,
+    ('gender', 'single_select', false, true, 'medium', 0, false,
      '[{"label": "Male", "value": 0}, {"label": "Female", "value": 0}, {"label": "Other", "value": 0}, {"label": "Unknown", "value": 0}]'::jsonb),
-    ('substance_abuse_history', 'multi_select', false, true,
+    ('substance_abuse_history', 'multi_select', false, true, 'low', 0, false,
      '["None", "Mild", "Moderate", "Severe", "In Recovery"]'::jsonb);
     ```
   - [x] 1.5 Create demo user in Supabase Auth dashboard (demo@sfgov.org / demo123456)
@@ -70,9 +74,9 @@
   - [x] 1.8 Create basic CORS configuration allowing all origins for demo
   - [x] 1.9 Deploy to Railway.app and verify deployment with health check endpoint
 
-- [ ] 2.0 **[Dev 1]** Implement AI transcription and categorization services
-  - [ ] 2.1 Create OpenAI service with Whisper transcription supporting M4A format from Supabase URL
-  - [ ] 2.2 Implement GPT-4o categorization with exact prompt from PRD:
+- [x] 2.0 **[Dev 1]** Implement AI transcription and categorization services
+  - [x] 2.1 Create OpenAI service with Whisper transcription supporting M4A format from Supabase URL
+  - [x] 2.2 Implement GPT-4o categorization with exact prompt from PRD:
     ```
     Extract information from this transcription into these categories:
     {list of categories with types and required flags}
@@ -84,12 +88,12 @@
     
     Return JSON only.
     ```
-  - [ ] 2.3 Implement danger score calculator with exact formula:
+  - [x] 2.3 Implement danger score calculator with exact formula:
     - Auto-trigger: If field has non-zero/non-empty value AND auto_trigger=true, return 100
     - Otherwise: (numeric_value/300 * weight) for numbers, (option_value * weight) for single-select
     - Only number and single-select types can have danger weights
-  - [ ] 2.4 Create duplicate detection using LLM to compare all attributes, return confidence 0-100
-  - [ ] 2.5 Build `/api/transcribe` endpoint that returns complete results (no streaming):
+  - [x] 2.4 Create duplicate detection using LLM to compare all attributes, return confidence 0-100
+  - [x] 2.5 Build `/api/transcribe` endpoint that returns complete results (no streaming):
     ```json
     {
       "transcription": "...",
@@ -98,8 +102,46 @@
       "potential_matches": [{"id": "...", "confidence": 89, "name": "..."}]
     }
     ```
-  - [ ] 2.6 Add validation helper checking required fields and types (numbers 0-300, valid select options)
-  - [ ] 2.7 Write integration test for complete transcription flow verifying all steps work
+  - [x] 2.6 Add validation helper checking required fields and types (numbers 0-300, valid select options)
+  - [x] 2.7 Write integration test for complete transcription flow verifying all steps work
+
+- [ ] 2.15 **[Dev 1]** Implement individual management backend APIs (NEW - Critical for frontend)
+  - [ ] 2.15.1 Create data models in `db/models.py`:
+    - SaveIndividualRequest, IndividualResponse, DangerOverrideRequest
+    - LocationData (includes address string from frontend), InteractionResponse models
+  - [ ] 2.15.2 Create `services/individual_service.py` with helper functions:
+    - update_individual_with_merged_data() - Update individual with data merged by frontend
+    - get_changed_fields() - Track what changed between interactions
+    - save_individual() - Core save logic with transaction handling
+    - Frontend sends already-merged data with merge_with_id when applicable
+  - [ ] 2.15.3 Implement POST /api/individuals endpoint:
+    - Validate data using existing validation_helper
+    - Calculate danger score using danger_calculator
+    - When merge_with_id provided, update existing individual with frontend's merged data
+    - Create interaction record with changes only
+    - Store location with address string from frontend
+    - Note: Audio files auto-delete after 24 hours via Supabase lifecycle (no manual deletion after save)
+  - [ ] 2.15.4 Implement GET /api/individuals endpoint:
+    - Search across multiple fields (name and all JSONB data fields)
+    - Join with interactions for last_seen timestamp
+    - Return location data as provided by frontend
+    - Support sort by last_seen, danger_score, name
+  - [ ] 2.15.5 Implement GET /api/individuals/{id} endpoint:
+    - Return full individual data
+    - Include recent interactions summary
+    - Calculate display danger score (override or calculated)
+  - [ ] 2.15.6 Implement PUT /api/individuals/{id}/danger-override endpoint:
+    - Update danger_override field
+    - Return current scores for UI update
+  - [ ] 2.15.7 Implement GET /api/individuals/{id}/interactions endpoint:
+    - Return detailed interaction history
+    - Include location data with addresses as stored
+    - Show only changed fields per interaction
+    - Skip categories_snapshot for MVP
+  - [ ] 2.15.8 Write integration tests for individual management flow:
+    - Test save → search → update → history flow
+    - Test merge behavior (>= 95% shows streamlined confirmation)
+    - Test multi-field search functionality
 
 - [ ] 3.0 **[Dev 2]** Build recording interface and transcription flow (frontend)
   - [ ] 3.1 Initialize Expo project with TypeScript and dependencies (expo-av, react-native-maps, react-native-toast-message)
@@ -120,10 +162,14 @@
     - Required: Name (text), Height (number), Weight (number), Skin Color (dropdown)
     - Optional: All other fields including Gender, Substance Abuse History
     - Number inputs: keyboardType="numeric", max 300
-  - [ ] 3.7 Add location capture with Google Maps draggable pin
-  - [ ] 3.8 Build MergeUI component for duplicates (confidence < 95%):
-    - Side-by-side field comparison
-    - Merge/Create New/Cancel buttons
+  - [ ] 3.7 Add location capture with Google Maps draggable pin:
+    - Get coordinates from pin position
+    - Use Google Maps Geocoding to get address from coordinates
+    - Send both coordinates and address string to backend
+  - [ ] 3.8 Build MergeUI component for duplicates:
+    - For confidence >= 95%: Streamlined confirmation dialog ("High confidence match found. Merge?")
+    - For confidence < 95%: Full side-by-side field comparison UI (only show if LLM determines meaningful match)
+    - Both UIs have: Merge/Create New/Cancel buttons
   - [ ] 3.9 Create demo audio files with these scripts:
     - "Met John near Market Street. About 45 years old, 6 feet tall, maybe 180 pounds. Light skin. Shows signs of moderate substance abuse, been on streets 3 months. Needs diabetes medication."
     - "Sarah by the library, approximately 35, 5 foot 4, 120 pounds, dark skin. Says she's in recovery, looking for shelter. Has two children staying with relatives."
@@ -139,7 +185,7 @@
   - [ ] 4.2 Build SearchScreen with:
     - Search bar for name/keyword search
     - Results showing: Name, danger score with color, "Last seen: X days ago"
-    - Recent individuals section (last 10 viewed)
+    - Search results display
   - [ ] 4.3 Create IndividualProfileScreen displaying:
     - All current field values from aggregated data
     - Danger score with color background (green #10B981, yellow #F59E0B, red #EF4444)
@@ -158,6 +204,29 @@
     - Logout button (for switching demo accounts if needed)
   - [ ] 4.7 Add CSV export button triggering `/api/export` download
   - [ ] 4.8 Write integration test for search → profile → danger override flow
+
+- [ ] 4.5 **[Dev 2 & 3]** Frontend Integration Phase (NEW - Can start as soon as backend APIs are ready)
+  - [ ] 4.5.1 **[Dev 2]** Update transcription flow to save data:
+    - After transcription results shown, add "Save" button
+    - Include location data with address from Google Maps
+    - Call POST /api/individuals with categorized data + location
+    - Frontend shows streamlined confirmation at >= 95% confidence before sending
+    - Show merge UI only if confidence < 95%
+    - Show success toast after save
+  - [ ] 4.5.2 **[Dev 3]** Connect search screen to backend:
+    - Wire SearchScreen to GET /api/individuals
+    - Search queries multiple fields, not just name
+    - Implement pagination and loading states
+    - Handle empty states gracefully
+  - [ ] 4.5.3 **[Dev 3]** Connect profile screen to backend:
+    - Wire IndividualProfileScreen to GET /api/individuals/{id}
+    - Connect danger slider to PUT /api/individuals/{id}/danger-override
+    - Load interaction history from GET /api/individuals/{id}/interactions
+  - [ ] 4.5.4 **[Dev 2 & 3]** Test full integration flow:
+    - Record → Transcribe → Save → Search → View → Update
+    - Verify all data persists correctly
+    - Test offline error handling
+    - Note: Frontend teams can start integration as soon as Task 2.15 endpoints are deployed, even if UI isn't 100% complete
 
 - [ ] 5.0 **[Dev 2 & 3]** Implement category management and danger scoring (shared)
   - [ ] 5.1 **[Dev 3]** Build CategoriesScreen listing all categories with:
@@ -181,6 +250,9 @@
     - Last interaction date
     - Multi-select values comma-separated
   - [ ] 5.5 **[All]** Write integration test for category creation → use in recording → danger calculation
+  - [ ] 5.6 **[Dev 1]** Implement backend endpoints for Task 5:
+    - POST /api/categories - Create new category
+    - GET /api/export - Generate and download CSV file
 
 - [ ] 6.0 **[All]** Integration, testing, and demo preparation
   - [ ] 6.1 **[Dev 1]** Create demo data SQL with:
@@ -191,7 +263,7 @@
   - [ ] 6.2 **[Dev 2]** Test and fix voice recording flow ensuring:
     - 10-second minimum enforced
     - Required fields highlighted if missing from transcription
-    - Merge UI appears for close matches
+    - Full merge UI appears for matches with confidence <95%
   - [ ] 6.3 **[Dev 3]** Test search and profile features:
     - Search returns correct results
     - Danger override persists across sessions
@@ -209,3 +281,27 @@
     - Export CSV
   - [ ] 6.8 **[Dev 1]** Set up ngrok backup if Railway fails
   - [ ] 6.9 **[All]** Final demo run-through with handoffs
+
+## Key Changes in This Update
+
+### New Task 2.5 - Backend Individual Management APIs
+This is critical for frontend to function. Without these APIs:
+- Frontend can't save transcribed data
+- Search screen has no data to display
+- Profile screen can't load individuals
+
+### New Task 4.5 - Frontend Integration Phase
+Added explicit integration tasks to connect frontend to new backend APIs after they're ready. This ensures:
+- Clear handoff points between backend and frontend
+- Explicit testing of the integration
+- No assumptions about API behavior
+
+### Task 5.6 - Backend support for Task 5
+Added backend endpoints needed for category management and CSV export.
+
+## Critical Path
+
+1. **Dev 1 must complete Task 2.5 ASAP** - Frontend teams are blocked without these APIs
+2. **Frontend teams continue with UI development** - Can use mock data temporarily
+3. **Task 4.5 brings everything together** - Integration phase once APIs are ready
+4. **Task 5 can proceed in parallel** - Category management is somewhat independent
