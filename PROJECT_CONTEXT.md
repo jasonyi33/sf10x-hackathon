@@ -4,7 +4,9 @@
 
 ## 🚨 CRITICAL DEVELOPMENT PRINCIPLES
 
-### 1. ALWAYS ASK QUESTIONS IF AMBIGUOUS
+### 1. ALWAYS REFER TO PRD REQUIREMENTS
+- **HACKATHON CONTEXT**: Keep things simple - don't overcomplicate
+- Every decision must align with the PRD specifications
 - If any requirement is unclear, ask for clarification before proceeding
 - If there are multiple possible interpretations, ask which is correct
 - If implementation details are missing, ask for specific requirements
@@ -13,23 +15,33 @@
 ### 2. CHECK FOR CONFLICTING LOGIC
 - Before implementing any feature, verify it aligns with the PRD
 - Check that new code doesn't conflict with existing requirements
-- Ensure data structures match the defined schema
+- Ensure data structures match the defined schema exactly
 - Verify API endpoints follow the specified patterns
 - Confirm UI flows match the documented user stories
 
-### 3. TEST-DRIVEN DEVELOPMENT (TDD)
+### 3. TEST-DRIVEN DEVELOPMENT (TDD) - HACKATHON APPROACH
 - Write integration tests BEFORE implementing features
-- Focus on critical user flows, not unit tests for hackathon
+- **Focus on critical user flows only** - not comprehensive unit tests
 - Test main paths: recording → transcription → save, search → profile, category management
 - Use pytest for backend, Jest for frontend
 - Tests should verify end-to-end functionality
+- **Keep tests simple and functional** - avoid over-engineering
 
 ### 4. VALIDATE AGAINST PRD AND TASKS
 - Every code change must align with the PRD requirements
-- Check that implementation matches the task specifications
+- Check that implementation matches the task specifications exactly
 - Ensure no features are added that aren't in scope
 - Verify all required fields and validations are implemented
 - Confirm danger scoring follows the exact formula
+
+### 5. HACKATHON SIMPLIFICATION RULES
+- **Use the simplest solution that works**
+- **Avoid premature optimization**
+- **Focus on demo functionality over production polish**
+- **Use hardcoded values where appropriate for demo**
+- **Skip complex error handling for MVP**
+- **Prioritize working features over perfect code**
+- **Reference PRD requirements constantly**
 
 ---
 
@@ -235,7 +247,10 @@ GET    /api/export           - Generate CSV download
 
 ## 📝 IMPLEMENTATION TASKS
 
-### Dev 1 (Backend) - Hours 0-18
+### 🎯 YOUR ROLE: DEV 1 (Backend)
+**You are Dev 1 and should ONLY work on Dev 1 tasks. Do NOT implement Dev 2 or Dev 3 tasks.**
+
+### Dev 1 (Backend) - Hours 0-18 - **YOUR TASKS**
 - [ ] Set up FastAPI + Supabase + Railway deployment
 - [ ] Implement OpenAI Whisper transcription
 - [ ] Build GPT-4o categorization with exact prompt
@@ -244,7 +259,7 @@ GET    /api/export           - Generate CSV download
 - [ ] Build all API endpoints
 - [ ] Write integration tests
 
-### Dev 2 (Frontend Recording) - Hours 0-18
+### Dev 2 (Frontend Recording) - Hours 0-18 - **NOT YOUR TASKS**
 - [ ] Set up Expo with TypeScript
 - [ ] Build AudioRecorder with 2-minute limit
 - [ ] Implement manual entry form
@@ -253,7 +268,7 @@ GET    /api/export           - Generate CSV download
 - [ ] Add location capture
 - [ ] Write integration tests
 
-### Dev 3 (Frontend Data Management) - Hours 0-18
+### Dev 3 (Frontend Data Management) - Hours 0-18 - **NOT YOUR TASKS**
 - [ ] Set up tab navigation
 - [ ] Build SearchScreen
 - [ ] Create IndividualProfileScreen
@@ -262,7 +277,7 @@ GET    /api/export           - Generate CSV download
 - [ ] Add CSV export
 - [ ] Write integration tests
 
-### All - Hours 18-36
+### All - Hours 18-36 - **COLLABORATIVE TASKS**
 - [ ] Integration testing
 - [ ] Demo data creation
 - [ ] Bug fixes
