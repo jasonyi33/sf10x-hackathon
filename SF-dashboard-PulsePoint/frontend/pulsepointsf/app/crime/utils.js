@@ -44,35 +44,61 @@ export const formatDateTime = (datetimeString) => {
 };
 
 /**
- * Process crime data for category breakdown chart
- * @param {Array} sortedData - Array of crime incidents
- * @returns {Array} - Chart data array
+ * Process grouped category data for crime type overview chart
+ * @param {Object} categoryExplorerData - Grouped category data from processCategoryExplorerData
+ * @returns {Array} - Chart data array for 5 main crime types
  */
-export const processCategoryChartData = (sortedData) => {
-  if (!sortedData.length) return [];
+export const processCategoryGroupChartData = (categoryExplorerData) => {
+  if (!categoryExplorerData) return [];
 
-  console.log('🔍 Processing category data from', sortedData.length, 'incidents');
+  console.log('🔍 Processing category group data for crime type overview chart');
 
-  const categoryCounts = {};
-  sortedData.forEach(incident => {
-    const category = incident.incident_category || 'Unknown';
-    categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-  });
+  // Calculate total incidents for each group
+  const violentTotal = categoryExplorerData.violent.reduce((sum, crime) => sum + crime.count, 0);
+  const propertyTotal = categoryExplorerData.property.reduce((sum, crime) => sum + crime.count, 0);
+  const drugTotal = categoryExplorerData.drug.reduce((sum, crime) => sum + crime.count, 0);
+  const publicOrderTotal = categoryExplorerData.publicOrder.reduce((sum, crime) => sum + crime.count, 0);
+  const otherTotal = categoryExplorerData.other.reduce((sum, crime) => sum + crime.count, 0);
 
-  console.log('📊 Category counts:', JSON.stringify(categoryCounts, null, 2));
+  // Calculate total for percentages
+  const grandTotal = violentTotal + propertyTotal + drugTotal + publicOrderTotal + otherTotal;
 
-  const chartData = Object.entries(categoryCounts)
-    .map(([category, count]) => ({
-      category: category.length > 15 ? category.substring(0, 15) + '...' : category,
-      fullCategory: category,
-      count: Number(count),
-      percentage: ((count / sortedData.length) * 100).toFixed(1),
-      fill: getCategoryColor(category)
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10); // Top 10 categories
+  // Create chart data with consistent colors matching CategoryExplorer
+  const chartData = [
+    {
+      category: 'Violent Crimes',
+      count: violentTotal,
+      percentage: grandTotal > 0 ? ((violentTotal / grandTotal) * 100).toFixed(1) : '0.0',
+      fill: '#dc2626' // Red
+    },
+    {
+      category: 'Property Crimes',
+      count: propertyTotal,
+      percentage: grandTotal > 0 ? ((propertyTotal / grandTotal) * 100).toFixed(1) : '0.0',
+      fill: '#d97706' // Orange
+    },
+    {
+      category: 'Drug Offenses',
+      count: drugTotal,
+      percentage: grandTotal > 0 ? ((drugTotal / grandTotal) * 100).toFixed(1) : '0.0',
+      fill: '#0284c7' // Blue
+    },
+    {
+      category: 'Public Order',
+      count: publicOrderTotal,
+      percentage: grandTotal > 0 ? ((publicOrderTotal / grandTotal) * 100).toFixed(1) : '0.0',
+      fill: '#7c3aed' // Purple
+    },
+    {
+      category: 'Other',
+      count: otherTotal,
+      percentage: grandTotal > 0 ? ((otherTotal / grandTotal) * 100).toFixed(1) : '0.0',
+      fill: '#4b5563' // Gray
+    }
+  ].filter(item => item.count > 0) // Only include groups with incidents
+   .sort((a, b) => b.count - a.count); // Sort by count descending
 
-  console.log('📈 Final chart data with values:', JSON.stringify(chartData, null, 2));
+  console.log('📈 Crime type overview chart data:', JSON.stringify(chartData, null, 2));
   return chartData;
 };
 

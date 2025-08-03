@@ -24,7 +24,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 // Import modular components and utilities
 import { API_QUERY, INITIAL_VISIBLE_ITEMS, ITEMS_PER_LOAD, SCROLL_THRESHOLD } from './constants.js';
 import {
-  processCategoryChartData,
+  processCategoryGroupChartData,
   processTimeChartData,
   processDayOfWeekChartData,
   processResolutionChartData,
@@ -163,8 +163,11 @@ export default function CrimeDataDashboard() {
   // CHART DATA PROCESSING (using modular utilities)
   // ================================================================================
 
-  const categoryChartData = useMemo(() =>
-    processCategoryChartData(sortedData), [sortedData]);
+  const categoryExplorerData = useMemo(() =>
+    processCategoryExplorerData(sortedData), [sortedData]);
+
+  const categoryGroupChartData = useMemo(() =>
+    processCategoryGroupChartData(categoryExplorerData), [categoryExplorerData]);
 
   const timeChartData = useMemo(() =>
     processTimeChartData(sortedData), [sortedData]);
@@ -174,9 +177,6 @@ export default function CrimeDataDashboard() {
 
   const resolutionChartData = useMemo(() =>
     processResolutionChartData(sortedData), [sortedData]);
-
-  const categoryExplorerData = useMemo(() =>
-    processCategoryExplorerData(sortedData), [sortedData]);
 
   // ================================================================================
   // EVENT HANDLERS
@@ -391,7 +391,7 @@ export default function CrimeDataDashboard() {
 
         {/* Charts Section Component */}
         <ChartsSection
-          categoryChartData={categoryChartData}
+          categoryGroupChartData={categoryGroupChartData}
           timeChartData={timeChartData}
           dayOfWeekChartData={dayOfWeekChartData}
           resolutionChartData={resolutionChartData}

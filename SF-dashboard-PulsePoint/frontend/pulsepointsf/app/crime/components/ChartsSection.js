@@ -24,7 +24,7 @@ import {
 } from 'recharts';
 
 const ChartsSection = ({
-  categoryChartData,
+  categoryGroupChartData,
   timeChartData,
   dayOfWeekChartData,
   resolutionChartData
@@ -50,13 +50,14 @@ const ChartsSection = ({
         gap: '2rem',
         marginBottom: '2rem'
       }}>
-        {/* Crime Category Breakdown Chart */}
+        {/* Crime Type Overview Chart - Side-by-Side Bar & Pie */}
         <div style={{
           backgroundColor: '#ffffff',
           border: '1px solid #e5e7eb',
           borderRadius: '12px',
           padding: '1.5rem',
-          boxShadow: '0 2px 4px 0 rgba(0, 0, 0, 0.05)'
+          boxShadow: '0 2px 4px 0 rgba(0, 0, 0, 0.05)',
+          gridColumn: '1 / -1' // Span full width for side-by-side layout
         }}>
           <h3 style={{
             fontSize: '1.125rem',
@@ -65,47 +66,100 @@ const ChartsSection = ({
             marginBottom: '1rem',
             textAlign: 'center'
           }}>
-            🏷️ Incidents by Category
+            📊 Incidents by Crime Type
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              data={categoryChartData}
-              layout="horizontal"
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-              <XAxis
-                type="number"
-                stroke="#6b7280"
-                fontSize={12}
-              />
-              <YAxis
-                type="category"
-                dataKey="category"
-                stroke="#6b7280"
-                fontSize={11}
-                width={100}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#1f2937',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '0.875rem'
-                }}
-                formatter={(value, name, props) => [
-                  `${value} incidents (${props.payload.percentage}%)`,
-                  props.payload.fullCategory
-                ]}
-              />
-              <Bar
-                dataKey="count"
-                fill="#3b82f6"
-                radius={[0, 4, 4, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+
+          {/* Side-by-side charts container */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '1rem'
+          }}>
+            {/* Bar Chart - Primary */}
+            <div>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={categoryGroupChartData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 40 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis
+                    dataKey="category"
+                    stroke="#6b7280"
+                    fontSize={10}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis
+                    stroke="#6b7280"
+                    fontSize={11}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1f2937',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontSize: '0.875rem'
+                    }}
+                    formatter={(value, name, props) => [
+                      `${value} incidents (${props.payload.percentage}%)`,
+                      props.payload.category
+                    ]}
+                  />
+                  <Bar
+                    dataKey="count"
+                    radius={[4, 4, 0, 0]}
+                  >
+                    {categoryGroupChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Pie Chart - Secondary */}
+            <div>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={categoryGroupChartData.map(item => ({
+                      ...item,
+                      name: item.category,
+                      value: item.count
+                    }))}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    innerRadius={40}
+                    paddingAngle={2}
+                    dataKey="value"
+                    label={({ percentage }) => `${percentage}%`}
+                    labelLine={false}
+                  >
+                    {categoryGroupChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1f2937',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: 'white',
+                      fontSize: '0.875rem'
+                    }}
+                    formatter={(value, name, props) => [
+                      `${value} incidents (${props.payload.percentage}%)`,
+                      props.payload.category
+                    ]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
 
         {/* Time Distribution Chart */}

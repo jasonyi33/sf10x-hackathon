@@ -4,12 +4,29 @@
  * ==================================================================================
  *
  * Comprehensive crime category explorer with grouping and detailed stats
+ * Enhanced with mini bar charts for each category group
  */
 
 import React from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  Tooltip
+} from 'recharts';
 
 const CategoryGroup = ({ title, icon, categories, color, bgColor, borderColor }) => {
   if (categories.length === 0) return null;
+
+  // Prepare chart data from categories
+  const chartData = categories.map(category => ({
+    name: category.name.length > 15 ? category.name.substring(0, 15) + '...' : category.name,
+    fullName: category.name,
+    count: category.count,
+    percentage: category.percentage
+  }));
 
   return (
     <div style={{
@@ -29,6 +46,62 @@ const CategoryGroup = ({ title, icon, categories, color, bgColor, borderColor })
       }}>
         {icon} {title} ({categories.length})
       </h3>
+
+      {/* Mini Bar Chart */}
+      <div style={{
+        backgroundColor: '#ffffff',
+        borderRadius: '6px',
+        padding: '0.75rem',
+        marginBottom: '1rem',
+        border: '1px solid #f3f4f6'
+      }}>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart
+            data={chartData}
+            margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+          >
+            <XAxis
+              dataKey="name"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: '#6b7280' }}
+              interval={0}
+              angle={-45}
+              textAnchor="end"
+              height={60}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: '#6b7280' }}
+              width={30}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#1f2937',
+                border: 'none',
+                borderRadius: '6px',
+                color: 'white',
+                fontSize: '0.75rem',
+                padding: '0.5rem'
+              }}
+              formatter={(value, name, props) => [
+                `${value} incidents (${props.payload.percentage}%)`,
+                props.payload.fullName
+              ]}
+              labelStyle={{ display: 'none' }}
+            />
+            <Bar
+              dataKey="count"
+              fill={color}
+              radius={[2, 2, 0, 0]}
+              opacity={0.8}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Category Details List */}
       <div style={{
         display: 'flex',
         flexDirection: 'column',
