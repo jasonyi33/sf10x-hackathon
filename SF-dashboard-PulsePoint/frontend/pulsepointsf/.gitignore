@@ -84,3 +84,17 @@ pids
 
 # Yarn Integrity file
 .yarn-integrity
+
+# MotherDuck Related (when enabled)
+*.duckdb
+*.duckdb.wal
+motherduck-logs/
+motherduck-cache/
+motherduck-temp/
+
+# Next.js specific
+.next/
+next-env.d.ts
+
+# Turbopack cache
+.turbo/
