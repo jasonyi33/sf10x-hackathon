@@ -9,6 +9,10 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# Debug: Check if environment variables are loaded
+api_key = os.getenv("OPENAI_API_KEY")
+print(f"🔑 Main.py - API Key loaded: {api_key[:20] if api_key else 'None'}...")
+
 app = FastAPI(title="SF Homeless Outreach API", version="0.1.0")
 
 # CORS configuration for hackathon demo

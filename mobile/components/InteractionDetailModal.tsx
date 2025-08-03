@@ -34,10 +34,25 @@ export default function InteractionDetailModal({
     });
   };
 
-  const formatLocation = (location?: { lat: number; lng: number }) => {
-    if (!location) return 'Location not available';
-    return `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+  const getLocationDisplay = () => {
+    if (!interaction.location) return 'Location not available';
+    
+    const { latitude, longitude, address } = interaction.location;
+    if (address) return address;
+    return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
   };
+
+  const getChangesDisplay = () => {
+    if (!interaction.changes || Object.keys(interaction.changes).length === 0) {
+      return 'No data changes recorded';
+    }
+    
+    return Object.entries(interaction.changes)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n');
+  };
+
+
 
   const handleShare = () => {
     // Mock share functionality
@@ -76,13 +91,15 @@ export default function InteractionDetailModal({
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.label}>Worker:</Text>
-                <Text style={styles.value}>{interaction.worker_name || 'Not specified'}</Text>
+                <Text style={styles.value}>{interaction.user_name || 'Not specified'}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.label}>Location:</Text>
-                <Text style={styles.value}>{interaction.abbreviated_address || formatLocation(interaction.location)}</Text>
+                <Text style={styles.value}>{getLocationDisplay()}</Text>
               </View>
             </View>
+
+
 
             {/* Transcription */}
             {interaction.transcription && (
@@ -94,27 +111,13 @@ export default function InteractionDetailModal({
               </View>
             )}
 
-            {/* Additional Data */}
-            {Object.keys(interaction.data).length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Additional Data</Text>
-                {Object.entries(interaction.data).map(([key, value]) => (
-                  <View key={key} style={styles.infoRow}>
-                    <Text style={styles.label}>
-                      {key.split('_').map(word => 
-                        word.charAt(0).toUpperCase() + word.slice(1)
-                      ).join(' ')}:
-                    </Text>
-                    <Text style={styles.value}>
-                      {typeof value === 'boolean' 
-                        ? (value ? 'Yes' : 'No')
-                        : String(value)
-                      }
-                    </Text>
-                  </View>
-                ))}
+            {/* Data Changes */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Data Changes</Text>
+              <View style={styles.changesContainer}>
+                <Text style={styles.changesText}>{getChangesDisplay()}</Text>
               </View>
-            )}
+            </View>
 
             {/* Actions */}
             <View style={styles.section}>
@@ -216,6 +219,19 @@ const styles = StyleSheet.create({
     borderLeftColor: '#007AFF',
   },
   transcriptionText: {
+    fontSize: 16,
+    color: '#111827',
+    lineHeight: 24,
+  },
+
+  changesContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10B981',
+  },
+  changesText: {
     fontSize: 16,
     color: '#111827',
     lineHeight: 24,

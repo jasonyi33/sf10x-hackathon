@@ -296,7 +296,7 @@ export default function CategoriesScreen() {
                 <Text style={styles.requiredBadge}>Required</Text>
               )}
               {(category.type === 'number' || category.type === 'single-select') && category.danger_weight !== undefined && (
-                <Text style={styles.dangerWeightBadge}>Danger: {category.danger_weight}</Text>
+                <Text style={styles.dangerWeightBadge}>Urgency: {category.danger_weight}</Text>
               )}
             </View>
             <TouchableOpacity
@@ -343,13 +343,13 @@ export default function CategoriesScreen() {
         
         {(newCategoryType === 'number' || newCategoryType === 'single-select') && (
           <View style={styles.dangerWeightContainer}>
-            <Text style={styles.dangerWeightLabel}>Danger Weight: {newCategoryDangerWeight}</Text>
+                          <Text style={styles.dangerWeightLabel}>Urgency Weight: {newCategoryDangerWeight}</Text>
             <TouchableOpacity 
               style={[styles.autoTriggerButton, newCategoryAutoTrigger && styles.autoTriggerButtonActive]}
               onPress={() => setNewCategoryAutoTrigger(!newCategoryAutoTrigger)}
             >
               <Text style={styles.autoTriggerText}>
-                Auto-Trigger Danger: {newCategoryAutoTrigger ? 'ON' : 'OFF'}
+                Auto-Trigger Urgency: {newCategoryAutoTrigger ? 'ON' : 'OFF'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -364,13 +364,50 @@ export default function CategoriesScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Legal/Data Violation Protection */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>⚠️ Legal & Data Protection</Text>
+        <View style={styles.warningContainer}>
+          <Text style={styles.warningTitle}>Prohibited Categories</Text>
+          <Text style={styles.warningText}>
+            Do not add categories pertaining to sensitive data. This includes:
+          </Text>
+          <View style={styles.prohibitedList}>
+            <Text style={styles.prohibitedItem}>• Medical history</Text>
+            <Text style={styles.prohibitedItem}>• Criminal history</Text>
+            <Text style={styles.prohibitedItem}>• Race or ethnicity</Text>
+            <Text style={styles.prohibitedItem}>• Immigration status</Text>
+            <Text style={styles.prohibitedItem}>• Financial information</Text>
+            <Text style={styles.prohibitedItem}>• Social security numbers</Text>
+            <Text style={styles.prohibitedItem}>• Any profiling characteristics</Text>
+          </View>
+          
+          <Text style={styles.warningTitle}>✅ Accepted Categories</Text>
+          <Text style={styles.warningText}>
+            Safe categories include:
+          </Text>
+          <View style={styles.acceptedList}>
+            <Text style={styles.acceptedItem}>• Height and weight estimates</Text>
+            <Text style={styles.acceptedItem}>• Clothing descriptions</Text>
+            <Text style={styles.acceptedItem}>• Behavior observations</Text>
+            <Text style={styles.acceptedItem}>• Location patterns</Text>
+            <Text style={styles.acceptedItem}>• Housing preferences</Text>
+            <Text style={styles.acceptedItem}>• Service needs</Text>
+          </View>
+          
+          <Text style={styles.warningNote}>
+            When in doubt, focus on narrative-based interaction details rather than personal identifiers.
+          </Text>
+        </View>
+      </View>
+
       {/* Export Info */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Export Information</Text>
         <Text style={styles.infoText}>
           • CSV includes all individuals in the database{'\n'}
           • All active categories are included as columns{'\n'}
-          • Danger scores and last interaction dates included{'\n'}
+                      • Urgency scores and last interaction dates included{'\n'}
           • Multi-select values are comma-separated{'\n'}
           • File is named with current date and time
         </Text>
@@ -589,5 +626,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     lineHeight: 20,
+  },
+  warningContainer: {
+    backgroundColor: '#FEF3C7',
+    padding: 16,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F59E0B',
+  },
+  warningTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#92400E',
+    marginBottom: 8,
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#92400E',
+    marginBottom: 8,
+  },
+  prohibitedList: {
+    marginBottom: 16,
+  },
+  prohibitedItem: {
+    fontSize: 14,
+    color: '#DC2626',
+    marginBottom: 2,
+  },
+  acceptedList: {
+    marginBottom: 16,
+  },
+  acceptedItem: {
+    fontSize: 14,
+    color: '#059669',
+    marginBottom: 2,
+  },
+  warningNote: {
+    fontSize: 12,
+    color: '#92400E',
+    fontStyle: 'italic',
+    marginTop: 8,
   },
 }); 

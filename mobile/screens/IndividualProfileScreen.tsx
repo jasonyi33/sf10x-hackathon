@@ -3,27 +3,26 @@ import {
   View,
   Text,
   ScrollView,
-  FlatList,
   StyleSheet,
   ActivityIndicator,
   Alert,
   RefreshControl,
 } from 'react-native';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { IndividualProfile, IndividualProfileScreenProps } from '../types';
 import { api } from '../services/api';
-import { getDangerScoreColor, getDisplayDangerScore } from '../utils/dangerScore';
-import FieldDisplay from '../components/FieldDisplay';
-import InteractionHistoryItem from '../components/InteractionHistoryItem';
-import DangerScore from '../components/DangerScore';
-import InteractionDetailModal from '../components/InteractionDetailModal';
+import { getUrgencyScoreColor, getDisplayUrgencyScore } from '../utils/urgencyScore';
+import UrgencyScore from '../components/UrgencyScore';
+import CurrentInformationTab from '../components/CurrentInformationTab';
+import PreviousInteractionsTab from '../components/PreviousInteractionsTab';
+
+const Tab = createMaterialTopTabNavigator();
 
 export default function IndividualProfileScreen({ navigation, route }: any) {
   // State variables to store data
   const [profile, setProfile] = useState<IndividualProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedInteraction, setSelectedInteraction] = useState<any>(null);
-  const [modalVisible, setModalVisible] = useState(false);
 
   // Get the individual ID from the route parameters
   const { individualId } = route.params;
@@ -60,71 +59,35 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
     setIsRefreshing(false);
   };
 
-  // Function to handle interaction item press
-  const handleInteractionPress = (interaction: any) => {
-    setSelectedInteraction(interaction);
-    setModalVisible(true);
-  };
 
-  // Function to close the modal
-  const handleCloseModal = () => {
-    setModalVisible(false);
-    setSelectedInteraction(null);
-  };
 
-  // Function to handle danger override change
-  const handleDangerOverrideChange = async (overrideValue: number | null) => {
+  // Function to handle urgency override change
+  const handleUrgencyOverrideChange = async (overrideValue: number | null) => {
     if (!profile) return;
     
     // Immediately update local state for instant UI feedback
     const updatedProfile = {
       ...profile,
-      danger_override: overrideValue,
+      urgency_override: overrideValue,
     };
     setProfile(updatedProfile);
     
     try {
-      const success = await api.updateDangerOverride(profile.id, overrideValue);
+      const success = await api.updateUrgencyOverride(profile.id, overrideValue);
       if (!success) {
         // Revert the change if the API call failed
         setProfile(profile);
-        Alert.alert('Error', 'Failed to update danger override');
+        Alert.alert('Error', 'Failed to update urgency override');
       }
     } catch (error) {
       // Revert the change if there was an error
       setProfile(profile);
-      console.error('Error updating danger override:', error);
-      Alert.alert('Error', 'Failed to update danger override');
+      console.error('Error updating urgency override:', error);
+      Alert.alert('Error', 'Failed to update urgency override');
     }
   };
 
-  // Function to render a field display
-  const renderField = (key: string, value: any, isRequired: boolean = false) => {
-    // Skip certain fields that are handled separately
-    if (key === 'name') return null;
-    
-    // Format the field label (convert snake_case to Title Case)
-    const label = key.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-    
-    return (
-      <FieldDisplay
-        key={key}
-        label={label}
-        value={value}
-        isRequired={isRequired}
-      />
-    );
-  };
 
-  // Function to render interaction history item
-  const renderInteractionItem = ({ item }: { item: any }) => (
-    <InteractionHistoryItem
-      interaction={item}
-      onPress={handleInteractionPress}
-    />
-  );
 
   // Show loading spinner while data is being fetched
   if (isLoading) {
@@ -145,69 +108,47 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
     );
   }
 
-  // Calculate the display danger score
-  const displayScore = getDisplayDangerScore(profile);
-  const scoreColor = getDangerScoreColor(displayScore);
+  // Calculate the display urgency score
+  const displayScore = getDisplayUrgencyScore(profile);
+  const scoreColor = getUrgencyScoreColor(displayScore);
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
-        }
+      {/* Header Section */}
+      <View style={styles.header}>
+        <Text style={styles.name}>{profile.name}</Text>
+        
+        {/* Urgency Score Component */}
+        <UrgencyScore
+          individual={profile}
+          onOverrideChange={handleUrgencyOverrideChange}
+          showSlider={true}
+        />
+      </View>
+
+      {/* Tab Navigation */}
+      <Tab.Navigator
+        screenOptions={{
+          tabBarStyle: styles.tabBar,
+          tabBarLabelStyle: styles.tabLabel,
+          tabBarIndicatorStyle: styles.tabIndicator,
+          tabBarActiveTintColor: '#007AFF',
+          tabBarInactiveTintColor: '#6B7280',
+        }}
       >
-        {/* Header Section */}
-        <View style={styles.header}>
-          <Text style={styles.name}>{profile.name}</Text>
-          
-          {/* Danger Score Component */}
-          <DangerScore
-            individual={profile}
-            onOverrideChange={handleDangerOverrideChange}
-            showSlider={true}
-          />
-        </View>
-
-        {/* Current Data Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Current Information</Text>
-          <View style={styles.fieldsContainer}>
-            {/* Render all data fields */}
-            {Object.entries(profile.data).map(([key, value]) => 
-              renderField(key, value, key === 'name' || key === 'height' || key === 'weight' || key === 'skin_color')
-            )}
-          </View>
-        </View>
-
-        {/* Interaction History Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Interaction History</Text>
-            <Text style={styles.interactionCount}>
-              {profile.total_interactions} interaction{profile.total_interactions !== 1 ? 's' : ''}
-            </Text>
-          </View>
-          
-          {profile.interactions.length > 0 ? (
-            <FlatList
-              data={profile.interactions}
-              renderItem={renderInteractionItem}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false} // Let the parent ScrollView handle scrolling
-              showsVerticalScrollIndicator={false}
-            />
-          ) : (
-            <Text style={styles.noInteractions}>No interactions recorded</Text>
-          )}
-        </View>
-      </ScrollView>
-
-      {/* Interaction Detail Modal */}
-      <InteractionDetailModal
-        visible={modalVisible}
-        interaction={selectedInteraction}
-        onClose={handleCloseModal}
-      />
+        <Tab.Screen
+          name="CurrentInformation"
+          component={CurrentInformationTab}
+          options={{ tabBarLabel: 'Current Information' }}
+          initialParams={{ profile }}
+        />
+        <Tab.Screen
+          name="PreviousInteractions"
+          component={PreviousInteractionsTab}
+          options={{ tabBarLabel: 'Previous Interactions' }}
+          initialParams={{ profile }}
+        />
+      </Tab.Navigator>
     </View>
   );
 }
@@ -281,5 +222,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#6B7280',
     fontSize: 16,
+  },
+  tabBar: {
+    backgroundColor: '#fff',
+    elevation: 0,
+    shadowOpacity: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  tabLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    textTransform: 'none',
+  },
+  tabIndicator: {
+    backgroundColor: '#007AFF',
+    height: 3,
   },
 }); 

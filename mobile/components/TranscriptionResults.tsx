@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert 
 import Toast from 'react-native-toast-message';
 import { TranscriptionResult, api } from '../services/api';
 import { MergeUI } from './MergeUI';
+import PhotoUploadModal from './PhotoUploadModal';
 
 interface TranscriptionResultsProps {
   result: TranscriptionResult;
@@ -23,6 +24,8 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
     confidence: number;
     name: string;
   } | null>(null);
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false);
+  const [uploadedPhotoUri, setUploadedPhotoUri] = useState<string | null>(null);
 
   const handleFieldChange = (fieldName: string, value: any) => {
     setCategorizedData(prev => ({
@@ -34,6 +37,83 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
+    // Show photo upload modal first
+    setShowPhotoUpload(true);
+  };
+
+  const handleMerge = async (mergedData: Record<string, any>) => {
+    try {
+      // Include transcription and location data for interaction record
+      const dataWithContext = {
+        ...mergedData,
+        transcription: result.transcription,
+        location: result.location,
+      };
+      await api.saveIndividual(dataWithContext);
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Data merged successfully!'
+      });
+      setShowMergeUI(false);
+      setSelectedMatch(null);
+      onSave(dataWithContext);
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message
+      });
+    }
+  };
+
+  const handleCreateNew = async (data: Record<string, any>) => {
+    try {
+      // Include transcription and location data for interaction record
+      const dataWithContext = {
+        ...data,
+        transcription: result.transcription,
+        location: result.location,
+      };
+      await api.saveIndividual(dataWithContext);
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'New individual created successfully!'
+      });
+      setShowMergeUI(false);
+      setSelectedMatch(null);
+      onSave(dataWithContext);
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message
+      });
+    }
+  };
+
+  const handleMergeCancel = () => {
+    setShowMergeUI(false);
+    setSelectedMatch(null);
+  };
+
+  const handlePhotoUploaded = (photoUri: string | null) => {
+    setUploadedPhotoUri(photoUri);
+    setShowPhotoUpload(false);
+    
+    // Continue with the save process after photo upload
+    if (photoUri) {
+      console.log('📸 Photo uploaded:', photoUri);
+    } else {
+      console.log('📸 No photo uploaded');
+    }
+    
+    // Proceed with the original save logic
+    proceedWithSave();
+  };
+
+  const proceedWithSave = async () => {
     if (isSaving) return;
     
     // Validate required fields
@@ -58,107 +138,98 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
       const mediumConfidenceMatch = result.potential_matches?.find(match => match.confidence >= 60 && match.confidence < 95);
       const lowConfidenceMatch = result.potential_matches?.find(match => match.confidence < 60);
 
-      if (highConfidenceMatch) {
-        // Streamlined confirmation for >= 95% confidence
-        Alert.alert(
-          'High Confidence Match Found',
-          `We found a similar individual: ${highConfidenceMatch.name} (${highConfidenceMatch.confidence}% match). Merge this data?`,
-          [
-            { text: 'Cancel', style: 'cancel', onPress: () => setIsSaving(false) },
-            { 
-              text: 'Merge', 
-              onPress: async () => {
-                try {
-                  const mergedData = { 
-                    ...categorizedData, 
-                    existing_individual_id: highConfidenceMatch.id 
-                  };
-                  await api.saveIndividual(mergedData);
-                  Toast.show({
-                    type: 'success',
-                    text1: 'Success',
-                    text2: 'Data merged successfully!'
-                  });
-                  onSave(mergedData);
-                } catch (error) {
-                  Alert.alert('Error', error.message);
-                  setIsSaving(false);
+      // Photo matching logic
+      if (uploadedPhotoUri && (highConfidenceMatch || mediumConfidenceMatch)) {
+        const matchToCheck = highConfidenceMatch || mediumConfidenceMatch;
+        
+        // Check if the matched individual already has a photo
+        const matchedIndividual = await api.getIndividualProfile(matchToCheck.id);
+        
+        if (matchedIndividual?.photo_url) {
+          // Show photo comparison dialog
+          Alert.alert(
+            'Photo Comparison',
+            `The matched individual (${matchToCheck.name}) already has a photo. Would you like to compare photos to verify it's the same person?`,
+            [
+              { text: 'Skip Photo Check', style: 'cancel', onPress: () => proceedWithMatch(matchToCheck) },
+              { 
+                text: 'Compare Photos', 
+                onPress: () => {
+                  // TODO: Implement photo comparison UI
+                  Alert.alert(
+                    'Photo Comparison',
+                    'Photo comparison feature will be implemented in the next version. Proceeding with match.',
+                    [{ text: 'OK', onPress: () => proceedWithMatch(matchToCheck) }]
+                  );
                 }
               }
-            }
-          ]
-        );
-        return;
+            ]
+          );
+          return;
+        } else {
+          // No existing photo, allow street team to evaluate
+          Alert.alert(
+            'Photo Evaluation',
+            `The matched individual (${matchToCheck.name}) doesn't have a photo. You can upload this photo to help with future identification.`,
+            [
+              { text: 'Skip Photo', style: 'cancel', onPress: () => proceedWithMatch(matchToCheck) },
+              { 
+                text: 'Upload Photo', 
+                onPress: () => proceedWithMatch(matchToCheck, uploadedPhotoUri)
+              }
+            ]
+          );
+          return;
+        }
+      }
+
+      // No photo or no match, proceed normally
+      if (highConfidenceMatch) {
+        proceedWithMatch(highConfidenceMatch);
       } else if (mediumConfidenceMatch) {
-        // Full merge UI for 60-94% confidence
         setSelectedMatch(mediumConfidenceMatch);
         setShowMergeUI(true);
         setIsSaving(false);
-        return;
       } else {
-        // No meaningful match (< 60% or no matches), save as new
+        // No meaningful match, save as new
         const saveData = {
           ...categorizedData,
-          // Add any additional context data here if needed
+          transcription: result.transcription,
+          location: result.location,
+          photo_uri: uploadedPhotoUri
         };
         await api.saveIndividual(saveData);
         Toast.show({
           type: 'success',
           text1: 'Success',
-          text2: 'Data saved successfully!'
+          text2: 'New individual saved successfully!'
         });
         onSave(saveData);
       }
     } catch (error) {
       Alert.alert('Error', error.message);
-    } finally {
       setIsSaving(false);
     }
   };
 
-  const handleMerge = async (mergedData: Record<string, any>) => {
+  const proceedWithMatch = async (match: any, photoUri?: string | null) => {
     try {
+      const mergedData = { 
+        ...categorizedData, 
+        existing_individual_id: match.id,
+        photo_uri: photoUri || uploadedPhotoUri
+      };
       await api.saveIndividual(mergedData);
       Toast.show({
         type: 'success',
         text1: 'Success',
         text2: 'Data merged successfully!'
       });
-      setShowMergeUI(false);
-      setSelectedMatch(null);
       onSave(mergedData);
     } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: error.message
-      });
+      Alert.alert('Error', error.message);
+      setIsSaving(false);
     }
-  };
-
-  const handleCreateNew = async (data: Record<string, any>) => {
-    try {
-      await api.saveIndividual(data);
-      Toast.show({
-        type: 'success',
-        text1: 'Success',
-        text2: 'New individual created successfully!'
-      });
-      setShowMergeUI(false);
-      setSelectedMatch(null);
-      onSave(data);
-    } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: error.message
-      });
-    }
-  };
-
-  const handleMergeCancel = () => {
-    setShowMergeUI(false);
-    setSelectedMatch(null);
   };
 
   const isFieldRequired = (fieldName: string) => {
@@ -287,6 +358,13 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Photo Upload Modal */}
+      <PhotoUploadModal
+        visible={showPhotoUpload}
+        onClose={() => setShowPhotoUpload(false)}
+        onPhotoUploaded={handlePhotoUploaded}
+      />
     </ScrollView>
   );
 };

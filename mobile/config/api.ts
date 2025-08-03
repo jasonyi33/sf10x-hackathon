@@ -3,7 +3,7 @@
 
 export const API_CONFIG = {
   // Backend API URL - using your computer's IP for iOS simulator
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.1.198:8001',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.15.85:8001',
   
   // Enable real API calls (set to true to use real transcription)
   USE_REAL_API: true, // Set to true to use real transcription

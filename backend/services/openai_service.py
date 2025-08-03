@@ -13,7 +13,9 @@ from urllib.parse import urlparse
 
 class OpenAIService:
     def __init__(self):
-        self.client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        api_key = os.getenv("OPENAI_API_KEY")
+        print(f"🔑 API Key loaded: {api_key[:20]}..." if api_key else "❌ No API key found")
+        self.client = AsyncOpenAI(api_key=api_key)
         
     async def transcribe_audio(self, audio_url: str) -> str:
         """

@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { SearchResult } from '../types';
-import { getDangerScoreColor, getDisplayDangerScore, calculateDaysAgo } from '../utils/dangerScore';
-import DangerScore from './DangerScore';
+import { getUrgencyScoreColor, getDisplayUrgencyScore, calculateDaysAgo } from '../utils/urgencyScore';
+import UrgencyScore from './UrgencyScore';
 
 interface SearchResultItemProps {
   result: SearchResult;
@@ -15,16 +15,28 @@ export default function SearchResultItem({ result, onPress }: SearchResultItemPr
   return (
     <TouchableOpacity style={styles.container} onPress={() => onPress(result)}>
       <View style={styles.content}>
-        <Text style={styles.name}>{result.name}</Text>
+        <View style={styles.header}>
+          {result.photo_url && (
+            <Image source={{ uri: result.photo_url }} style={styles.photo} />
+          )}
+          <View style={styles.nameContainer}>
+            <Text style={styles.name}>{result.name}</Text>
+            <Text style={styles.lastSeen}>
+              Last seen: {daysAgo} {daysAgo === 1 ? 'day' : 'days'} ago
+            </Text>
+            {result.data?.last_location?.address && (
+              <Text style={styles.location}>
+                📍 {result.data.last_location.address}
+              </Text>
+            )}
+          </View>
+        </View>
         <View style={styles.details}>
-          <DangerScore
+          <UrgencyScore
             individual={result}
             onOverrideChange={() => {}} // No override in search results
             showSlider={false}
           />
-          <Text style={styles.lastSeen}>
-            Last seen: {daysAgo} {daysAgo === 1 ? 'day' : 'days'} ago
-          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -41,11 +53,27 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  photo: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+  },
+  nameContainer: {
+    flex: 1,
+  },
   name: {
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   details: {
     flexDirection: 'row',
@@ -55,5 +83,10 @@ const styles = StyleSheet.create({
   lastSeen: {
     fontSize: 14,
     color: '#6B7280',
+  },
+  location: {
+    fontSize: 12,
+    color: '#059669',
+    marginTop: 2,
   },
 }); 

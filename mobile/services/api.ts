@@ -219,8 +219,8 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440001": {
       id: "550e8400-e29b-41d4-a716-446655440001",
       name: "Sarah Smith",
-      danger_score: 15,
-      danger_override: null,
+      urgency_score: 15,
+      urgency_override: null,
       data: { age: 32, height: 65, weight: 140, skin_color: "Light", gender: "Female", substance_abuse_history: ["None"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Low" },
       created_at: "2024-01-10T09:00:00Z",
       updated_at: "2024-01-15T14:30:00Z",
@@ -231,8 +231,8 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440002": {
       id: "550e8400-e29b-41d4-a716-446655440002",
       name: "Michael Chen",
-      danger_score: 25,
-      danger_override: null,
+      urgency_score: 25,
+      urgency_override: null,
       data: { age: 28, height: 68, weight: 155, skin_color: "Medium", gender: "Male", substance_abuse_history: ["None"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Medium" },
       created_at: "2024-01-11T10:15:00Z",
       updated_at: "2024-01-16T11:45:00Z",
@@ -243,8 +243,8 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440003": {
       id: "550e8400-e29b-41d4-a716-446655440003",
       name: "Emily Rodriguez",
-      danger_score: 30,
-      danger_override: null,
+      urgency_score: 30,
+      urgency_override: null,
       data: { age: 35, height: 62, weight: 130, skin_color: "Medium", gender: "Female", substance_abuse_history: ["Mild"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Medium" },
       created_at: "2024-01-12T08:30:00Z",
       updated_at: "2024-01-17T16:20:00Z",
@@ -255,8 +255,8 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440004": {
       id: "550e8400-e29b-41d4-a716-446655440004",
       name: "David Wilson",
-      danger_score: 20,
-      danger_override: null,
+      urgency_score: 20,
+      urgency_override: null,
       data: { age: 45, height: 70, weight: 175, skin_color: "Light", gender: "Male", substance_abuse_history: ["None"], veteran_status: "Yes", medical_conditions: ["None"], housing_priority: "High" },
       created_at: "2024-01-13T12:00:00Z",
       updated_at: "2024-01-18T09:15:00Z",
@@ -267,8 +267,8 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440005": {
       id: "550e8400-e29b-41d4-a716-446655440005",
       name: "Lisa Thompson",
-      danger_score: 18,
-      danger_override: null,
+      urgency_score: 18,
+      urgency_override: null,
       data: { age: 29, height: 64, weight: 145, skin_color: "Light", gender: "Female", substance_abuse_history: ["Mild"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Low" },
       created_at: "2024-01-14T14:45:00Z",
       updated_at: "2024-01-19T13:30:00Z",
@@ -279,8 +279,8 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440006": {
       id: "550e8400-e29b-41d4-a716-446655440006",
       name: "James Brown",
-      danger_score: 32,
-      danger_override: null,
+      urgency_score: 32,
+      urgency_override: null,
       data: { age: 52, height: 72, weight: 185, skin_color: "Dark", gender: "Male", substance_abuse_history: ["None"], veteran_status: "Yes", medical_conditions: ["Heart Disease"], housing_priority: "High" },
       created_at: "2024-01-15T11:20:00Z",
       updated_at: "2024-01-20T10:45:00Z",
@@ -291,8 +291,8 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440007": {
       id: "550e8400-e29b-41d4-a716-446655440007",
       name: "John Doe",
-      danger_score: 75,
-      danger_override: null,
+      urgency_score: 75,
+      urgency_override: null,
       data: { age: 45, height: 72, weight: 180, skin_color: "Light", gender: "Male", substance_abuse_history: ["Moderate"], veteran_status: "No", medical_conditions: ["Diabetes"], housing_priority: "High" },
       created_at: "2024-01-10T08:00:00Z",
       updated_at: "2024-01-15T15:30:00Z",
@@ -555,7 +555,7 @@ export const api = {
       console.log('Data to save:', data);
       
       // Extract categorized data (age, height, weight, etc.) from the data
-      const { Name, name, id, danger_score, danger_override, data: existingData, ...categorizedData } = data;
+      const { Name, name, id, danger_score, danger_override, data: existingData, photo_uri, transcription, location, ...categorizedData } = data;
       
       // Convert categorized data field names to lowercase for profile display
       const processedData = {};
@@ -573,9 +573,14 @@ export const api = {
         .insert({
           id: id || generateUUID(),
           name: Name || name || 'Unknown Individual',
-          data: existingData || processedData || {},
+          data: {
+            ...(existingData || processedData || {}),
+            last_location: location || null,
+            transcription: transcription || null
+          },
           danger_score: danger_score || 0,
           danger_override: danger_override || null,
+          photo_url: photo_uri || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -592,6 +597,39 @@ export const api = {
       }
 
       console.log('✅ Successfully saved individual:', result);
+
+      // Create interaction record for this new individual
+      try {
+        const interactionData = {
+          individual_id: result.id,
+          user_id: 'demo-user', // For now, use demo user
+          user_name: 'Demo User',
+          transcription: data.transcription || null,
+          location: data.location || null,
+          changes: existingData || processedData || {}, // All data for first interaction
+          photo_url: photo_uri || null,
+          created_at: new Date().toISOString()
+        };
+
+        console.log('📝 Creating interaction record:', interactionData);
+
+        const { data: interaction, error: interactionError } = await supabase
+          .from('interactions')
+          .insert(interactionData)
+          .select()
+          .single();
+
+        if (interactionError) {
+          console.error('❌ Interaction creation error:', interactionError);
+          console.log('⚠️ Individual saved but interaction creation failed. This is okay for demo.');
+        } else {
+          console.log('✅ Successfully created interaction:', interaction);
+        }
+      } catch (interactionError) {
+        console.error('❌ Interaction creation failed:', interactionError);
+        console.log('⚠️ Individual saved but interaction creation failed. This is okay for demo.');
+      }
+
       return {
         id: result.id,
         success: true,
@@ -634,16 +672,18 @@ export const api = {
         // Calculate display score (override or calculated)
         const displayScore = individual.danger_override !== null && individual.danger_override !== undefined 
           ? individual.danger_override 
-          : individual.danger_score;
+          : individual.danger_score || 0;
         
         return {
           id: individual.id,
           name: individual.name,
-          danger_score: displayScore,
+          urgency_score: displayScore,
           last_seen: individual.updated_at,
           last_seen_days: calculateDaysAgo(individual.updated_at),
           last_interaction_date: individual.updated_at,
-          abbreviated_address: "Market St & 5th" // Mock address for now
+          abbreviated_address: individual.data?.last_location?.address || "Market St & 5th",
+          photo_url: individual.photo_url || null,
+          data: individual.data || {}
         };
       });
 
@@ -675,6 +715,19 @@ export const api = {
 
       console.log('✅ Found individual profile:', individual);
       
+      // Fetch interactions for this individual
+      const { data: interactions, error: interactionsError } = await supabase
+        .from('interactions')
+        .select('*')
+        .eq('individual_id', individualId)
+        .order('created_at', { ascending: false });
+
+      if (interactionsError) {
+        console.error('❌ Interactions fetch error:', interactionsError);
+      }
+
+      console.log('📋 Found interactions:', interactions);
+      
       // Convert to IndividualProfile format
       const profile: IndividualProfile = {
         id: individual.id,
@@ -684,7 +737,8 @@ export const api = {
         data: individual.data || {},
         created_at: individual.created_at,
         updated_at: individual.updated_at,
-        interactions: [] // TODO: Add interactions when that table is set up
+        interactions: interactions || [],
+        total_interactions: interactions ? interactions.length : 0
       };
 
       return profile;
@@ -822,6 +876,27 @@ export const api = {
     }
   },
 
+  // Upload photo file
+  uploadPhoto: async (photoUri: string) => {
+    try {
+      console.log('📸 Uploading photo file...');
+      
+      // For now, return the local URI as the photo URL
+      // In a real implementation, this would upload to cloud storage
+      console.log('✅ Photo URI stored:', photoUri);
+      return {
+        url: photoUri,
+        error: null
+      };
+    } catch (error) {
+      console.error('Photo upload error:', error);
+      return {
+        url: null,
+        error: 'Photo upload failed'
+      };
+    }
+  },
+
   // Create new individual (legacy)
   createIndividual: async (data: any) => {
     return apiRequest('/api/individuals', {
@@ -852,5 +927,74 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  // Get interactions for an individual
+  getInteractions: async (individualId: string): Promise<any[]> => {
+    try {
+      console.log('📋 Fetching interactions for individual:', individualId);
+      
+      // Use direct Supabase query for real database
+      const { data: interactions, error } = await supabase
+        .from('interactions')
+        .select('*')
+        .eq('individual_id', individualId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Get interactions error:', error);
+        return [];
+      }
+
+      console.log('✅ Found interactions:', interactions);
+      
+      // Transform to frontend format
+      const formattedInteractions = interactions.map(interaction => ({
+        id: interaction.id,
+        individual_id: interaction.individual_id,
+        user_id: interaction.user_id,
+        user_name: interaction.user_name || 'Unknown User',
+        transcription: interaction.transcription,
+        location: interaction.location,
+        changes: interaction.changes || {},
+        created_at: interaction.created_at,
+        audio_url: interaction.audio_url
+      }));
+
+      console.log('📋 Formatted interactions:', formattedInteractions);
+      return formattedInteractions;
+    } catch (error) {
+      console.error('❌ Get interactions error:', error);
+      return [];
+    }
+  },
+
+  // Update urgency override
+  updateUrgencyOverride: async (individualId: string, urgencyOverride: number | null): Promise<boolean> => {
+    try {
+      console.log('🔄 Updating urgency override for individual:', individualId);
+      console.log('New urgency override value:', urgencyOverride);
+      
+      // Use direct Supabase query for real database
+      const { data, error } = await supabase
+        .from('individuals')
+        .update({
+          urgency_override: urgencyOverride,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', individualId)
+        .select();
+
+      if (error) {
+        console.error('❌ Update urgency override error:', error);
+        return false;
+      }
+
+      console.log('✅ Successfully updated urgency override:', data);
+      return true;
+    } catch (error) {
+      console.error('❌ Update urgency override error:', error);
+      return false;
+    }
   },
 }; 

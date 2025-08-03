@@ -23,6 +23,30 @@ export default function InteractionHistoryItem({ interaction, onPress }: Interac
   // Check if this was a voice entry (has transcription)
   const isVoiceEntry = !!interaction.transcription;
 
+  // Get location display
+  const getLocationDisplay = () => {
+    if (!interaction.location) return 'Location not specified';
+    
+    const { latitude, longitude, address } = interaction.location;
+    if (address) return address;
+    return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+  };
+
+  // Get changes summary
+  const getChangesSummary = () => {
+    if (!interaction.changes || Object.keys(interaction.changes).length === 0) {
+      return 'No data changes';
+    }
+    
+    const changes = Object.entries(interaction.changes)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(', ');
+    
+    return changes;
+  };
+
+
+
   return (
     <TouchableOpacity style={styles.container} onPress={() => onPress(interaction)}>
       <View style={styles.header}>
@@ -36,19 +60,26 @@ export default function InteractionHistoryItem({ interaction, onPress }: Interac
       
       <View style={styles.details}>
         <Text style={styles.workerName}>
-          {interaction.worker_name || 'Unknown Worker'}
+          {interaction.user_name || 'Unknown Worker'}
         </Text>
-        <Text style={styles.address}>
-          {interaction.abbreviated_address || 'Location not specified'}
+        <Text style={styles.location}>
+          📍 {getLocationDisplay()}
         </Text>
       </View>
+      
+      {/* Show changes summary */}
+      <Text style={styles.changesSummary}>
+        📝 {getChangesSummary()}
+      </Text>
       
       {/* Show transcription preview if available */}
       {interaction.transcription && (
         <Text style={styles.transcriptionPreview} numberOfLines={2}>
-          "{interaction.transcription}"
+          🎤 "{interaction.transcription}"
         </Text>
       )}
+      
+
     </TouchableOpacity>
   );
 }
@@ -90,14 +121,22 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: 2,
   },
-  address: {
+  location: {
     fontSize: 14,
     color: '#6B7280',
+  },
+  changesSummary: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+    marginBottom: 8,
   },
   transcriptionPreview: {
     fontSize: 14,
     color: '#6B7280',
     fontStyle: 'italic',
     lineHeight: 18,
+    marginBottom: 8,
   },
+
 }); 
