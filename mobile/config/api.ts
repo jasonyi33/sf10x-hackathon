@@ -3,10 +3,10 @@
 
 export const API_CONFIG = {
   // Backend API URL - using localhost for development
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8001',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8000',
   
   // Enable real API calls (set to false to use mock data only)
-  USE_REAL_API: false, // Set to false to use mock data only
+  USE_REAL_API: true, // Set to true to use real API
   
   // Supabase Configuration (for direct frontend access if needed)
   SUPABASE: {
@@ -32,7 +32,7 @@ export const API_CONFIG = {
   // Demo configuration
   DEMO: {
     // Use mock data for demo (set to false to use real API)
-    USE_MOCK_DATA: true,
+    USE_MOCK_DATA: false,
     
     // Mock response delays (ms)
     MOCK_DELAY: 1000,

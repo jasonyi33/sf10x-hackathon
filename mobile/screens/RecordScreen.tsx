@@ -4,9 +4,11 @@ import { AudioRecorder } from '../components/AudioRecorder';
 import { TranscriptionResults } from '../components/TranscriptionResults';
 import { ManualEntryForm } from '../components/ManualEntryForm';
 import { LocationPicker } from '../components/LocationPicker';
+import PhotoCapture from '../components/PhotoCapture';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 import { api, TranscriptionResult } from '../services/api';
+import { API_CONFIG } from '../config/api';
 import { ErrorHandler } from '../utils/errorHandler';
 
 export const RecordScreen: React.FC = () => {
@@ -28,6 +30,10 @@ export const RecordScreen: React.FC = () => {
       address: string;
     }
   } | null>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [hasPhotoConsent, setHasPhotoConsent] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
 
   const handleRecordingComplete = async (uri: string, location?: { 
     location: {
@@ -104,11 +110,29 @@ export const RecordScreen: React.FC = () => {
 
   const handleSaveTranscription = async (data: Record<string, any>) => {
     try {
+      let photoUrl = null;
+      
+      // Upload photo if exists and has consent
+      if (photoUri && hasPhotoConsent) {
+        try {
+          photoUrl = await uploadPhoto(photoUri);
+          setUploadedPhotoUrl(photoUrl);
+        } catch (error) {
+          console.error('Photo upload failed:', error);
+          ErrorHandler.showError(ErrorHandler.handleError(error, 'Photo Upload'));
+          return; // Don't save if photo upload fails
+        }
+      } else if (photoUri && !hasPhotoConsent) {
+        ErrorHandler.showError(ErrorHandler.handleError(new Error('Photo consent required'), 'Photo Upload'));
+        return;
+      }
+
       const saveData = {
         ...data,
         location: selectedLocation?.location,
         audio_url: uploadedUrl,
         transcription: transcriptionResult?.transcription,
+        photo_url: photoUrl,
       };
       
       await api.saveIndividual(saveData);
@@ -120,6 +144,9 @@ export const RecordScreen: React.FC = () => {
       setTranscriptionResult(null);
       setSelectedLocation(null);
       setShowManualEntry(false);
+      setPhotoUri(null);
+      setHasPhotoConsent(false);
+      setUploadedPhotoUrl(null);
       
       // Reset audio recorder
       if (audioRecorderRef.current) {
@@ -133,9 +160,27 @@ export const RecordScreen: React.FC = () => {
 
   const handleSaveManualEntry = async (data: Record<string, any>) => {
     try {
+      let photoUrl = null;
+      
+      // Upload photo if exists and has consent
+      if (photoUri && hasPhotoConsent) {
+        try {
+          photoUrl = await uploadPhoto(photoUri);
+          setUploadedPhotoUrl(photoUrl);
+        } catch (error) {
+          console.error('Photo upload failed:', error);
+          ErrorHandler.showError(ErrorHandler.handleError(error, 'Photo Upload'));
+          return; // Don't save if photo upload fails
+        }
+      } else if (photoUri && !hasPhotoConsent) {
+        ErrorHandler.showError(ErrorHandler.handleError(new Error('Photo consent required'), 'Photo Upload'));
+        return;
+      }
+
       const saveData = {
         ...data,
         location: selectedLocation?.location,
+        photo_url: photoUrl,
       };
       
       await api.saveIndividual(saveData);
@@ -144,6 +189,9 @@ export const RecordScreen: React.FC = () => {
       // Reset state
       setShowManualEntry(false);
       setSelectedLocation(null);
+      setPhotoUri(null);
+      setHasPhotoConsent(false);
+      setUploadedPhotoUrl(null);
     } catch (error) {
       const appError = ErrorHandler.handleError(error, 'Save Manual Entry');
       ErrorHandler.showError(appError);
@@ -155,6 +203,9 @@ export const RecordScreen: React.FC = () => {
     setUploadedUrl(null);
     setRecordingUri(null);
     setSelectedLocation(null);
+    setPhotoUri(null);
+    setHasPhotoConsent(false);
+    setUploadedPhotoUrl(null);
     
     // Reset audio recorder
     if (audioRecorderRef.current) {
@@ -165,6 +216,9 @@ export const RecordScreen: React.FC = () => {
   const handleCancelManualEntry = () => {
     setShowManualEntry(false);
     setSelectedLocation(null);
+    setPhotoUri(null);
+    setHasPhotoConsent(false);
+    setUploadedPhotoUrl(null);
   };
 
   const handleRecordingStart = () => {
@@ -191,6 +245,60 @@ export const RecordScreen: React.FC = () => {
 
   const handleRecordingStop = () => {
     // Recording stopped, will be handled by handleRecordingComplete
+  };
+
+  const handlePhotoChange = (uri: string | null) => {
+    setPhotoUri(uri);
+    if (!uri) {
+      setUploadedPhotoUrl(null);
+    }
+  };
+
+  const handlePhotoConsentChange = (hasConsent: boolean) => {
+    setHasPhotoConsent(hasConsent);
+  };
+
+  const uploadPhoto = async (uri: string): Promise<string | null> => {
+    if (!hasPhotoConsent) {
+      throw new Error('Photo consent required before upload');
+    }
+
+    try {
+      setIsUploadingPhoto(true);
+      
+      // Create form data for photo upload
+      const formData = new FormData();
+      formData.append('photo', {
+        uri: uri,
+        type: 'image/jpeg',
+        name: 'photo.jpg',
+      } as any);
+      
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      // Upload to backend
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/photos/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token || 'demo-token'}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Photo upload failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.photo_url;
+    } catch (error) {
+      console.error('Photo upload error:', error);
+      throw error;
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   };
 
   if (loading) {
@@ -237,6 +345,14 @@ export const RecordScreen: React.FC = () => {
         />
       </View>
 
+      {/* Photo Capture */}
+      <PhotoCapture
+        onPhotoChange={handlePhotoChange}
+        onConsentChange={handlePhotoConsentChange}
+        photoUri={photoUri}
+        hasConsent={hasPhotoConsent}
+      />
+
       {/* Upload Status */}
       {isUploading && (
         <View style={styles.uploadingContainer}>
@@ -250,6 +366,14 @@ export const RecordScreen: React.FC = () => {
         <View style={styles.transcribingContainer}>
           <ActivityIndicator size="small" color="#28a745" />
           <Text style={styles.transcribingText}>Transcribing audio...</Text>
+        </View>
+      )}
+
+      {/* Photo Upload Status */}
+      {isUploadingPhoto && (
+        <View style={styles.uploadingContainer}>
+          <ActivityIndicator size="small" color="#ff9500" />
+          <Text style={styles.uploadingText}>Uploading photo...</Text>
         </View>
       )}
 
