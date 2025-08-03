@@ -4,6 +4,8 @@ import { AudioRecorder } from '../components/AudioRecorder';
 import { TranscriptionResults } from '../components/TranscriptionResults';
 import { ManualEntryForm } from '../components/ManualEntryForm';
 import { LocationPicker } from '../components/LocationPicker';
+import PhotoCapture from '../components/PhotoCapture';
+import { compressImage } from '../services/imageCompression';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 import { api, TranscriptionResult } from '../services/api';
@@ -28,6 +30,12 @@ export const RecordScreen: React.FC = () => {
       address: string;
     }
   } | null>(null);
+  const [photoData, setPhotoData] = useState<{
+    photoUri: string | null;
+    hasConsent: boolean;
+  } | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [showPhotoCapture, setShowPhotoCapture] = useState(false);
 
   const handleRecordingComplete = async (uri: string, location?: { 
     location: {
@@ -104,11 +112,46 @@ export const RecordScreen: React.FC = () => {
 
   const handleSaveTranscription = async (data: Record<string, any>) => {
     try {
+      let photoUrl: string | undefined;
+      
+      // Upload photo first if exists
+      if (photoData?.photoUri && photoData.hasConsent) {
+        try {
+          setIsUploadingPhoto(true);
+          
+          // Compress the image first
+          const compressedUri = await compressImage(photoData.photoUri);
+          
+          // Generate a temporary individual ID (will be replaced with actual ID after save)
+          const tempIndividualId = `temp_${Date.now()}`;
+          
+          // Upload the photo
+          const uploadResult = await api.uploadPhoto({
+            photoUri: compressedUri,
+            individualId: tempIndividualId,
+            consentLocation: selectedLocation?.location || {
+              latitude: 0,
+              longitude: 0,
+              address: 'Unknown'
+            }
+          });
+          
+          photoUrl = uploadResult.photo_url;
+        } catch (photoError) {
+          console.error('Photo upload failed:', photoError);
+          ErrorHandler.showError(ErrorHandler.handleError(photoError, 'Photo upload failed'));
+          // Continue with save even if photo upload fails
+        } finally {
+          setIsUploadingPhoto(false);
+        }
+      }
+      
       const saveData = {
         ...data,
         location: selectedLocation?.location,
         audio_url: uploadedUrl,
         transcription: transcriptionResult?.transcription,
+        ...(photoUrl && { photo_url: photoUrl }), // Only include if photo was uploaded
       };
       
       await api.saveIndividual(saveData);
@@ -119,7 +162,9 @@ export const RecordScreen: React.FC = () => {
       setUploadedUrl(null);
       setTranscriptionResult(null);
       setSelectedLocation(null);
+      setPhotoData(null);
       setShowManualEntry(false);
+      setShowPhotoCapture(false);
       
       // Reset audio recorder
       if (audioRecorderRef.current) {
@@ -133,9 +178,44 @@ export const RecordScreen: React.FC = () => {
 
   const handleSaveManualEntry = async (data: Record<string, any>) => {
     try {
+      let photoUrl: string | undefined;
+      
+      // Upload photo first if exists
+      if (photoData?.photoUri && photoData.hasConsent) {
+        try {
+          setIsUploadingPhoto(true);
+          
+          // Compress the image first
+          const compressedUri = await compressImage(photoData.photoUri);
+          
+          // Generate a temporary individual ID
+          const tempIndividualId = `temp_${Date.now()}`;
+          
+          // Upload the photo
+          const uploadResult = await api.uploadPhoto({
+            photoUri: compressedUri,
+            individualId: tempIndividualId,
+            consentLocation: selectedLocation?.location || {
+              latitude: 0,
+              longitude: 0,
+              address: 'Unknown'
+            }
+          });
+          
+          photoUrl = uploadResult.photo_url;
+        } catch (photoError) {
+          console.error('Photo upload failed:', photoError);
+          ErrorHandler.showError(ErrorHandler.handleError(photoError, 'Photo upload failed'));
+          // Continue with save even if photo upload fails
+        } finally {
+          setIsUploadingPhoto(false);
+        }
+      }
+      
       const saveData = {
         ...data,
         location: selectedLocation?.location,
+        ...(photoUrl && { photo_url: photoUrl }),
       };
       
       await api.saveIndividual(saveData);
@@ -144,6 +224,8 @@ export const RecordScreen: React.FC = () => {
       // Reset state
       setShowManualEntry(false);
       setSelectedLocation(null);
+      setPhotoData(null);
+      setShowPhotoCapture(false);
     } catch (error) {
       const appError = ErrorHandler.handleError(error, 'Save Manual Entry');
       ErrorHandler.showError(appError);
@@ -155,6 +237,8 @@ export const RecordScreen: React.FC = () => {
     setUploadedUrl(null);
     setRecordingUri(null);
     setSelectedLocation(null);
+    setPhotoData(null);
+    setShowPhotoCapture(false);
     
     // Reset audio recorder
     if (audioRecorderRef.current) {
@@ -165,6 +249,13 @@ export const RecordScreen: React.FC = () => {
   const handleCancelManualEntry = () => {
     setShowManualEntry(false);
     setSelectedLocation(null);
+    setPhotoData(null);
+    setShowPhotoCapture(false);
+  };
+
+  const handlePhotoCapture = (data: { photoUri: string | null; hasConsent: boolean }) => {
+    setPhotoData(data);
+    setShowPhotoCapture(false);
   };
 
   const handleRecordingStart = () => {
@@ -270,21 +361,70 @@ export const RecordScreen: React.FC = () => {
       )}
 
       {/* Transcription Results */}
-      {transcriptionResult && (
-        <TranscriptionResults
-          result={transcriptionResult}
-          onSave={handleSaveTranscription}
-          onCancel={handleCancelTranscription}
-        />
+      {transcriptionResult && !showPhotoCapture && (
+        <>
+          <TranscriptionResults
+            result={transcriptionResult}
+            onSave={handleSaveTranscription}
+            onCancel={handleCancelTranscription}
+          />
+          
+          {/* Photo Capture Button */}
+          <View style={styles.photoButtonContainer}>
+            <TouchableOpacity
+              style={[styles.photoButton, photoData?.photoUri && styles.photoButtonWithPhoto]}
+              onPress={() => setShowPhotoCapture(true)}
+              testID="add-photo-button"
+            >
+              <Text style={styles.photoButtonText}>
+                {photoData?.photoUri ? '📷 Update Photo' : '📷 Add Photo (Optional)'}
+              </Text>
+            </TouchableOpacity>
+            {photoData?.photoUri && (
+              <Text style={styles.photoStatusText}>✓ Photo captured with consent</Text>
+            )}
+          </View>
+        </>
+      )}
+
+      {/* Photo Capture Component */}
+      {showPhotoCapture && (
+        <PhotoCapture onPhotoCapture={handlePhotoCapture} />
+      )}
+
+      {/* Photo Upload Loading */}
+      {isUploadingPhoto && (
+        <View style={styles.uploadingContainer} testID="photo-upload-loading">
+          <ActivityIndicator size="small" color="#007AFF" />
+          <Text style={styles.uploadingText}>Uploading photo...</Text>
+        </View>
       )}
 
       {/* Manual Entry Form */}
-      {showManualEntry && (
-        <ManualEntryForm
-          selectedLocation={selectedLocation?.location || null}
-          onSave={handleSaveManualEntry}
-          onCancel={handleCancelManualEntry}
-        />
+      {showManualEntry && !showPhotoCapture && (
+        <>
+          <ManualEntryForm
+            selectedLocation={selectedLocation?.location || null}
+            onSave={handleSaveManualEntry}
+            onCancel={handleCancelManualEntry}
+          />
+          
+          {/* Photo Capture Button for Manual Entry */}
+          <View style={styles.photoButtonContainer}>
+            <TouchableOpacity
+              style={[styles.photoButton, photoData?.photoUri && styles.photoButtonWithPhoto]}
+              onPress={() => setShowPhotoCapture(true)}
+              testID="add-photo-button"
+            >
+              <Text style={styles.photoButtonText}>
+                {photoData?.photoUri ? '📷 Update Photo' : '📷 Add Photo (Optional)'}
+              </Text>
+            </TouchableOpacity>
+            {photoData?.photoUri && (
+              <Text style={styles.photoStatusText}>✓ Photo captured with consent</Text>
+            )}
+          </View>
+        </>
       )}
 
       {/* Action Buttons */}
@@ -504,5 +644,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 6,
+  },
+  photoButtonContainer: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  photoButton: {
+    backgroundColor: '#6c757d',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  photoButtonWithPhoto: {
+    backgroundColor: '#17a2b8',
+  },
+  photoButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  photoStatusText: {
+    fontSize: 14,
+    color: '#28a745',
+    marginTop: 8,
+    textAlign: 'center',
+    fontWeight: '500',
   },
 }); 

@@ -1,7 +1,7 @@
 """
 Validation helper for categorized data
 """
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 
 
@@ -11,6 +11,45 @@ class ValidationResult:
     is_valid: bool
     missing_required: List[str]
     validation_errors: List[Dict[str, str]]  # [{"field": "height", "message": "Value 400 exceeds maximum of 300"}]
+
+
+def validate_age_range(age_value: Any) -> bool:
+    """
+    Validate age range format and values
+    
+    Age is always array: [-1,-1] for Unknown or [min,max]
+    
+    Args:
+        age_value: Value to validate as age range
+        
+    Returns:
+        bool: True if valid age range, False otherwise
+    """
+    # Must be a list
+    if not isinstance(age_value, list):
+        return False
+    
+    # Must have exactly 2 values
+    if len(age_value) != 2:
+        return False
+    
+    # Special case: [-1, -1] represents "Unknown"
+    if age_value == [-1, -1]:
+        return True
+    
+    # Extract min and max
+    try:
+        min_age, max_age = age_value
+        
+        # Must be integers or floats that can be converted to int
+        min_age = int(min_age)
+        max_age = int(max_age)
+        
+        # Validate range: 0 <= min < max <= 120
+        return 0 <= min_age < max_age <= 120
+        
+    except (ValueError, TypeError):
+        return False
 
 
 def validate_categorized_data(data: dict, categories: list) -> ValidationResult:
@@ -93,6 +132,44 @@ def validate_categorized_data(data: dict, categories: list) -> ValidationResult:
                             "message": f"Invalid option '{selected}' in selection"
                         })
                         break
+                        
+        elif field_type == 'range':
+            # Validate range fields (like approximate_age)
+            if field_name == 'approximate_age':
+                # Use the specific age validation
+                if not validate_age_range(value):
+                    # Provide specific error message based on the issue
+                    if not isinstance(value, list):
+                        message = "Age must be an array [min, max]"
+                    elif len(value) != 2:
+                        message = "Age must have exactly 2 values [min, max]"
+                    elif value != [-1, -1]:
+                        try:
+                            min_age, max_age = value
+                            if min_age >= max_age:
+                                message = f"Invalid age range: min ({min_age}) must be less than max ({max_age})"
+                            elif min_age < 0:
+                                message = f"Invalid age range: minimum age cannot be negative"
+                            elif max_age > 120:
+                                message = f"Invalid age range: maximum age cannot exceed 120"
+                            else:
+                                message = "Invalid age range format"
+                        except:
+                            message = "Invalid age range values"
+                    else:
+                        message = "Invalid age range"
+                    
+                    validation_errors.append({
+                        "field": field_name,
+                        "message": message
+                    })
+            else:
+                # Generic range validation for other range fields
+                if not isinstance(value, list) or len(value) != 2:
+                    validation_errors.append({
+                        "field": field_name,
+                        "message": "Range must be an array with 2 values"
+                    })
                         
         # Text, date, location types - no special validation needed
         # They pass as long as they have a value

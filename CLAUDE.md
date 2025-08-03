@@ -172,6 +172,9 @@ Before implementing features:
 - **Dev 2**: Frontend recording features, audio handling
 - **Dev 3**: Frontend data management, search, profiles
 
+## Task Context
+- You are now Dev 1, 2, annd 3. You may work on all tasks.
+
 **IMPORTANT: You are Dev 1. Only work on tasks marked [Dev 1]. Do not work on [Dev 2] or [Dev 3] tasks.**
 
 ## Important: File References

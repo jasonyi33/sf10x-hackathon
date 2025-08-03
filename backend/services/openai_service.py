@@ -133,11 +133,21 @@ Rules:
 - For multi-select, return array of matching options
 - For single-select, return one option from the available choices
 - For numbers, extract digits only
-- Always attempt to extract required fields: Name, Height, Weight, Skin Color
+- Always attempt to extract required fields: Name, Height, Weight, Skin Color, Approximate Age
 - Return null for missing non-required information
 - Be conservative - only extract explicitly stated info
 - For skin color, map descriptions to Light/Medium/Dark
 - For height, convert to total inches (e.g., "6 feet" = 72, "5'4\"" = 64)
+- For approximate_age, ALWAYS return as [min, max] array:
+  - Specific ages: use ±2 years (e.g., "45 years old" → [43, 47])
+  - Descriptive ages: use standard ranges:
+    - "teenage"/"teenager" → [13, 19]
+    - "young adult" → [18, 30]
+    - "middle-aged" → [40, 60]
+    - "elderly"/"senior" → [65, 85]
+    - "in their twenties" → [20, 29], "thirties" → [30, 39], etc.
+  - No age mentioned: return [-1, -1] for "Unknown"
+  - NEVER return a single number, always [min, max] format
 
 Transcription: {transcription}
 
@@ -166,7 +176,64 @@ Return JSON only."""
                 value = extracted_data.get(field_name)
                 
                 # Handle different field types
-                if value is not None:
+                # Special handling for required range fields (like age)
+                if cat['type'] == 'range' and field_name == 'approximate_age':
+                    # Always process age, even if None
+                    if value is None:
+                        value = [-1, -1]  # Unknown
+                    elif not isinstance(value, list):
+                        # If GPT returns a single number, string, or object, handle it
+                        if isinstance(value, str):
+                            # Handle string values like "Unknown"
+                            if value.lower() in ["unknown", "n/a", "none", ""]:
+                                value = [-1, -1]
+                            else:
+                                # Try to parse as number
+                                try:
+                                    age = int(value)
+                                    if age == -1:
+                                        value = [-1, -1]
+                                    elif age < 0 or age > 120:
+                                        value = [-1, -1]
+                                    else:
+                                        value = [max(0, age - 2), min(120, age + 2)]
+                                except (ValueError, TypeError):
+                                    value = [-1, -1]
+                        elif isinstance(value, dict):
+                            # Handle object format like {"min": 45, "max": 50}
+                            try:
+                                min_age = int(value.get("min", -1))
+                                max_age = int(value.get("max", -1))
+                                if min_age >= 0 and max_age > min_age and max_age <= 120:
+                                    value = [min_age, max_age]
+                                else:
+                                    value = [-1, -1]
+                            except (ValueError, TypeError):
+                                value = [-1, -1]
+                        else:
+                            # Handle numeric values
+                            try:
+                                age = int(value)
+                                # Special case for -1 (unknown)
+                                if age == -1:
+                                    value = [-1, -1]
+                                # Check bounds
+                                elif age < 0 or age > 120:
+                                    value = [-1, -1]
+                                else:
+                                    value = [max(0, age - 2), min(120, age + 2)]
+                            except (ValueError, TypeError):
+                                value = [-1, -1]
+                    elif len(value) != 2:
+                        value = [-1, -1]
+                    else:
+                        # Ensure values are integers
+                        try:
+                            value = [int(value[0]), int(value[1])]
+                        except (ValueError, TypeError):
+                            value = [-1, -1]
+                    processed_data[field_name] = value
+                elif value is not None:
                     if cat['type'] == 'number':
                         # Special handling for height field
                         if field_name == 'height':
@@ -204,7 +271,7 @@ Return JSON only."""
                             valid_options = cat['options']
                             value = [v for v in value if v in valid_options]
                             
-                processed_data[field_name] = value
+                    processed_data[field_name] = value
                 
             return processed_data
             

@@ -18,6 +18,12 @@ export interface SearchResult {
   last_interaction_date: string;
   last_seen?: string;
   abbreviated_address?: string;
+  data?: {
+    approximate_age?: [number, number];
+    height?: number;
+    skin_color?: string;
+    [key: string]: any;
+  };
 }
 
 export interface SearchScreenProps {
@@ -48,6 +54,11 @@ export interface IndividualProfile {
   interactions: Interaction[];
   total_interactions: number;
   last_interaction_date?: string;
+  photo_url?: string | null;
+  photo_history?: Array<{
+    url: string;
+    timestamp: string;
+  }>;
 }
 
 export interface IndividualProfileScreenProps {

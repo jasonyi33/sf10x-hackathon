@@ -233,7 +233,8 @@ async def save_individual(
             merge_with_id=request.merge_with_id,
             location=request.location,
             transcription=request.transcription,
-            audio_url=request.audio_url
+            audio_url=request.audio_url,
+            photo_url=request.photo_url
         )
         
         return result

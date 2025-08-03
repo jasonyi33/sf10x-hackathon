@@ -73,6 +73,11 @@ const mockIndividuals: SearchResult[] = [
     danger_override: null,
     last_seen_days: calculateDaysAgo('2024-01-15T10:30:00Z'),
     last_interaction_date: '2024-01-15T10:30:00Z',
+    data: {
+      approximate_age: [45, 50],
+      height: 72, // 6'0"
+      skin_color: 'Light',
+    },
   },
   {
     id: '2',
@@ -81,6 +86,11 @@ const mockIndividuals: SearchResult[] = [
     danger_override: 40,
     last_seen_days: calculateDaysAgo('2024-01-12T14:20:00Z'),
     last_interaction_date: '2024-01-12T14:20:00Z',
+    data: {
+      approximate_age: [-1, -1], // Unknown
+      height: 66, // 5'6"
+      skin_color: 'Medium',
+    },
   },
   {
     id: '3',
@@ -89,6 +99,11 @@ const mockIndividuals: SearchResult[] = [
     danger_override: null,
     last_seen_days: calculateDaysAgo('2024-01-16T09:15:00Z'),
     last_interaction_date: '2024-01-16T09:15:00Z',
+    data: {
+      approximate_age: [65, 70],
+      height: 70, // 5'10"
+      skin_color: 'Dark',
+    },
   },
   {
     id: '4',
@@ -97,6 +112,11 @@ const mockIndividuals: SearchResult[] = [
     danger_override: null,
     last_seen_days: calculateDaysAgo('2024-01-10T16:45:00Z'),
     last_interaction_date: '2024-01-10T16:45:00Z',
+    data: {
+      approximate_age: [30, 35],
+      height: 64, // 5'4"
+      skin_color: 'Medium',
+    },
   },
   {
     id: '5',
@@ -105,6 +125,103 @@ const mockIndividuals: SearchResult[] = [
     danger_override: null,
     last_seen_days: calculateDaysAgo('2024-01-14T11:30:00Z'),
     last_interaction_date: '2024-01-14T11:30:00Z',
+    data: {
+      approximate_age: [55, 60],
+      height: 68, // 5'8"
+      skin_color: 'Light',
+    },
+  },
+  // Add more test data for dropdown limit testing
+  {
+    id: '6',
+    name: 'Test Person 6',
+    danger_score: 35,
+    danger_override: null,
+    last_seen_days: calculateDaysAgo('2024-01-13T10:00:00Z'),
+    last_interaction_date: '2024-01-13T10:00:00Z',
+    data: {
+      approximate_age: [40, 45],
+      height: 67,
+      skin_color: 'Dark',
+    },
+  },
+  {
+    id: '7',
+    name: 'Test Person 7',
+    danger_score: 25,
+    danger_override: null,
+    last_seen_days: calculateDaysAgo('2024-01-12T10:00:00Z'),
+    last_interaction_date: '2024-01-12T10:00:00Z',
+    data: {
+      approximate_age: [25, 30],
+      height: 71,
+      skin_color: 'Medium',
+    },
+  },
+  {
+    id: '8',
+    name: 'Test Person 8',
+    danger_score: 45,
+    danger_override: null,
+    last_seen_days: calculateDaysAgo('2024-01-11T10:00:00Z'),
+    last_interaction_date: '2024-01-11T10:00:00Z',
+    data: {
+      approximate_age: [50, 55],
+      height: 69,
+      skin_color: 'Light',
+    },
+  },
+  {
+    id: '9',
+    name: 'Test Person 9',
+    danger_score: 55,
+    danger_override: null,
+    last_seen_days: calculateDaysAgo('2024-01-10T10:00:00Z'),
+    last_interaction_date: '2024-01-10T10:00:00Z',
+    data: {
+      approximate_age: [35, 40],
+      height: 65,
+      skin_color: 'Dark',
+    },
+  },
+  {
+    id: '10',
+    name: 'Test Person 10',
+    danger_score: 30,
+    danger_override: null,
+    last_seen_days: calculateDaysAgo('2024-01-09T10:00:00Z'),
+    last_interaction_date: '2024-01-09T10:00:00Z',
+    data: {
+      approximate_age: [60, 65],
+      height: 73,
+      skin_color: 'Medium',
+    },
+  },
+  {
+    id: '11',
+    name: 'Test Person 11',
+    danger_score: 40,
+    danger_override: null,
+    last_seen_days: calculateDaysAgo('2024-01-08T10:00:00Z'),
+    last_interaction_date: '2024-01-08T10:00:00Z',
+    data: {
+      approximate_age: [20, 25],
+      height: 66,
+      skin_color: 'Light',
+    },
+  },
+  {
+    id: '12',
+    name: 'Test Person 12',
+    danger_score: 50,
+    danger_override: null,
+    last_seen_days: calculateDaysAgo('2024-01-07T10:00:00Z'),
+    last_interaction_date: '2024-01-07T10:00:00Z',
+    data: {
+      approximate_age: [45, 50],
+      height: 70,
+      skin_color: 'Dark',
+    },
   },
 ];
 
@@ -213,7 +330,7 @@ const mockDataStore = {
       danger_score: 75,
       danger_override: null,
       data: {
-        age: 45,
+        approximate_age: [45, 50],
         height: 72,
         weight: 180,
         skin_color: "Light",
@@ -443,10 +560,12 @@ export const api = {
             id: individual.id,
             name: individual.name,
             danger_score: displayScore, // Use display score instead of original
+            danger_override: individual.danger_override,
             last_seen: individual.last_interaction_date,
             last_seen_days: 2, // Mock value
             last_interaction_date: individual.last_interaction_date,
-            abbreviated_address: "Market St & 5th" // Mock address
+            abbreviated_address: "Market St & 5th", // Mock address
+            data: individual.data // Include data for dropdown display
           };
         });
         
@@ -647,5 +766,100 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  // Upload photo
+  uploadPhoto: async (params: {
+    photoUri: string;
+    individualId: string;
+    consentLocation: object;
+  }) => {
+    try {
+      // Skip real API calls if disabled
+      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
+        console.log('Using mock photo upload');
+        // Simulate upload delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return {
+          photo_url: 'https://example.com/mock-photo.jpg',
+          consent_id: 'mock-consent-123'
+        };
+      }
+
+      const token = await getAuthToken();
+      const formData = new FormData();
+      
+      formData.append('photo', {
+        uri: params.photoUri,
+        type: 'image/jpeg',
+        name: 'photo.jpg',
+      } as any);
+      formData.append('individual_id', params.individualId);
+      formData.append('consent_location', JSON.stringify(params.consentLocation));
+
+      const response = await fetch(getApiUrl('/api/photos/upload'), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Photo upload failed: ${response.status} ${errorText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Photo upload error:', error);
+      throw error;
+    }
+  },
+
+  // Update individual photo (without creating interaction)
+  updateIndividualPhoto: async (params: {
+    individualId: string;
+    photoUri: string;
+    consentLocation: { latitude: number; longitude: number; address: string };
+  }) => {
+    try {
+      const token = await getAuthToken();
+      if (USE_MOCK_DATA) {
+        console.log('Using mock photo update');
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate upload
+        return {
+          photo_url: 'https://example.com/mock-updated-photo.jpg',
+          consent_id: 'mock-consent-456',
+          message: 'Photo updated successfully'
+        };
+      }
+
+      const formData = new FormData();
+      formData.append('photo', {
+        uri: params.photoUri,
+        type: 'image/jpeg',
+        name: 'photo.jpg',
+      } as any);
+      formData.append('consent_location', JSON.stringify(params.consentLocation));
+
+      const response = await fetch(getApiUrl(`/api/photos/update/${params.individualId}`), {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Photo update failed: ${response.status} ${errorText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Photo update error:', error);
+      throw error;
+    }
   },
 }; 

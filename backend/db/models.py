@@ -22,11 +22,12 @@ class SaveIndividualRequest(BaseModel):
     location: Optional[LocationData] = None
     transcription: Optional[str] = None  # Original audio transcription if voice entry
     audio_url: Optional[str] = None  # Reference to audio file
+    photo_url: Optional[str] = None  # URL of uploaded photo from photo upload endpoint
     
     @field_validator('data')
     def validate_required_fields(cls, v):
         """Ensure required fields exist per PRD"""
-        required = ['name', 'height', 'weight', 'skin_color']
+        required = ['name', 'height', 'weight', 'skin_color', 'approximate_age']
         missing = [f for f in required if f not in v or v[f] is None]
         if missing:
             raise ValueError(f"Missing required fields: {missing}")

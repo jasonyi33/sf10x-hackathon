@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,12 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Image,
+  TouchableOpacity,
+  Animated,
+  Dimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { IndividualProfile, IndividualProfileScreenProps } from '../types';
 import { api } from '../services/api';
 import { getDangerScoreColor, getDisplayDangerScore } from '../utils/dangerScore';
@@ -16,6 +21,11 @@ import FieldDisplay from '../components/FieldDisplay';
 import InteractionHistoryItem from '../components/InteractionHistoryItem';
 import DangerScore from '../components/DangerScore';
 import InteractionDetailModal from '../components/InteractionDetailModal';
+import PhotoGallery from '../components/PhotoGallery';
+import PhotoCapture from '../components/PhotoCapture';
+import Toast from 'react-native-toast-message';
+import * as Location from 'expo-location';
+import { compressImage } from '../services/imageCompression';
 
 export default function IndividualProfileScreen({ navigation, route }: any) {
   // State variables to store data
@@ -24,6 +34,14 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedInteraction, setSelectedInteraction] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
+  const [photoLoadError, setPhotoLoadError] = useState(false);
+  const [showPhotoCapture, setShowPhotoCapture] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<{
+    location: { latitude: number; longitude: number; address: string };
+    timestamp: number;
+  } | null>(null);
 
   // Get the individual ID from the route parameters
   const { individualId } = route.params;
@@ -32,6 +50,19 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
   useEffect(() => {
     loadProfile();
   }, [individualId]);
+  
+  // Update selected photo when profile loads
+  useEffect(() => {
+    if (profile?.photo_url) {
+      setSelectedPhotoUrl(profile.photo_url);
+      setPhotoLoadError(false);
+    }
+  }, [profile]);
+  
+  // Get location when component mounts
+  useEffect(() => {
+    getCurrentLocation();
+  }, []);
 
   // Function to load the individual's profile data
   const loadProfile = async () => {
@@ -59,6 +90,36 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
     await loadProfile();
     setIsRefreshing(false);
   };
+  
+  // Function to get current location
+  const getCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Location permission not granted');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      const [address] = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      const fullAddress = `${address.street || ''} ${address.city || ''} ${address.region || ''} ${address.postalCode || ''}`.trim();
+      
+      setSelectedLocation({
+        location: {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          address: fullAddress || 'Unknown location',
+        },
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      console.error('Error getting location:', error);
+    }
+  };
 
   // Function to handle interaction item press
   const handleInteractionPress = (interaction: any) => {
@@ -72,6 +133,69 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
     setSelectedInteraction(null);
   };
 
+  // Function to handle photo selection from gallery
+  const handlePhotoSelect = (photoUrl: string) => {
+    setSelectedPhotoUrl(photoUrl);
+    setPhotoLoadError(false);
+  };
+  
+  // Function to handle photo load error
+  const handlePhotoError = () => {
+    setPhotoLoadError(true);
+  };
+  
+  // Function to handle photo update
+  const handlePhotoUpdate = async (photoData: { photoUri: string; hasConsent: boolean }) => {
+    if (!photoData.hasConsent) {
+      Alert.alert('Consent Required', 'You must confirm consent before saving the photo.');
+      return;
+    }
+    
+    if (!profile || !selectedLocation) {
+      Alert.alert('Error', 'Unable to update photo. Please try again.');
+      return;
+    }
+    
+    try {
+      setIsUploadingPhoto(true);
+      
+      // Compress the image first
+      const compressedUri = await compressImage(photoData.photoUri);
+      
+      // Update the photo
+      const result = await api.updateIndividualPhoto({
+        individualId: profile.id,
+        photoUri: compressedUri,
+        consentLocation: selectedLocation.location,
+      });
+      
+      // Show success message
+      Toast.show({
+        type: 'success',
+        text1: 'Photo Updated',
+        text2: 'The photo has been updated successfully.',
+        position: 'bottom',
+      });
+      
+      // Close the photo capture modal
+      setShowPhotoCapture(false);
+      
+      // Refresh the profile to show the new photo
+      await loadProfile();
+      
+    } catch (error) {
+      console.error('Photo update error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Upload Failed',
+        text2: 'Failed to update photo. Please try again.',
+        position: 'bottom',
+      });
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+  
   // Function to handle danger override change
   const handleDangerOverrideChange = async (overrideValue: number | null) => {
     if (!profile) return;
@@ -156,6 +280,53 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
         }
       >
+        {/* Photo Section */}
+        <View testID="photo-section">
+          <View style={styles.photoTouchable}>
+            <View testID="photo-container" style={styles.photoContainer}>
+              {(selectedPhotoUrl || profile?.photo_url) && !photoLoadError ? (
+                <Image
+                  testID="individual-photo"
+                  source={{ uri: selectedPhotoUrl || profile?.photo_url }}
+                  style={styles.photo}
+                  resizeMode="cover"
+                  onError={handlePhotoError}
+                />
+              ) : (
+                <View testID="photo-placeholder" style={styles.photoPlaceholder}>
+                  <Ionicons name="person-circle-outline" size={120} color="#D1D5DB" />
+                </View>
+              )}
+              
+              {/* Update Photo Button */}
+              <TouchableOpacity
+                testID="update-photo-button"
+                style={styles.updatePhotoButton}
+                onPress={() => setShowPhotoCapture(true)}
+              >
+                <Ionicons name="camera" size={24} color="#fff" />
+                <Text testID="update-photo-button-text" style={styles.updatePhotoButtonText}>
+                  Update Photo
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          {/* Photo Gallery Component */}
+          {(profile?.photo_url || profile?.photo_history?.length > 0) && (
+            <View testID="photo-gallery-component">
+              <PhotoGallery
+                currentPhoto={profile?.photo_url ? {
+                  url: profile.photo_url,
+                  timestamp: profile.updated_at || new Date().toISOString()
+                } : null}
+                photoHistory={profile?.photo_history || []}
+                onPhotoSelect={handlePhotoSelect}
+              />
+            </View>
+          )}
+        </View>
+        
         {/* Header Section */}
         <View style={styles.header}>
           <Text style={styles.name}>{profile.name}</Text>
@@ -208,6 +379,33 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
         interaction={selectedInteraction}
         onClose={handleCloseModal}
       />
+      
+      {/* Photo Capture Modal */}
+      {showPhotoCapture && (
+        <View testID="photo-capture-modal" style={styles.photoCaptureModal}>
+          <View style={styles.photoCaptureHeader}>
+            <Text style={styles.photoCaptureTitle}>Update Photo</Text>
+            <TouchableOpacity
+              testID="cancel-photo-button"
+              onPress={() => setShowPhotoCapture(false)}
+              style={styles.cancelButton}
+            >
+              <Ionicons name="close" size={24} color="#374151" />
+            </TouchableOpacity>
+          </View>
+          
+          <PhotoCapture
+            onPhotoCapture={handlePhotoUpdate}
+          />
+          
+          {isUploadingPhoto && (
+            <View testID="upload-loading-indicator" style={styles.uploadingOverlay}>
+              <ActivityIndicator size="large" color="#007AFF" />
+              <Text style={styles.uploadingText}>Updating photo...</Text>
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -281,5 +479,92 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#6B7280',
     fontSize: 16,
+  },
+  photoTouchable: {
+    width: '100%',
+  },
+  photoContainer: {
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: '#F3F4F6',
+    overflow: 'hidden',
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
+  },
+  photoPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  updatePhotoButton: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: '#3B82F6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  updatePhotoButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  photoCaptureModal: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#fff',
+    zIndex: 1000,
+  },
+  photoCaptureHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  photoCaptureTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  cancelButton: {
+    padding: 8,
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1001,
+  },
+  uploadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6B7280',
   },
 }); 

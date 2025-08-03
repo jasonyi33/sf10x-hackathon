@@ -21,6 +21,7 @@ from db.models import (
     LocationData
 )
 from services.danger_calculator import calculate_danger_score
+from services.photo_history import update_photo_history
 
 
 class IndividualService:
@@ -100,7 +101,8 @@ class IndividualService:
         merge_with_id: Optional[UUID] = None,
         location: Optional[LocationData] = None,
         transcription: Optional[str] = None,
-        audio_url: Optional[str] = None
+        audio_url: Optional[str] = None,
+        photo_url: Optional[str] = None
     ) -> SaveIndividualResponse:
         """
         Save a new individual or update existing (merge).
@@ -146,14 +148,23 @@ class IndividualService:
             # Get changes only
             changes = self.get_changed_fields(existing_individual.get("data", {}), data)
             
+            # Handle photo history if new photo provided
+            update_data = {
+                "name": name,
+                "danger_score": danger_score,
+                "data": data,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            if photo_url is not None:
+                # Update photo history
+                updated_individual = update_photo_history(existing_individual, photo_url)
+                update_data["photo_url"] = updated_individual["photo_url"]
+                update_data["photo_history"] = updated_individual["photo_history"]
+            
             # Update existing individual
             update_response = self.supabase.table("individuals") \
-                .update({
-                    "name": name,
-                    "danger_score": danger_score,
-                    "data": data,
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                }) \
+                .update(update_data) \
                 .eq("id", str(merge_with_id)) \
                 .execute()
             
@@ -176,12 +187,19 @@ class IndividualService:
             
         else:
             # Create new individual
+            insert_data = {
+                "name": name,
+                "danger_score": danger_score,
+                "data": data
+            }
+            
+            # For new individual, if photo_url provided, set it directly with empty history
+            if photo_url:
+                insert_data["photo_url"] = photo_url
+                insert_data["photo_history"] = []  # Empty history for first photo
+            
             individual_response = self.supabase.table("individuals") \
-                .insert({
-                    "name": name,
-                    "danger_score": danger_score,
-                    "data": data
-                }) \
+                .insert(insert_data) \
                 .execute()
             
             individual = individual_response.data[0]
