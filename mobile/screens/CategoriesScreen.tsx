@@ -8,6 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
+  SafeAreaView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../services/api';
@@ -243,14 +245,43 @@ export default function CategoriesScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Categories</Text>
-        <Text style={styles.subtitle}>
-          Manage data collection fields and export data
-        </Text>
+    <SafeAreaView style={styles.safeContainer} testID="categories-screen">
+      {/* Sticky Warning Header */}
+      <View style={styles.warningHeader} testID="warning-header">
+        <Ionicons 
+          name="warning" 
+          size={24} 
+          color="#856404" 
+          style={styles.warningIcon}
+          testID="warning-icon"
+        />
+        <View style={styles.warningContent}>
+          <Text style={styles.warningTitle} testID="warning-title">
+            ⚠️ Data Protection Notice
+          </Text>
+          <Text style={styles.warningSubtitle}>Do not create categories for:</Text>
+          <View style={styles.warningList}>
+            <Text style={styles.warningItem}>• Medical diagnoses or health conditions</Text>
+            <Text style={styles.warningItem}>• Criminal history or legal status</Text>
+            <Text style={styles.warningItem}>• Immigration or citizenship status</Text>
+            <Text style={styles.warningItem}>• Specific racial/ethnic identification</Text>
+          </View>
+        </View>
       </View>
+
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.scrollContent}
+        testID="categories-scroll-view"
+      >
+        <View testID="scroll-content" style={styles.contentWrapper}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Categories</Text>
+            <Text style={styles.subtitle}>
+              Manage data collection fields and export data
+            </Text>
+          </View>
 
       {/* Export Section */}
       <View style={styles.section}>
@@ -364,25 +395,91 @@ export default function CategoriesScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Export Info */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Export Information</Text>
-        <Text style={styles.infoText}>
-          • CSV includes all individuals in the database{'\n'}
-          • All active categories are included as columns{'\n'}
-          • Danger scores and last interaction dates included{'\n'}
-          • Multi-select values are comma-separated{'\n'}
-          • File is named with current date and time
-        </Text>
-      </View>
-    </ScrollView>
+          {/* Export Info */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Export Information</Text>
+            <Text style={styles.infoText}>
+              • CSV includes all individuals in the database{'\n'}
+              • All active categories are included as columns{'\n'}
+              • Danger scores and last interaction dates included{'\n'}
+              • Multi-select values are comma-separated{'\n'}
+              • File is named with current date and time
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeContainer: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  warningHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
+    backgroundColor: '#FFF3CD',
+    borderColor: '#FF3B30',
+    borderWidth: 2,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    zIndex: 1000,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
+  },
+  warningIcon: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  warningContent: {
+    flex: 1,
+  },
+  warningTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#856404',
+    marginBottom: 4,
+  },
+  warningSubtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#856404',
+    marginBottom: 4,
+  },
+  warningList: {
+    marginTop: 2,
+  },
+  warningItem: {
+    fontSize: 13,
+    color: '#856404',
+    lineHeight: 18,
+    marginBottom: 2,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  contentWrapper: {
+    paddingTop: 120, // Add padding to account for sticky header
   },
   header: {
     padding: 20,

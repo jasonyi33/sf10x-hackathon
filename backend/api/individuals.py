@@ -4,8 +4,8 @@ Individual management API endpoints
 import os
 from fastapi import APIRouter, HTTPException, Depends, status, Query
 from uuid import UUID
-from typing import Optional
-from datetime import datetime, timezone
+from typing import Optional, Dict, Any, List
+from datetime import datetime, timezone, timedelta
 from supabase import create_client, Client
 
 from api.auth import get_current_user
@@ -24,6 +24,10 @@ from services.validation_helper import validate_categorized_data
 
 
 router = APIRouter()
+
+# Filter cache for performance
+FILTER_CACHE: Dict[str, Any] = {}
+CACHE_EXPIRY: Optional[datetime] = None
 
 
 def get_current_user_name(user_id: str = Depends(get_current_user)) -> str:
@@ -169,6 +173,138 @@ def get_supabase_client() -> Client:
     if not url or not key:
         raise ValueError("Supabase configuration missing")
     return create_client(url, key)
+
+
+def build_filter_cache(supabase: Client) -> Dict[str, Any]:
+    """
+    Build filter options cache from database.
+    Extracts unique values and ranges from all individuals.
+    """
+    try:
+        # Get all individuals
+        individuals_response = supabase.table("individuals").select("*").execute()
+        individuals = individuals_response.data
+        
+        # Initialize filter options
+        genders = set()
+        age_min, age_max = 120, 0  # Start with inverted ranges
+        height_min, height_max = 300, 0
+        danger_min, danger_max = 100, 0
+        has_photo_values = set()
+        skin_colors = set()
+        
+        # Extract unique values and ranges
+        for ind in individuals:
+            data = ind.get("data", {})
+            
+            # Gender
+            if "gender" in data and data["gender"]:
+                genders.add(data["gender"])
+            
+            # Age range (skip unknown ages [-1, -1])
+            if "approximate_age" in data:
+                age_range = data["approximate_age"]
+                if isinstance(age_range, list) and len(age_range) == 2:
+                    if age_range != [-1, -1]:  # Skip unknown ages
+                        age_min = min(age_min, age_range[0])
+                        age_max = max(age_max, age_range[1])
+            
+            # Height
+            if "height" in data and isinstance(data["height"], (int, float)):
+                height_min = min(height_min, data["height"])
+                height_max = max(height_max, data["height"])
+            
+            # Danger score (consider override if present)
+            danger_score = ind.get("danger_override") or ind.get("danger_score", 0)
+            danger_min = min(danger_min, danger_score)
+            danger_max = max(danger_max, danger_score)
+            
+            # Has photo
+            has_photo_values.add(ind.get("photo_url") is not None)
+            
+            # Skin color
+            if "skin_color" in data and data["skin_color"]:
+                skin_colors.add(data["skin_color"])
+        
+        # Handle empty database case
+        if not individuals:
+            age_min, age_max = 0, 120
+            height_min, height_max = 0, 300
+            danger_min, danger_max = 0, 100
+        else:
+            # Fix inverted ranges if no valid data found
+            if age_min > age_max:
+                age_min, age_max = 0, 120
+            if height_min > height_max:
+                height_min, height_max = 0, 300
+            if danger_min > danger_max:
+                danger_min, danger_max = 0, 100
+        
+        return {
+            "filters": {
+                "gender": sorted(list(genders)),
+                "age_range": {"min": age_min, "max": age_max},
+                "height_range": {"min": height_min, "max": height_max},
+                "danger_score_range": {"min": danger_min, "max": danger_max},
+                "has_photo": sorted(list(has_photo_values)),
+                "skin_color": sorted(list(skin_colors))
+            },
+            "cached_at": datetime.now(timezone.utc).isoformat(),
+            "expires_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+        }
+        
+    except Exception as e:
+        print(f"Error building filter cache: {str(e)}")
+        # Return default values on error
+        return {
+            "filters": {
+                "gender": [],
+                "age_range": {"min": 0, "max": 120},
+                "height_range": {"min": 0, "max": 300},
+                "danger_score_range": {"min": 0, "max": 100},
+                "has_photo": [True, False],
+                "skin_color": []
+            },
+            "cached_at": datetime.now(timezone.utc).isoformat(),
+            "expires_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+        }
+
+
+@router.get("/api/search/filters")
+async def get_filter_options(user_id: str = Depends(get_current_user)):
+    """
+    Get dynamic filter options from existing data.
+    
+    Features:
+    - Caches filter options for 1 hour to improve performance
+    - Refreshes cache if empty or expired
+    - Extracts unique values from database
+    - Returns min/max for numeric fields
+    - Excludes unknown ages from age range calculation
+    """
+    global FILTER_CACHE, CACHE_EXPIRY
+    
+    try:
+        # Check if cache is valid
+        now = datetime.now(timezone.utc)
+        
+        # Rebuild cache if empty or expired
+        if not FILTER_CACHE or CACHE_EXPIRY is None or now > CACHE_EXPIRY:
+            # Get Supabase client
+            supabase = get_supabase_client()
+            
+            # Build new cache
+            FILTER_CACHE = build_filter_cache(supabase)
+            CACHE_EXPIRY = now + timedelta(hours=1)
+        
+        return FILTER_CACHE
+        
+    except Exception as e:
+        print(f"Error getting filter options: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get filter options: {str(e)}"
+        )
 
 
 @router.post("/api/individuals", response_model=SaveIndividualResponse)

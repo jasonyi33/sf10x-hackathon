@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Import screens
@@ -14,9 +15,11 @@ import SearchScreen from './screens/SearchScreen';
 import CategoriesScreen from './screens/CategoriesScreen';
 import UserProfileScreen from './screens/UserProfileScreen';
 import IndividualProfileScreen from './screens/IndividualProfileScreen';
+import OnboardingScreen from './screens/OnboardingScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+const RootStack = createStackNavigator();
 
 // Stack navigator for Search tab
 function SearchStack() {
@@ -36,10 +39,83 @@ function SearchStack() {
   );
 }
 
+// Main app tabs
+function MainTabs() {
+  return (
+    <Tab.Navigator
+      initialRouteName="Record"
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap;
+
+          if (route.name === 'Record') {
+            iconName = focused ? 'camera' : 'camera-outline';
+          } else if (route.name === 'Search') {
+            iconName = focused ? 'search' : 'search-outline';
+          } else if (route.name === 'Categories') {
+            iconName = focused ? 'settings' : 'settings-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
+          } else {
+            iconName = 'help-outline';
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#007AFF',
+        tabBarInactiveTintColor: 'gray',
+        headerShown: true,
+      })}
+    >
+      <Tab.Screen 
+        name="Record" 
+        component={RecordScreen}
+        options={{ title: 'Record' }}
+      />
+      <Tab.Screen 
+        name="Search" 
+        component={SearchStack}
+        options={{ title: 'Search', headerShown: false }}
+      />
+      <Tab.Screen 
+        name="Categories" 
+        component={CategoriesScreen}
+        options={{ title: 'Categories' }}
+      />
+      <Tab.Screen 
+        name="Profile" 
+        component={UserProfileScreen}
+        options={{ title: 'Profile' }}
+      />
+    </Tab.Navigator>
+  );
+}
+
 function AppContent() {
   const { user, loading } = useAuth();
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
-  if (loading) {
+  useEffect(() => {
+    checkOnboardingStatus();
+  }, []);
+
+  const checkOnboardingStatus = async () => {
+    try {
+      const onboardingComplete = await AsyncStorage.getItem('onboarding_complete');
+      if (onboardingComplete !== 'true') {
+        setNeedsOnboarding(true);
+      }
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+      // Show onboarding on error to be safe
+      setNeedsOnboarding(true);
+    } finally {
+      setCheckingOnboarding(false);
+    }
+  };
+
+  if (loading || checkingOnboarding) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -50,52 +126,28 @@ function AppContent() {
 
   return (
     <NavigationContainer>
-      <Tab.Navigator
-        initialRouteName="Record"
-        screenOptions={({ route }) => ({
-          tabBarIcon: ({ focused, color, size }) => {
-            let iconName: keyof typeof Ionicons.glyphMap;
-
-            if (route.name === 'Record') {
-              iconName = focused ? 'camera' : 'camera-outline';
-            } else if (route.name === 'Search') {
-              iconName = focused ? 'search' : 'search-outline';
-            } else if (route.name === 'Categories') {
-              iconName = focused ? 'settings' : 'settings-outline';
-            } else if (route.name === 'Profile') {
-              iconName = focused ? 'person' : 'person-outline';
-            } else {
-              iconName = 'help-outline';
-            }
-
-            return <Ionicons name={iconName} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: '#007AFF',
-          tabBarInactiveTintColor: 'gray',
-          headerShown: true,
-        })}
+      <RootStack.Navigator
+        screenOptions={{
+          headerShown: false,
+          presentation: 'modal',
+        }}
       >
-        <Tab.Screen 
-          name="Record" 
-          component={RecordScreen}
-          options={{ title: 'Record' }}
-        />
-        <Tab.Screen 
-          name="Search" 
-          component={SearchStack}
-          options={{ title: 'Search', headerShown: false }}
-        />
-        <Tab.Screen 
-          name="Categories" 
-          component={CategoriesScreen}
-          options={{ title: 'Categories' }}
-        />
-        <Tab.Screen 
-          name="Profile" 
-          component={UserProfileScreen}
-          options={{ title: 'Profile' }}
-        />
-      </Tab.Navigator>
+        {needsOnboarding ? (
+          <RootStack.Screen
+            name="Onboarding"
+            component={OnboardingScreen}
+            options={{
+              gestureEnabled: false,
+              presentation: 'fullScreenModal',
+            }}
+          />
+        ) : (
+          <RootStack.Screen
+            name="MainApp"
+            component={MainTabs}
+          />
+        )}
+      </RootStack.Navigator>
       <StatusBar style="auto" />
     </NavigationContainer>
   );

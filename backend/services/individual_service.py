@@ -546,6 +546,9 @@ class IndividualService:
         - Return IndividualSummary (no photo_url)
         """
         try:
+            # Validate distance sort requires coordinates
+            if sort_by == "distance" and (lat is None or lon is None):
+                raise ValueError("Distance sort requires both lat and lon parameters")
             # Start with all individuals
             all_individuals = []
             
@@ -685,8 +688,6 @@ class IndividualService:
                     reverse=(sort_order == "desc")
                 )
             elif sort_by == "distance":
-                if lat is None or lon is None:
-                    raise ValueError("Distance sort requires lat and lon parameters")
                 filtered_individuals.sort(
                     key=lambda x: x.get("_distance", float('inf')),
                     reverse=(sort_order == "desc")
