@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { formatAge } from '../utils/ageUtils';
 
 interface SearchDropdownItemProps {
   id: string;
@@ -10,14 +11,6 @@ interface SearchDropdownItemProps {
   onPress: () => void;
   testID?: string;
 }
-
-// Helper function to format age display
-const formatAge = (age: [number, number] | null): string => {
-  if (!age || age[0] === -1 || age[1] === -1) {
-    return 'Unknown';
-  }
-  return `${age[0]}-${age[1]}`;
-};
 
 // Helper function to convert inches to feet and inches
 const formatHeight = (inches: number | null): string => {

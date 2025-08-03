@@ -1,17 +1,24 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { formatAge } from '../utils/ageUtils';
 
 interface FieldDisplayProps {
   label: string;
   value: any;
   isRequired?: boolean;
+  type?: 'text' | 'number' | 'age' | 'array' | 'boolean';
 }
 
-export default function FieldDisplay({ label, value, isRequired = false }: FieldDisplayProps) {
+export default function FieldDisplay({ label, value, isRequired = false, type }: FieldDisplayProps) {
   // Handle different types of values
   const formatValue = (val: any): string => {
     if (val === null || val === undefined) {
       return 'Not specified';
+    }
+    
+    // Special handling for age type
+    if (type === 'age' || (label.toLowerCase() === 'age' || label.toLowerCase() === 'approximate_age')) {
+      return formatAge(val);
     }
     
     if (Array.isArray(val)) {

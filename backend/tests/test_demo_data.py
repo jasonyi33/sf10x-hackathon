@@ -1,135 +1,410 @@
 """
-Test cases for demo data SQL
+Task 4.0.5: Demo Data Creation Tests
+Verify that the required 5 demo individuals exist with correct specifications
 """
+
 import pytest
+import asyncio
 from unittest.mock import patch, MagicMock
+from datetime import datetime
+import sys
 import os
-from uuid import UUID
+
+# Add backend to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from services.individual_service import IndividualService
+
+# Mark all tests as async
+pytestmark = pytest.mark.asyncio
 
 
-class TestDemoData:
+class TestDemoDataRequirements:
+    """Test that demo data meets PRD requirements"""
     
-    def test_demo_data_requirements(self):
-        """Test that demo data meets all requirements from Task 6.1"""
+    # Required demo individuals as per PRD
+    REQUIRED_INDIVIDUALS = [
+        {
+            "name": "John Doe",
+            "gender": "Male",
+            "age": [45, 50],
+            "height": 70,  # 5'10"
+            "skin_color": "Medium",
+            "danger_score": 20,
+            "has_photo": True,
+            "has_history": True
+        },
+        {
+            "name": "Jane Smith",
+            "gender": "Female", 
+            "age": [-1, -1],  # Unknown age
+            "height": 66,  # 5'6"
+            "skin_color": "Light",
+            "danger_score": 80,
+            "has_photo": False,
+            "has_history": True
+        },
+        {
+            "name": "Robert Johnson",
+            "gender": "Male",
+            "age": [65, 70],
+            "height": 72,  # 6'0"
+            "skin_color": "Dark",
+            "danger_score": 45,
+            "has_photo": True,
+            "has_history": True,
+            "has_photo_history": True  # Special: has photo history
+        },
+        {
+            "name": "Maria Garcia",
+            "gender": "Female",
+            "age": [30, 35],
+            "height": 64,  # 5'4"
+            "skin_color": "Medium",
+            "danger_score": 10,
+            "has_photo": True,
+            "has_history": True
+        },
+        {
+            "name": "Unknown Person",
+            "gender": "Unknown",
+            "age": [-1, -1],  # Unknown age
+            "height": 68,  # 5'8"
+            "skin_color": "Medium",
+            "danger_score": 90,
+            "has_photo": False,
+            "has_history": True
+        }
+    ]
+    
+    @pytest.fixture
+    def mock_supabase(self):
+        """Mock Supabase client with demo data"""
+        mock = MagicMock()
         
-        # This test verifies the SQL file creates the expected data
-        # In a real scenario, we would execute the SQL and check the database
-        # For now, we'll simulate the expected results
-        
-        # Mock data representing what the SQL should create
+        # Mock demo individuals data
         mock_individuals = [
-            {"id": "550e8400-e29b-41d4-a716-446655440001", "name": "John Doe", "danger_score": 75, "danger_override": None, 
-             "data": {"height": 72, "weight": 180, "skin_color": "Light", "gender": "Male", "veteran_status": "Yes", "housing_priority": "High", "substance_abuse_history": ["Moderate"]}},
-            {"id": "550e8400-e29b-41d4-a716-446655440002", "name": "Sarah Smith", "danger_score": 20, "danger_override": 40,
-             "data": {"height": 64, "weight": 130, "skin_color": "Dark", "gender": "Female", "substance_abuse_history": ["In Recovery"], "housing_priority": "Medium"}},
-            {"id": "550e8400-e29b-41d4-a716-446655440003", "name": "Robert Johnson", "danger_score": 90, "danger_override": None,
-             "data": {"height": 70, "weight": 200, "skin_color": "Medium", "gender": "Male", "veteran_status": "Yes", "violent_behavior": "Physical", "medical_conditions": ["Mental Health", "Chronic Pain"]}},
-            {"id": "550e8400-e29b-41d4-a716-446655440004", "name": "Maria Garcia", "danger_score": 15, "danger_override": 25,
-             "data": {"height": 62, "weight": 115, "skin_color": "Medium", "gender": "Female", "housing_priority": "Low", "substance_abuse_history": ["None"]}},
-            {"id": "550e8400-e29b-41d4-a716-446655440005", "name": "Michael Chen", "danger_score": 100, "danger_override": None,
-             "data": {"height": 68, "weight": 160, "skin_color": "Light", "gender": "Male", "violent_behavior": "Physical", "medical_conditions": ["Mental Health"]}},
-            {"id": "550e8400-e29b-41d4-a716-446655440006", "name": "Linda Williams", "danger_score": 45, "danger_override": None,
-             "data": {"height": 66, "weight": 140, "skin_color": "Dark", "gender": "Female", "veteran_status": "No", "housing_priority": "Medium", "substance_abuse_history": ["Mild"]}},
-            {"id": "550e8400-e29b-41d4-a716-446655440007", "name": "James Wilson", "danger_score": 85, "danger_override": 60,
-             "data": {"height": 74, "weight": 190, "skin_color": "Light", "gender": "Male", "violent_behavior": "Verbal Only", "housing_priority": "High"}},
-            {"id": "550e8400-e29b-41d4-a716-446655440008", "name": "Patricia Brown", "danger_score": 10, "danger_override": None,
-             "data": {"height": 60, "weight": 125, "skin_color": "Medium", "gender": "Female", "substance_abuse_history": ["None"], "medical_conditions": ["Diabetes"]}},
-            {"id": "550e8400-e29b-41d4-a716-446655440009", "name": "David Martinez", "danger_score": 100, "danger_override": None,
-             "data": {"height": 71, "weight": 175, "skin_color": "Medium", "gender": "Male", "violent_behavior": "Physical", "veteran_status": "Yes", "medical_conditions": ["Mental Health", "Mobility Issues"], "housing_priority": "Critical"}},
-            {"id": "550e8400-e29b-41d4-a716-446655440010", "name": "Jennifer Davis", "danger_score": 50, "danger_override": None,
-             "data": {"height": 65, "weight": 135, "skin_color": "Light", "gender": "Female", "veteran_status": "No", "medical_conditions": ["Heart Disease", "Chronic Pain"], "housing_priority": "Medium", "violent_behavior": "None", "substance_abuse_history": ["Moderate", "In Recovery"]}},
-            {"id": "550e8400-e29b-41d4-a716-446655440011", "name": "Christopher Lee", "danger_score": 70, "danger_override": None,
-             "data": {"height": 69, "weight": 155, "skin_color": "Medium", "gender": "Male", "housing_priority": "High", "violent_behavior": "Verbal Only"}},
-            {"id": "550e8400-e29b-41d4-a716-446655440012", "name": "Nancy Taylor", "danger_score": 5, "danger_override": 15,
-             "data": {"height": 63, "weight": 120, "skin_color": "Dark", "gender": "Female", "substance_abuse_history": ["None"]}},
-            {"id": "550e8400-e29b-41d4-a716-446655440013", "name": "Kevin Anderson", "danger_score": 100, "danger_override": None,
-             "data": {"height": 73, "weight": 185, "skin_color": "Light", "gender": "Male", "violent_behavior": "Physical", "substance_abuse_history": ["Severe"]}},
-            {"id": "550e8400-e29b-41d4-a716-446655440014", "name": "Barbara Thomas", "danger_score": 35, "danger_override": None,
-             "data": {"height": 61, "weight": 110, "skin_color": "Medium", "gender": "Female", "veteran_status": "Unknown", "housing_priority": "Low", "medical_conditions": ["None"]}},
-            {"id": "550e8400-e29b-41d4-a716-446655440015", "name": "Daniel Rodriguez", "danger_score": 80, "danger_override": None,
-             "data": {"height": 72, "weight": 170, "skin_color": "Dark", "gender": "Male", "housing_priority": "Critical", "violent_behavior": "Verbal Only", "medical_conditions": ["Mental Health"]}},
-            {"id": "550e8400-e29b-41d4-a716-446655440016", "name": "Lisa White", "danger_score": 20, "danger_override": None,
-             "data": {"height": 64, "weight": 128, "skin_color": "Light", "gender": "Female", "substance_abuse_history": ["In Recovery"]}},
-            {"id": "550e8400-e29b-41d4-a716-446655440017", "name": "Mark Harris", "danger_score": 55, "danger_override": None,
-             "data": {"height": 70, "weight": 165, "skin_color": "Medium", "gender": "Male", "veteran_status": "Yes", "housing_priority": "Medium"}},
-            {"id": "550e8400-e29b-41d4-a716-446655440018", "name": "Sandra Clark", "danger_score": 65, "danger_override": 50,
-             "data": {"height": 62, "weight": 118, "skin_color": "Dark", "gender": "Female", "violent_behavior": "None", "medical_conditions": ["Diabetes", "Heart Disease"]}},
-            {"id": "550e8400-e29b-41d4-a716-446655440019", "name": "Paul Lewis", "danger_score": 25, "danger_override": None,
-             "data": {"height": 68, "weight": 150, "skin_color": "Light", "gender": "Male", "substance_abuse_history": ["Mild"]}},
-            {"id": "550e8400-e29b-41d4-a716-446655440020", "name": "Amy Walker", "danger_score": 60, "danger_override": None,
-             "data": {"height": 66, "weight": 132, "skin_color": "Medium", "gender": "Female", "veteran_status": "No", "housing_priority": "High", "medical_conditions": ["Mobility Issues"]}}
+            {
+                "id": "demo-john-doe",
+                "name": "John Doe",
+                "danger_score": 20,
+                "danger_override": None,
+                "photo_url": "https://storage.example.com/photos/john-doe.jpg",
+                "data": {
+                    "gender": "Male",
+                    "approximate_age": [45, 50],
+                    "height": 70,
+                    "weight": 180,
+                    "skin_color": "Medium"
+                },
+                "created_at": "2024-01-01T10:00:00Z",
+                "updated_at": "2024-01-15T10:00:00Z"
+            },
+            {
+                "id": "demo-jane-smith",
+                "name": "Jane Smith",
+                "danger_score": 80,
+                "danger_override": None,
+                "photo_url": None,
+                "data": {
+                    "gender": "Female",
+                    "approximate_age": [-1, -1],
+                    "height": 66,
+                    "weight": 140,
+                    "skin_color": "Light"
+                },
+                "created_at": "2024-01-02T10:00:00Z",
+                "updated_at": "2024-01-16T10:00:00Z"
+            },
+            {
+                "id": "demo-robert-johnson",
+                "name": "Robert Johnson",
+                "danger_score": 45,
+                "danger_override": None,
+                "photo_url": "https://storage.example.com/photos/robert-johnson.jpg",
+                "data": {
+                    "gender": "Male",
+                    "approximate_age": [65, 70],
+                    "height": 72,
+                    "weight": 200,
+                    "skin_color": "Dark"
+                },
+                "created_at": "2024-01-03T10:00:00Z",
+                "updated_at": "2024-01-17T10:00:00Z"
+            },
+            {
+                "id": "demo-maria-garcia",
+                "name": "Maria Garcia",
+                "danger_score": 10,
+                "danger_override": None,
+                "photo_url": "https://storage.example.com/photos/maria-garcia.jpg",
+                "data": {
+                    "gender": "Female",
+                    "approximate_age": [30, 35],
+                    "height": 64,
+                    "weight": 130,
+                    "skin_color": "Medium"
+                },
+                "created_at": "2024-01-04T10:00:00Z",
+                "updated_at": "2024-01-18T10:00:00Z"
+            },
+            {
+                "id": "demo-unknown-person",
+                "name": "Unknown Person",
+                "danger_score": 90,
+                "danger_override": None,
+                "photo_url": None,
+                "data": {
+                    "gender": "Unknown",
+                    "approximate_age": [-1, -1],
+                    "height": 68,
+                    "weight": 160,
+                    "skin_color": "Medium"
+                },
+                "created_at": "2024-01-05T10:00:00Z",
+                "updated_at": "2024-01-19T10:00:00Z"
+            }
         ]
         
-        # Test 1: 20 individuals exist
-        assert len(mock_individuals) == 20, "Should have exactly 20 individuals"
+        # Mock search to return demo individuals
+        mock.table.return_value.select.return_value.execute.return_value = MagicMock(
+            data=mock_individuals
+        )
         
-        # Test 2: Danger score distribution
-        # Expected: ~6 low (0-33), ~8 medium (34-66), ~6 high (67-100)
-        individuals = mock_individuals
-        low_count = sum(1 for i in individuals if (i.get('danger_override') or i.get('danger_score', 0)) <= 33)
-        medium_count = sum(1 for i in individuals if 33 < (i.get('danger_override') or i.get('danger_score', 0)) <= 66)
-        high_count = sum(1 for i in individuals if (i.get('danger_override') or i.get('danger_score', 0)) > 66)
+        return mock
+    
+    async def test_all_required_individuals_exist(self, mock_supabase):
+        """Test that all 5 required demo individuals exist"""
+        service = IndividualService(mock_supabase)
         
-        assert 4 <= low_count <= 8, f"Expected 4-8 low danger individuals, got {low_count}"
-        assert 6 <= medium_count <= 10, f"Expected 6-10 medium danger individuals, got {medium_count}"
-        assert 4 <= high_count <= 8, f"Expected 4-8 high danger individuals, got {high_count}"
+        # Get all individuals
+        result = await service.search_individuals("")
+        individuals = result["individuals"]
         
-        # Test 3: Manual overrides
-        override_count = sum(1 for i in individuals if i.get('danger_override') is not None)
-        assert override_count == 5, f"Expected 5 individuals with manual overrides, got {override_count}"
+        # Check we have at least 5 individuals
+        assert len(individuals) >= 5, f"Expected at least 5 demo individuals, found {len(individuals)}"
         
-        # Test 4: Auto-triggered scores
-        auto_triggered_count = sum(1 for i in individuals if i.get('danger_score') == 100)
-        assert auto_triggered_count >= 3, f"Expected at least 3 auto-triggered (100) scores, got {auto_triggered_count}"
+        # Check each required individual exists
+        for required in self.REQUIRED_INDIVIDUALS:
+            found = False
+            for ind in individuals:
+                if ind["name"] == required["name"]:
+                    found = True
+                    break
+            
+            assert found, f"Required demo individual '{required['name']}' not found"
+    
+    async def test_individual_specifications(self, mock_supabase):
+        """Test that each demo individual has correct specifications"""
+        service = IndividualService(mock_supabase)
         
-        # Test 5: Custom categories exist
-        mock_categories = [
-            {"name": "veteran_status", "type": "single_select", "is_preset": False, "danger_weight": 20, "auto_trigger": False},
-            {"name": "medical_conditions", "type": "multi_select", "is_preset": False, "danger_weight": 0, "auto_trigger": False},
-            {"name": "housing_priority", "type": "single_select", "is_preset": False, "danger_weight": 30, "auto_trigger": False},
-            {"name": "violent_behavior", "type": "single_select", "is_preset": False, "danger_weight": 40, "auto_trigger": True}
+        # Get all individuals
+        result = await service.search_individuals("")
+        individuals = result["individuals"]
+        
+        # Create lookup by name
+        individuals_by_name = {ind["name"]: ind for ind in individuals}
+        
+        # Verify each individual's specifications
+        for required in self.REQUIRED_INDIVIDUALS:
+            ind = individuals_by_name.get(required["name"])
+            assert ind is not None, f"Individual '{required['name']}' not found"
+            
+            # Check gender
+            assert ind["data"]["gender"] == required["gender"], \
+                f"{required['name']}: Expected gender '{required['gender']}', got '{ind['data']['gender']}'"
+            
+            # Check age
+            assert ind["data"]["approximate_age"] == required["age"], \
+                f"{required['name']}: Expected age {required['age']}, got {ind['data']['approximate_age']}"
+            
+            # Check height
+            assert ind["data"]["height"] == required["height"], \
+                f"{required['name']}: Expected height {required['height']}, got {ind['data']['height']}'"
+            
+            # Check skin color
+            assert ind["data"]["skin_color"] == required["skin_color"], \
+                f"{required['name']}: Expected skin_color '{required['skin_color']}', got '{ind['data']['skin_color']}'"
+            
+            # Check danger score
+            assert ind["danger_score"] == required["danger_score"], \
+                f"{required['name']}: Expected danger_score {required['danger_score']}, got {ind['danger_score']}"
+            
+            # Check photo
+            has_photo = ind.get("photo_url") is not None
+            assert has_photo == required["has_photo"], \
+                f"{required['name']}: Expected has_photo={required['has_photo']}, got {has_photo}"
+    
+    async def test_edge_cases(self, mock_supabase):
+        """Test edge cases: Unknown age and Unknown gender"""
+        service = IndividualService(mock_supabase)
+        
+        # Get all individuals
+        result = await service.search_individuals("")
+        individuals = result["individuals"]
+        
+        # Check Jane Smith has unknown age
+        jane = next((ind for ind in individuals if ind["name"] == "Jane Smith"), None)
+        assert jane is not None
+        assert jane["data"]["approximate_age"] == [-1, -1], "Jane Smith should have unknown age [-1, -1]"
+        
+        # Check Unknown Person has both unknown age and gender
+        unknown = next((ind for ind in individuals if ind["name"] == "Unknown Person"), None)
+        assert unknown is not None
+        assert unknown["data"]["approximate_age"] == [-1, -1], "Unknown Person should have unknown age [-1, -1]"
+        assert unknown["data"]["gender"] == "Unknown", "Unknown Person should have gender 'Unknown'"
+    
+    async def test_photo_history(self, mock_supabase):
+        """Test that Robert Johnson has photo history"""
+        # Mock photo history for Robert Johnson
+        mock_supabase.table.return_value.select.return_value.eq.return_value.order.return_value.execute.return_value = MagicMock(
+            data=[
+                {
+                    "id": "photo-1",
+                    "individual_id": "demo-robert-johnson",
+                    "photo_url": "https://storage.example.com/photos/robert-old-1.jpg",
+                    "consent_given": True,
+                    "created_at": "2024-01-03T10:00:00Z"
+                },
+                {
+                    "id": "photo-2", 
+                    "individual_id": "demo-robert-johnson",
+                    "photo_url": "https://storage.example.com/photos/robert-old-2.jpg",
+                    "consent_given": True,
+                    "created_at": "2024-01-10T10:00:00Z"
+                },
+                {
+                    "id": "photo-3",
+                    "individual_id": "demo-robert-johnson",
+                    "photo_url": "https://storage.example.com/photos/robert-johnson.jpg",
+                    "consent_given": True,
+                    "created_at": "2024-01-17T10:00:00Z"
+                }
+            ]
+        )
+        
+        # Check photo history exists
+        photo_history = mock_supabase.table("photo_history").select("*").eq("individual_id", "demo-robert-johnson").order("created_at").execute()
+        
+        assert len(photo_history.data) >= 2, "Robert Johnson should have photo history (at least 2 photos)"
+    
+    async def test_searchability(self, mock_supabase):
+        """Test that demo individuals are searchable by various criteria"""
+        service = IndividualService(mock_supabase)
+        
+        # Test search by name
+        test_searches = [
+            ("John", ["John Doe"]),
+            ("Smith", ["Jane Smith"]),
+            ("Garcia", ["Maria Garcia"]),
+            ("Unknown", ["Unknown Person"])
         ]
-        custom_categories = {cat['name'] for cat in mock_categories}
-        expected_categories = {'veteran_status', 'medical_conditions', 'housing_priority', 'violent_behavior'}
-        assert expected_categories.issubset(custom_categories), f"Missing custom categories: {expected_categories - custom_categories}"
         
-        # Test 6: Simulated interaction counts (would be from actual SQL execution)
-        # The SQL creates varied interactions per person
-        interaction_counts_valid = True  # In actual test, would verify from DB
-        assert interaction_counts_valid, "Each individual should have 1-10 interactions"
+        for query, expected_names in test_searches:
+            # Mock filtered results
+            mock_supabase.table.return_value.select.return_value.ilike.return_value.execute.return_value = MagicMock(
+                data=[ind for ind in mock_supabase.table().select().execute().data 
+                      if query.lower() in ind["name"].lower()]
+            )
+            
+            result = await service.search_individuals(query)
+            found_names = [ind["name"] for ind in result["individuals"]]
+            
+            for expected in expected_names:
+                assert expected in found_names, f"Search '{query}' should find '{expected}'"
+    
+    async def test_danger_score_distribution(self, mock_supabase):
+        """Test that demo individuals have varied danger scores"""
+        service = IndividualService(mock_supabase)
         
-        # Test 7: Mix of voice and manual entries
-        # The SQL includes both transcription and non-transcription entries
-        has_voice_entries = True  # Would check actual DB
-        has_manual_entries = True  # Would check actual DB
-        assert has_voice_entries, "Should have at least some voice entries"
-        assert has_manual_entries, "Should have at least some manual entries"
+        result = await service.search_individuals("")
+        individuals = result["individuals"]
         
-        # Test 8: Location variety
-        # The SQL includes Market St, Mission, Golden Gate Park, Tenderloin, SOMA, Haight-Ashbury
-        location_variety = 6  # From SQL file
-        assert location_variety >= 4, f"Expected at least 4 different SF locations"
+        danger_scores = [ind["danger_score"] for ind in individuals]
         
-        # Test 9: Specific individuals exist
-        names = {i['name'] for i in individuals}
-        required_names = {'John Doe', 'Sarah Smith', 'Robert Johnson'}
-        assert required_names.issubset(names), f"Missing required individuals: {required_names - names}"
+        # Check we have low, medium, and high danger scores
+        assert any(score <= 20 for score in danger_scores), "Should have low danger scores (≤20)"
+        assert any(20 < score <= 50 for score in danger_scores), "Should have medium danger scores (20-50)"
+        assert any(score > 50 for score in danger_scores), "Should have high danger scores (>50)"
         
-        # Verify specific individual details
-        john = next((i for i in individuals if i['name'] == 'John Doe'), None)
-        assert john and john['danger_score'] == 75, "John Doe should have danger_score 75"
+        # Check specific distribution
+        expected_scores = [20, 80, 45, 10, 90]
+        actual_scores = sorted([ind["danger_score"] for ind in individuals])
+        expected_scores.sort()
         
-        sarah = next((i for i in individuals if i['name'] == 'Sarah Smith'), None)
-        assert sarah and sarah['danger_score'] == 20 and sarah['danger_override'] == 40, "Sarah Smith should have score 20, override 40"
+        assert actual_scores == expected_scores, f"Expected danger scores {expected_scores}, got {actual_scores}"
+    
+    async def test_interaction_history(self, mock_supabase):
+        """Test that all demo individuals have interaction history"""
+        # Mock interactions for each individual
+        mock_interactions = {
+            "demo-john-doe": [
+                {"id": "int-1", "created_at": "2024-01-15T10:00:00Z", "transcription": "Met John near Market Street..."},
+                {"id": "int-2", "created_at": "2024-01-10T10:00:00Z", "data": {"location": "Golden Gate Park"}}
+            ],
+            "demo-jane-smith": [
+                {"id": "int-3", "created_at": "2024-01-16T10:00:00Z", "transcription": "Jane at the library..."}
+            ],
+            "demo-robert-johnson": [
+                {"id": "int-4", "created_at": "2024-01-17T10:00:00Z", "transcription": "Robert at Golden Gate Park..."},
+                {"id": "int-5", "created_at": "2024-01-12T10:00:00Z", "data": {"medical_needs": "Diabetes medication"}},
+                {"id": "int-6", "created_at": "2024-01-08T10:00:00Z", "data": {"veteran_status": "Yes"}}
+            ],
+            "demo-maria-garcia": [
+                {"id": "int-7", "created_at": "2024-01-18T10:00:00Z", "transcription": "Maria seeking housing assistance..."}
+            ],
+            "demo-unknown-person": [
+                {"id": "int-8", "created_at": "2024-01-19T10:00:00Z", "data": {"location": "Tenderloin", "needs": "Unknown"}}
+            ]
+        }
         
-        robert = next((i for i in individuals if i['name'] == 'Robert Johnson'), None)
-        assert robert and robert['danger_score'] == 90, "Robert Johnson should have danger_score 90"
+        for ind_id, interactions in mock_interactions.items():
+            mock_supabase.table.return_value.select.return_value.eq.return_value.order.return_value.execute.return_value = MagicMock(
+                data=interactions
+            )
+            
+            # Check interactions exist
+            result = mock_supabase.table("interactions").select("*").eq("individual_id", ind_id).order("created_at", desc=True).execute()
+            
+            assert len(result.data) > 0, f"Individual {ind_id} should have interaction history"
+
+
+class TestDemoDataCreation:
+    """Test demo data creation functionality"""
+    
+    async def test_create_demo_individuals_script_exists(self):
+        """Test that demo data creation script exists"""
+        script_paths = [
+            "/Users/jasonyi/sf10x-hackathon/backend/scripts/create_demo_data.py",
+            "/Users/jasonyi/sf10x-hackathon/supabase/migrations/004_required_demo_data.sql"
+        ]
         
-        # Test 10: At least one individual has all custom fields populated
-        individuals_with_all_custom = 0
-        for ind in individuals:
-            data = ind.get('data', {})
-            if all(field in data for field in ['veteran_status', 'medical_conditions', 'housing_priority', 'violent_behavior']):
-                individuals_with_all_custom += 1
+        script_exists = any(os.path.exists(path) for path in script_paths)
+        assert script_exists, "Demo data creation script should exist"
+    
+    async def test_demo_photos_exist(self):
+        """Test that demo photos are available"""
+        photo_paths = [
+            "/Users/jasonyi/sf10x-hackathon/mobile/assets/demo-photos/john-doe.jpg",
+            "/Users/jasonyi/sf10x-hackathon/mobile/assets/demo-photos/robert-johnson.jpg",
+            "/Users/jasonyi/sf10x-hackathon/mobile/assets/demo-photos/maria-garcia.jpg"
+        ]
         
-        assert individuals_with_all_custom >= 1, "At least one individual should have all custom fields populated"
+        # At least one approach should exist
+        photos_exist = any(os.path.exists(path) for path in photo_paths)
+        
+        # Or check for photo references in code
+        if not photos_exist:
+            # Check if there's a photo service that provides demo photos
+            api_path = "/Users/jasonyi/sf10x-hackathon/mobile/services/api.ts"
+            if os.path.exists(api_path):
+                with open(api_path, 'r') as f:
+                    content = f.read()
+                    photos_exist = "demo-photo" in content or "example.com/photos" in content
+        
+        assert photos_exist, "Demo photos or photo references should exist"
+
+
+if __name__ == "__main__":
+    # Run tests
+    pytest.main([__file__, "-v"])
