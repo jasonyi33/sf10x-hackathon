@@ -257,6 +257,88 @@ async def save_individual(
         )
 
 
+@router.get("/api/individuals/search", response_model=SearchIndividualsResponse)
+async def advanced_search_individuals(
+    q: Optional[str] = Query(None, description="Search query"),
+    gender: Optional[str] = Query(None, description="Comma-separated genders"),
+    age_min: Optional[int] = Query(None, ge=0, le=120),
+    age_max: Optional[int] = Query(None, ge=0, le=120),
+    height_min: Optional[int] = Query(None, ge=0, le=300),
+    height_max: Optional[int] = Query(None, ge=0, le=300),
+    danger_min: Optional[int] = Query(None, ge=0, le=100),
+    danger_max: Optional[int] = Query(None, ge=0, le=100),
+    has_photo: Optional[bool] = Query(None),
+    sort_by: str = Query("danger_score", pattern="^(danger_score|last_seen|name|distance)$"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
+    limit: int = Query(10, ge=1, le=20),
+    offset: int = Query(0, ge=0, le=100),
+    lat: Optional[float] = Query(None, ge=-90, le=90),
+    lon: Optional[float] = Query(None, ge=-180, le=180),
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Advanced search endpoint with multiple filters.
+    
+    Features:
+    - Text search across name and JSONB data fields
+    - Gender filter (comma-separated for OR logic)
+    - Age range with overlap logic
+    - Height range filter
+    - Danger score range filter
+    - Has photo filter
+    - Sorting options: danger_score, last_seen, name, distance
+    - Distance sort requires lat/lon coordinates
+    - Pagination with limit/offset
+    """
+    try:
+        # Validate distance sort requires coordinates
+        if sort_by == "distance" and (lat is None or lon is None):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Distance sort requires lat and lon parameters"
+            )
+        
+        # Get Supabase client
+        supabase = get_supabase_client()
+        
+        # Initialize service
+        service = IndividualService(supabase)
+        
+        # Perform advanced search
+        result = await service.advanced_search(
+            q=q,
+            gender=gender,
+            age_min=age_min,
+            age_max=age_max,
+            height_min=height_min,
+            height_max=height_max,
+            danger_min=danger_min,
+            danger_max=danger_max,
+            has_photo=has_photo,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            limit=limit,
+            offset=offset,
+            lat=lat,
+            lon=lon
+        )
+        
+        return SearchIndividualsResponse(**result)
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        # Log error for debugging
+        print(f"Error in advanced search: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to search individuals: {str(e)}"
+        )
+
+
 @router.get("/api/individuals", response_model=SearchIndividualsResponse)
 async def search_individuals(
     search: Optional[str] = Query(None, description="Search term for name and data fields"),

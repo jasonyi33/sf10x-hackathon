@@ -515,3 +515,221 @@ class IndividualService:
         ]
         
         return InteractionsResponse(interactions=interactions)
+
+    async def advanced_search(
+        self,
+        q: Optional[str] = None,
+        gender: Optional[str] = None,
+        age_min: Optional[int] = None,
+        age_max: Optional[int] = None,
+        height_min: Optional[int] = None,
+        height_max: Optional[int] = None,
+        danger_min: Optional[int] = None,
+        danger_max: Optional[int] = None,
+        has_photo: Optional[bool] = None,
+        sort_by: str = "danger_score",
+        sort_order: str = "desc",
+        limit: int = 10,
+        offset: int = 0,
+        lat: Optional[float] = None,
+        lon: Optional[float] = None
+    ) -> Dict[str, Any]:
+        """
+        Advanced search with multiple filters.
+        
+        Requirements:
+        - All filters use AND logic
+        - Age overlap: NOT (ind_max < filter_min OR ind_min > filter_max)
+        - Gender uses OR within field (e.g., gender IN ('Male', 'Female'))
+        - Text search across name and JSONB data fields
+        - Distance calculation if lat/lon provided
+        - Return IndividualSummary (no photo_url)
+        """
+        try:
+            # Start with all individuals
+            all_individuals = []
+            
+            # Get all individuals from database
+            response = self.supabase.table("individuals").select("*").execute()
+            db_individuals = response.data
+            
+            # Apply filters
+            filtered_individuals = []
+            
+            for ind in db_individuals:
+                # Text search in name and JSONB data
+                if q:
+                    search_term = q.lower()
+                    name_match = search_term in ind.get("name", "").lower()
+                    data_match = search_term in str(ind.get("data", {})).lower()
+                    if not (name_match or data_match):
+                        continue
+                
+                # Gender filter (OR logic for multiple values)
+                if gender:
+                    gender_list = [g.strip() for g in gender.split(",")]
+                    ind_gender = ind.get("data", {}).get("gender")
+                    if ind_gender not in gender_list:
+                        continue
+                
+                # Age range filter with overlap logic
+                if age_min is not None or age_max is not None:
+                    age_range = ind.get("data", {}).get("approximate_age", [])
+                    if age_range and len(age_range) == 2:
+                        ind_min, ind_max = age_range[0], age_range[1]
+                        # Apply overlap logic: NOT (ind_max < filter_min OR ind_min > filter_max)
+                        if age_min is not None and age_max is not None:
+                            if ind_max < age_min or ind_min > age_max:
+                                continue
+                        elif age_min is not None:
+                            if ind_max < age_min:
+                                continue
+                        elif age_max is not None:
+                            if ind_min > age_max:
+                                continue
+                
+                # Height range filter
+                if height_min is not None or height_max is not None:
+                    height = ind.get("data", {}).get("height", 0)
+                    if height_min is not None and height < height_min:
+                        continue
+                    if height_max is not None and height > height_max:
+                        continue
+                
+                # Danger score filter
+                if danger_min is not None or danger_max is not None:
+                    danger_score = ind.get("danger_override") or ind.get("danger_score", 0)
+                    if danger_min is not None and danger_score < danger_min:
+                        continue
+                    if danger_max is not None and danger_score > danger_max:
+                        continue
+                
+                # Has photo filter
+                if has_photo is not None:
+                    photo_url = ind.get("photo_url")
+                    if has_photo and photo_url is None:
+                        continue
+                    if not has_photo and photo_url is not None:
+                        continue
+                
+                # If we get here, individual passes all filters
+                filtered_individuals.append(ind)
+            
+            # Get last interactions for last_seen
+            individual_ids = [ind["id"] for ind in filtered_individuals]
+            interactions = {}
+            
+            if individual_ids:
+                # Get latest interaction for each individual
+                for ind_id in individual_ids:
+                    int_response = self.supabase.table("interactions")\
+                        .select("created_at, location")\
+                        .eq("individual_id", ind_id)\
+                        .order("created_at", desc=True)\
+                        .limit(1)\
+                        .execute()
+                    
+                    if int_response.data:
+                        interactions[ind_id] = int_response.data[0]
+            
+            # Calculate distance if coordinates provided
+            if lat is not None and lon is not None and sort_by == "distance":
+                from math import radians, sin, cos, sqrt, atan2
+                
+                for ind in filtered_individuals:
+                    # Get last known location
+                    interaction = interactions.get(ind["id"])
+                    if interaction and interaction.get("location"):
+                        loc = interaction["location"]
+                        if "lat" in loc and "lng" in loc:
+                            # Haversine formula for distance
+                            R = 3959  # Earth radius in miles
+                            lat1, lon1 = radians(lat), radians(lon)
+                            lat2, lon2 = radians(loc["lat"]), radians(loc["lng"])
+                            
+                            dlat = lat2 - lat1
+                            dlon = lon2 - lon1
+                            
+                            a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+                            c = 2 * atan2(sqrt(a), sqrt(1-a))
+                            distance = R * c
+                            
+                            ind["_distance"] = distance
+                        else:
+                            ind["_distance"] = float('inf')
+                    else:
+                        ind["_distance"] = float('inf')
+            
+            # Sort results
+            if sort_by == "danger_score":
+                filtered_individuals.sort(
+                    key=lambda x: x.get("danger_override") or x.get("danger_score", 0),
+                    reverse=(sort_order == "desc")
+                )
+            elif sort_by == "last_seen":
+                # Sort by last interaction time
+                for ind in filtered_individuals:
+                    interaction = interactions.get(ind["id"])
+                    if interaction:
+                        ind["_last_seen"] = interaction["created_at"]
+                    else:
+                        ind["_last_seen"] = ind["created_at"]
+                
+                filtered_individuals.sort(
+                    key=lambda x: x.get("_last_seen", ""),
+                    reverse=(sort_order == "desc")
+                )
+            elif sort_by == "name":
+                filtered_individuals.sort(
+                    key=lambda x: x.get("name", ""),
+                    reverse=(sort_order == "desc")
+                )
+            elif sort_by == "distance":
+                if lat is None or lon is None:
+                    raise ValueError("Distance sort requires lat and lon parameters")
+                filtered_individuals.sort(
+                    key=lambda x: x.get("_distance", float('inf')),
+                    reverse=(sort_order == "desc")
+                )
+            
+            # Apply pagination
+            total = len(filtered_individuals)
+            paginated = filtered_individuals[offset:offset + limit]
+            
+            # Convert to IndividualSummary format (no photo_url)
+            summaries = []
+            for ind in paginated:
+                interaction = interactions.get(ind["id"])
+                
+                danger_score = ind.get("danger_score", 0)
+                danger_override = ind.get("danger_override")
+                display_score = danger_override if danger_override is not None else danger_score
+                
+                # Get last location with abbreviated address
+                last_location = None
+                if interaction and interaction.get("location"):
+                    last_location = interaction["location"].copy()
+                    if last_location.get("address"):
+                        last_location["address"] = self.abbreviate_address(last_location["address"])
+                
+                summary = IndividualSummary(
+                    id=ind["id"],
+                    name=ind["name"],
+                    danger_score=danger_score,
+                    danger_override=danger_override,
+                    display_score=display_score,
+                    last_seen=interaction["created_at"] if interaction else ind["created_at"],
+                    last_location=last_location
+                )
+                summaries.append(summary.dict())
+            
+            return {
+                "individuals": summaries,
+                "total": total,
+                "limit": limit,
+                "offset": offset
+            }
+            
+        except Exception as e:
+            print(f"Error in advanced search: {str(e)}")
+            raise
