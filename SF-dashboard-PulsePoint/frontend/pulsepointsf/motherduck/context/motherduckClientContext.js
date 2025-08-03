@@ -78,17 +78,17 @@ export function MotherDuckClientProvider({ children, database }) {
     let token = null;
     let source = '';
 
-    // Try to get read token first
-    if (process.env.NEXT_PUBLIC_DUCK_READ_TOKEN) {
-      token = process.env.NEXT_PUBLIC_DUCK_READ_TOKEN;
-      source = 'NEXT_PUBLIC_DUCK_READ_TOKEN (read-only)';
-      addLog('success', 'Found read-only token in environment');
-    }
-    // Fallback to write token if read token not available
-    else if (process.env.NEXT_PUBLIC_DUCK_WRITE_READ_TOKEN) {
+    // Prioritize read-write token for full database capabilities
+    if (process.env.NEXT_PUBLIC_DUCK_WRITE_READ_TOKEN) {
       token = process.env.NEXT_PUBLIC_DUCK_WRITE_READ_TOKEN;
       source = 'NEXT_PUBLIC_DUCK_WRITE_READ_TOKEN (read-write)';
-      addLog('warn', 'Using read-write token (read-only token not found)');
+      addLog('success', 'Found read-write token in environment');
+    }
+    // Fallback to read-only token if write token not available
+    else if (process.env.NEXT_PUBLIC_DUCK_READ_TOKEN) {
+      token = process.env.NEXT_PUBLIC_DUCK_READ_TOKEN;
+      source = 'NEXT_PUBLIC_DUCK_READ_TOKEN (read-only)';
+      addLog('warn', 'Using read-only token (read-write token not found)');
     }
 
     if (!token) {
