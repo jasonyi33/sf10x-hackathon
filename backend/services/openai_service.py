@@ -88,6 +88,49 @@ class OpenAIService:
             # Clean up temporary file
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
+    
+    async def transcribe_audio_file(self, file_path: str) -> str:
+        """
+        Transcribe audio from local file using OpenAI Whisper API
+        
+        Args:
+            file_path: Path to local M4A audio file
+            
+        Returns:
+            Plain text transcription
+            
+        Raises:
+            ValueError: For invalid file format or duration issues
+            Exception: For API or network errors
+        """
+        try:
+            # Validate file exists
+            if not os.path.exists(file_path):
+                raise ValueError("Audio file not found")
+            
+            # Validate file format (basic check for M4A header)
+            with open(file_path, 'rb') as f:
+                header = f.read(12)
+                # M4A files typically have 'ftyp' at offset 4
+                if b'ftyp' not in header:
+                    raise ValueError("File is not in M4A format")
+            
+            # Send to Whisper API
+            with open(file_path, 'rb') as audio_file:
+                transcript = await self.client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file,
+                    response_format="text"
+                )
+                
+            return transcript.strip()
+            
+        except Exception as e:
+            if "Audio file is too short" in str(e):
+                raise ValueError("Audio must be at least 10 seconds long")
+            elif "Audio file is too long" in str(e):
+                raise ValueError("Audio must be less than 2 minutes")
+            raise
                 
     async def categorize_transcription(self, transcription: str, categories: list) -> dict:
         """

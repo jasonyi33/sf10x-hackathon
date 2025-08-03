@@ -3,6 +3,15 @@ import { API_CONFIG, getApiUrl } from '../config/api';
 import { ErrorHandler } from '../utils/errorHandler';
 import { SearchResult, IndividualProfile } from '../types';
 
+// Generate a proper UUID v4 format
+const generateUUID = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 // Helper function to get auth token
 const getAuthToken = async () => {
   const { data: { session } } = await supabase.auth.getSession();
@@ -507,55 +516,80 @@ export const api = {
   // Transcribe audio - NEW FUNCTION
   transcribe: async (audioUrl: string): Promise<TranscriptionResult> => {
     try {
-      // Skip real API calls if disabled
-      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
-        console.log('Using mock transcription');
-        // Simulate transcription delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        return mockTranscription(audioUrl);
-      }
-
-      const result = await apiRequest('/api/transcribe', {
-        method: 'POST',
-        body: JSON.stringify({ audio_url: audioUrl }),
+      console.log('🎤 Starting real OpenAI Whisper transcription...');
+      
+      // Convert audio file to base64 for sending
+      const response = await fetch(audioUrl);
+      const blob = await response.blob();
+      const base64Audio = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
       });
       
+      console.log('📤 Sending audio to OpenAI Whisper...');
+      
+      // Send to backend
+      const result = await apiRequest('/api/transcribe', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          audio_data: base64Audio,
+          location: { latitude: 37.7749, longitude: -122.4194 } // Default SF location
+        }),
+      });
+      
+      console.log('✅ Real transcription completed by OpenAI Whisper');
+      console.log('📝 Transcription:', result.transcription);
+      console.log('🏷️  Categorized data:', result.categorized_data);
       return result;
     } catch (error) {
-      console.error('Transcription error:', error);
-      // Fallback to mock data
-      return mockTranscription(audioUrl);
+      console.error('❌ Transcription error:', error);
+      throw error; // Don't fallback to mock - show real error
     }
   },
 
   // Save individual (create new or update existing)
   saveIndividual: async (data: any) => {
     try {
-      // Skip real API calls if disabled
-      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
-        console.log('Using mock save individual');
-        // Simulate save delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('💾 Saving individual to database...');
+      console.log('Data to save:', data);
+      
+      // Use direct Supabase insert for real database
+      const { data: result, error } = await supabase
+        .from('individuals')
+        .insert({
+          id: data.id || generateUUID(),
+          name: data.Name || data.name || 'Unknown Individual',
+          data: data.data || {},
+          danger_score: data.danger_score || 0,
+          danger_override: data.danger_override || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Save error:', error);
         return {
-          id: 'mock-' + Date.now(),
-          success: true,
-          message: 'Data saved successfully (mock)'
+          id: 'error-' + Date.now(),
+          success: false,
+          message: 'Failed to save: ' + error.message
         };
       }
 
-      const result = await apiRequest('/api/individuals', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
-      
-      return result;
-    } catch (error) {
-      console.error('Save individual error:', error);
-      // Fallback to mock success
+      console.log('✅ Successfully saved individual:', result);
       return {
-        id: 'mock-' + Date.now(),
+        id: result.id,
         success: true,
-        message: 'Data saved successfully (mock fallback)'
+        message: 'Data saved successfully to database'
+      };
+    } catch (error) {
+      console.error('❌ Save individual error:', error);
+      return {
+        id: 'error-' + Date.now(),
+        success: false,
+        message: 'Save failed: ' + error
       };
     }
   },
@@ -565,40 +599,45 @@ export const api = {
   // Search individuals
   searchIndividuals: async (query: string): Promise<SearchResult[]> => {
     try {
-      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
-        console.log('Using mock search data');
-        // Simulate search delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Convert mock data store to search results with display scores
-        const mockResults: SearchResult[] = Object.values(mockDataStore.individuals).map(individual => {
-          // Calculate display score (override or calculated)
-          const displayScore = individual.danger_override !== null && individual.danger_override !== undefined 
-            ? individual.danger_override 
-            : individual.danger_score;
-          
-          return {
-            id: individual.id,
-            name: individual.name,
-            danger_score: displayScore, // Use display score instead of original
-            last_seen: individual.last_interaction_date,
-            last_seen_days: 2, // Mock value
-            last_interaction_date: individual.last_interaction_date,
-            abbreviated_address: "Market St & 5th" // Mock address
-          };
-        });
-        
-        // Filter by query
-        return mockResults.filter(result => 
-          result.name.toLowerCase().includes(query.toLowerCase()) ||
-          (result.abbreviated_address && result.abbreviated_address.toLowerCase().includes(query.toLowerCase()))
-        );
+      console.log('🔍 Searching individuals in database...');
+      console.log('Query:', query);
+      
+      // Use direct Supabase query for real database
+      const { data: individuals, error } = await supabase
+        .from('individuals')
+        .select('*')
+        .or(`name.ilike.%${query}%,data->>'Name'.ilike.%${query}%`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Search error:', error);
+        return [];
       }
 
-      const result = await apiRequest(`/api/individuals?search=${encodeURIComponent(query)}`);
-      return result.individuals || [];
+      console.log('✅ Found individuals:', individuals);
+      
+      // Convert to SearchResult format
+      const searchResults: SearchResult[] = individuals.map(individual => {
+        // Calculate display score (override or calculated)
+        const displayScore = individual.danger_override !== null && individual.danger_override !== undefined 
+          ? individual.danger_override 
+          : individual.danger_score;
+        
+        return {
+          id: individual.id,
+          name: individual.name,
+          danger_score: displayScore,
+          last_seen: individual.updated_at,
+          last_seen_days: calculateDaysAgo(individual.updated_at),
+          last_interaction_date: individual.updated_at,
+          abbreviated_address: "Market St & 5th" // Mock address for now
+        };
+      });
+
+      console.log('📋 Search results:', searchResults);
+      return searchResults;
     } catch (error) {
-      console.error('Error searching individuals:', error);
+      console.error('❌ Search individuals error:', error);
       return [];
     }
   },
@@ -606,24 +645,38 @@ export const api = {
   // Get individual profile
   getIndividualProfile: async (individualId: string): Promise<IndividualProfile | null> => {
     try {
-      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
-        console.log('Using mock individual profile data');
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Get from mock data store
-        const mockProfile = mockDataStore.individuals[individualId];
-        if (!mockProfile) {
-          return null;
-        }
-        
-        return mockProfile;
+      console.log('👤 Fetching individual profile from database...');
+      console.log('Individual ID:', individualId);
+      
+      // Use direct Supabase query for real database
+      const { data: individual, error } = await supabase
+        .from('individuals')
+        .select('*')
+        .eq('id', individualId)
+        .single();
+
+      if (error) {
+        console.error('❌ Profile fetch error:', error);
+        return null;
       }
 
-      const result = await apiRequest(`/api/individuals/${individualId}`);
-      return result;
+      console.log('✅ Found individual profile:', individual);
+      
+      // Convert to IndividualProfile format
+      const profile: IndividualProfile = {
+        id: individual.id,
+        name: individual.name,
+        danger_score: individual.danger_score,
+        danger_override: individual.danger_override,
+        data: individual.data || {},
+        created_at: individual.created_at,
+        updated_at: individual.updated_at,
+        interactions: [] // TODO: Add interactions when that table is set up
+      };
+
+      return profile;
     } catch (error) {
-      console.error('Error fetching individual profile:', error);
+      console.error('❌ Get individual profile error:', error);
       return null;
     }
   },
@@ -631,30 +684,31 @@ export const api = {
   // Update danger override
   updateDangerOverride: async (individualId: string, overrideValue: number | null): Promise<boolean> => {
     try {
-      // Skip real API calls if disabled
-      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
-        console.log('Mock danger override update');
-        // Simulate update delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Update the mock data store
-        if (mockDataStore.individuals[individualId]) {
-          mockDataStore.individuals[individualId].danger_override = overrideValue;
-          mockDataStore.individuals[individualId].updated_at = new Date().toISOString();
-          console.log(`Updated danger override for ${individualId} to ${overrideValue}`);
-        }
-        
-        return true;
+      console.log('⚠️ Updating danger override in database...');
+      console.log('Individual ID:', individualId);
+      console.log('Override value:', overrideValue);
+      
+      // Use direct Supabase update for real database
+      const { data, error } = await supabase
+        .from('individuals')
+        .update({ 
+          danger_override: overrideValue,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', individualId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Danger override update error:', error);
+        return false;
       }
 
-      await apiRequest(`/api/individuals/${individualId}/danger-override`, {
-        method: 'PUT',
-        body: JSON.stringify({ danger_override: overrideValue }),
-      });
+      console.log('✅ Successfully updated danger override:', data);
       return true;
     } catch (error) {
-      console.log('Mock danger override update');
-      return true; // Mock success
+      console.error('❌ Update danger override error:', error);
+      return false;
     }
   },
 
