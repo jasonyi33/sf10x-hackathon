@@ -554,15 +554,28 @@ export const api = {
       console.log('💾 Saving individual to database...');
       console.log('Data to save:', data);
       
+      // Extract categorized data (age, height, weight, etc.) from the data
+      const { Name, name, id, danger_score, danger_override, data: existingData, ...categorizedData } = data;
+      
+      // Convert categorized data field names to lowercase for profile display
+      const processedData = {};
+      Object.entries(categorizedData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          processedData[key.toLowerCase()] = value;
+        }
+      });
+      
+      console.log('📊 Processed categorized data:', processedData);
+      
       // Use direct Supabase insert for real database
       const { data: result, error } = await supabase
         .from('individuals')
         .insert({
-          id: data.id || generateUUID(),
-          name: data.Name || data.name || 'Unknown Individual',
-          data: data.data || {},
-          danger_score: data.danger_score || 0,
-          danger_override: data.danger_override || null,
+          id: id || generateUUID(),
+          name: Name || name || 'Unknown Individual',
+          data: existingData || processedData || {},
+          danger_score: danger_score || 0,
+          danger_override: danger_override || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })

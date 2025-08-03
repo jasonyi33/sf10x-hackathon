@@ -599,7 +599,7 @@ Return JSON array with matches above 30% confidence:
 
 export const API_CONFIG = {
   // Backend API URL - using your computer's IP for iOS simulator
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.15.85:8001',
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.1.198:8001',
   
   // Enable real API calls (set to true to use real transcription)
   USE_REAL_API: true, // Set to true to use real transcription
@@ -714,10 +714,10 @@ saveIndividual: async (data: any) => {
     const { data: result, error } = await supabase
       .from('individuals')
       .insert({
-        id: data.id || generateUUID(),
-        name: data.Name || data.name || 'Unknown Individual',
-        data: data.data || {},
-        danger_score: data.danger_score || 0,
+        id: id || generateUUID(),
+        name: Name || name || 'Unknown Individual',
+        data: existingData || categorizedData || {},
+        danger_score: danger_score || 0,
         danger_override: data.danger_override || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -1165,6 +1165,18 @@ curl -X POST http://192.168.15.85:8001/api/transcribe \
 - **Cause:** Search function had conditional check for mock data
 - **Solution:** Replaced with direct Supabase queries
 - **Fix:** Removed mock data condition, now always queries real database
+
+**Profile Characteristics Not Displaying:**
+- **Problem:** Individual profiles don't show age, height, weight, etc. from transcription
+- **Cause:** Categorized data field names were capitalized but profile screen expects lowercase
+- **Solution:** Convert field names to lowercase and filter out null/empty values
+- **Fix:** Added field name processing in `saveIndividual()` to convert "Name" → "name", "Age" → "age", etc.
+
+**Slow Transcription/Network Issues:**
+- **Problem:** Transcription takes a long time or fails to connect
+- **Cause:** Outdated IP address in mobile app configuration
+- **Solution:** Update IP address to match current network
+- **Fix:** Changed from `192.168.15.85` to `192.168.1.198` in `mobile/config/api.ts`
 
 1. **Network Error**: Ensure backend is running on correct IP
 2. **Authentication Error**: Check that auth is optional for testing
