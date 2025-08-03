@@ -9,7 +9,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { Camera, CameraView, CameraType } from 'expo-camera';
+import { Camera, CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -18,7 +18,7 @@ interface PhotoCaptureProps {
 }
 
 const PhotoCapture: React.FC<PhotoCaptureProps> = ({ onPhotoCapture }) => {
-  const [permission, requestPermission] = Camera.useCameraPermissions();
+  const [permission, requestPermission] = useCameraPermissions();
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [hasConsent, setHasConsent] = useState(false);
   const [facing, setFacing] = useState<CameraType>('back');
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   cameraContainer: {
-    flex: 1,
+    aspectRatio: 1, // Make it square
     backgroundColor: 'black',
   },
   camera: {

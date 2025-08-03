@@ -109,7 +109,7 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
     <SearchDropdownItem
       id={item.id}
       name={item.name}
-      age={item.data?.approximate_age || null}
+      age={item.data?.age || null}
       height={item.data?.height || null}
       skinColor={item.data?.skin_color || null}
       onPress={() => handleResultPress(item)}

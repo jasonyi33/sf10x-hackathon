@@ -259,13 +259,9 @@ export default function CategoriesScreen() {
           <Text style={styles.warningTitle} testID="warning-title">
             ⚠️ Data Protection Notice
           </Text>
-          <Text style={styles.warningSubtitle}>Do not create categories for:</Text>
-          <View style={styles.warningList}>
-            <Text style={styles.warningItem}>• Medical diagnoses or health conditions</Text>
-            <Text style={styles.warningItem}>• Criminal history or legal status</Text>
-            <Text style={styles.warningItem}>• Immigration or citizenship status</Text>
-            <Text style={styles.warningItem}>• Specific racial/ethnic identification</Text>
-          </View>
+          <Text style={styles.warningSubtitle}>
+            No medical, criminal, immigration, or racial categories allowed
+          </Text>
         </View>
       </View>
 
@@ -426,8 +422,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF3CD',
     borderColor: '#FF3B30',
     borderWidth: 2,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     zIndex: 1000,
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -451,16 +447,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   warningTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#856404',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   warningSubtitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
     color: '#856404',
-    marginBottom: 4,
   },
   warningList: {
     marginTop: 2,
@@ -479,7 +474,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   contentWrapper: {
-    paddingTop: 120, // Add padding to account for sticky header
+    paddingTop: 80, // Add padding to account for sticky header
   },
   header: {
     padding: 20,

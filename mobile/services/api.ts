@@ -330,12 +330,12 @@ const mockDataStore = {
       danger_score: 75,
       danger_override: null,
       data: {
-        approximate_age: [45, 50],
+        age: [45, 50], // Changed from approximate_age
         height: 72,
         weight: 180,
         skin_color: "Light",
         gender: "Male",
-        substance_abuse_history: ["Moderate"],
+        substance_abuse: ["Moderate"], // Changed from substance_abuse_history
         medical_conditions: ["Diabetes"],
         veteran_status: "Yes",
         housing_priority: "High",
@@ -386,12 +386,12 @@ const mockDataStore = {
       danger_score: 20,
       danger_override: null,
       data: {
-        age: 32,
+        age: [30, 35], // Changed to array format
         height: 65,
         weight: 140,
         skin_color: "Medium",
         gender: "Female",
-        substance_abuse_history: ["None"],
+        substance_abuse: ["None"], // Changed from substance_abuse_history
         medical_conditions: ["Anxiety"],
         veteran_status: "No",
         housing_priority: "Medium",
@@ -471,9 +471,9 @@ const mockTranscription = (audioUrl: string): TranscriptionResult => {
     missing_required: ["height", "weight", "skin_color"],
     potential_matches: confidence > 0 ? [
       {
-        id: "123",
+        id: "550e8400-e29b-41d4-a716-446655440001", // Use valid mock individual ID
         confidence: confidence,
-        name: "John Smith"
+        name: "John Doe"
       }
     ] : []
   };

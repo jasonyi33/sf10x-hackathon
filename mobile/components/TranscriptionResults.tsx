@@ -23,6 +23,7 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
     confidence: number;
     name: string;
   } | null>(null);
+  const [existingIndividualData, setExistingIndividualData] = useState<Record<string, any> | null>(null);
 
   const handleFieldChange = (fieldName: string, value: any) => {
     setCategorizedData(prev => ({
@@ -91,6 +92,17 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
         setSelectedMatch(mediumConfidenceMatch);
         setShowMergeUI(true);
         setIsSaving(false);
+        
+        // Fetch existing individual's data
+        try {
+          const existingProfile = await api.getIndividualProfile(mediumConfidenceMatch.id);
+          if (existingProfile) {
+            setExistingIndividualData(existingProfile.data);
+          }
+        } catch (error) {
+          console.error('Failed to fetch existing individual data:', error);
+        }
+        
         return;
       } else {
         // No meaningful match (< 60% or no matches), save as new
@@ -119,6 +131,7 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
       });
       setShowMergeUI(false);
       setSelectedMatch(null);
+      setExistingIndividualData(null);
       onSave(mergedData);
     } catch (error) {
       Toast.show({
@@ -139,6 +152,7 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
       });
       setShowMergeUI(false);
       setSelectedMatch(null);
+      setExistingIndividualData(null);
       onSave(data);
     } catch (error) {
       Toast.show({
@@ -152,6 +166,7 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
   const handleMergeCancel = () => {
     setShowMergeUI(false);
     setSelectedMatch(null);
+    setExistingIndividualData(null);
   };
 
   const isFieldRequired = (fieldName: string) => {
@@ -199,6 +214,7 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
       <MergeUI
         newData={categorizedData}
         potentialMatch={selectedMatch}
+        existingData={existingIndividualData || {}}
         onMerge={handleMerge}
         onCreateNew={handleCreateNew}
         onCancel={handleMergeCancel}

@@ -1,0 +1,100 @@
+{
+  "type": "FeatureCollection",
+  "description": "Twin Towers Demo - Historic NYC towers placed on San Francisco map for deck.gl demonstration",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "North Tower (1 WTC)",
+        "height": 417,
+        "category": "historic_monument",
+        "year": 1970,
+        "original_location": "New York City",
+        "description": "North Tower of the original World Trade Center - 417m tall, 110 stories",
+        "floors": 110,
+        "demo_note": "Placed in SF for deck.gl visualization demo"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-122.39550, 37.78950],
+          [-122.39500, 37.78950],
+          [-122.39500, 37.79000],
+          [-122.39550, 37.79000],
+          [-122.39550, 37.78950]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "South Tower (2 WTC)",
+        "height": 415,
+        "category": "historic_monument",
+        "year": 1971,
+        "original_location": "New York City",
+        "description": "South Tower of the original World Trade Center - 415m tall, 110 stories",
+        "floors": 110,
+        "demo_note": "Placed in SF for deck.gl visualization demo"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-122.39600, 37.78950],
+          [-122.39550, 37.78950],
+          [-122.39550, 37.79000],
+          [-122.39600, 37.79000],
+          [-122.39600, 37.78950]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Salesforce Tower (for scale reference)",
+        "height": 326,
+        "category": "office",
+        "year": 2018,
+        "description": "Current tallest building in San Francisco - for height comparison",
+        "demo_note": "Included to show Twin Towers were significantly taller"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-122.39625, 37.78885],
+          [-122.39575, 37.78885],
+          [-122.39575, 37.78935],
+          [-122.39625, 37.78935],
+          [-122.39625, 37.78885]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Transamerica Pyramid (for scale reference)",
+        "height": 260,
+        "category": "office",
+        "year": 1972,
+        "description": "Iconic SF building - same era as Twin Towers",
+        "demo_note": "Shows how Twin Towers dominated skylines of their era"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-122.40325, 37.79475],
+          [-122.40275, 37.79475],
+          [-122.40275, 37.79525],
+          [-122.40325, 37.79525],
+          [-122.40325, 37.79475]
+        ]]
+      }
+    }
+  ]
+}
