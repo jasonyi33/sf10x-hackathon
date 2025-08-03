@@ -22,13 +22,17 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
 // Import modular components and utilities
-import { API_QUERY, INITIAL_VISIBLE_ITEMS, ITEMS_PER_LOAD, SCROLL_THRESHOLD } from './constants.js';
+import { API_QUERY, INITIAL_VISIBLE_ITEMS, ITEMS_PER_LOAD, SCROLL_THRESHOLD, DEFAULT_COMPARISON_MONTH } from './constants.js';
 import {
   processCategoryGroupChartData,
   processTimeChartData,
   processDayOfWeekChartData,
   processResolutionChartData,
-  processCategoryExplorerData
+  processCategoryExplorerData,
+  processYearOverYearCategoryData,
+  processYearOverYearTimeData,
+  processYearOverYearDayData,
+  processYearOverYearResolutionData
 } from './utils.js';
 
 // Import UI components
@@ -37,6 +41,7 @@ import StatsBar from './components/StatsBar.js';
 import CategoryExplorer from './components/CategoryExplorer.js';
 import ChartsSection from './components/ChartsSection.js';
 import CrimeCard from './components/CrimeCard.js';
+import MonthPicker from './components/MonthPicker.js';
 
 // Import MotherDuck context (ready for integration)
 // import { useMotherDuckClient } from '../../motherduck/context/motherduckClientContext.js';
@@ -66,6 +71,9 @@ export default function CrimeDataDashboard() {
 
   /** @type {[boolean, Function]} Category explorer visibility state */
   const [showCategoryExplorer, setShowCategoryExplorer] = useState(false);
+
+  /** @type {[number, Function]} Selected month for year-over-year comparison (1-12) */
+  const [selectedMonth, setSelectedMonth] = useState(DEFAULT_COMPARISON_MONTH);
 
   // MotherDuck integration (ready for future use)
   // const { testConnection, connectionStatus } = useMotherDuckClient();
@@ -178,6 +186,19 @@ export default function CrimeDataDashboard() {
   const resolutionChartData = useMemo(() =>
     processResolutionChartData(sortedData), [sortedData]);
 
+  // Year-over-Year Comparison Data Processing
+  const yearOverYearCategoryData = useMemo(() =>
+    processYearOverYearCategoryData(sortedData, selectedMonth), [sortedData, selectedMonth]);
+
+  const yearOverYearTimeData = useMemo(() =>
+    processYearOverYearTimeData(sortedData, selectedMonth), [sortedData, selectedMonth]);
+
+  const yearOverYearDayData = useMemo(() =>
+    processYearOverYearDayData(sortedData, selectedMonth), [sortedData, selectedMonth]);
+
+  const yearOverYearResolutionData = useMemo(() =>
+    processYearOverYearResolutionData(sortedData, selectedMonth), [sortedData, selectedMonth]);
+
   // ================================================================================
   // EVENT HANDLERS
   // ================================================================================
@@ -225,6 +246,14 @@ export default function CrimeDataDashboard() {
     console.log('🔄 Retrying data fetch - MotherDuck connection retry can be tested here');
     fetchCrimeData();
   }, [fetchCrimeData]);
+
+  /**
+   * Handle month selection change for year-over-year comparison
+   */
+  const handleMonthChange = useCallback((month) => {
+    setSelectedMonth(month);
+    console.log(`📅 [MotherDuck Logging] Month changed to ${month} - Year-over-year queries ready`);
+  }, []);
 
   // ================================================================================
   // LOADING & ERROR STATES
@@ -389,12 +418,25 @@ export default function CrimeDataDashboard() {
           showCategoryExplorer={showCategoryExplorer}
         />
 
-        {/* Charts Section Component */}
+        {/* Month Picker for Year-over-Year Analysis */}
+        <MonthPicker
+          selectedMonth={selectedMonth}
+          onMonthChange={handleMonthChange}
+        />
+
+        {/* Charts Section Component - Year-over-Year Mode */}
         <ChartsSection
           categoryGroupChartData={categoryGroupChartData}
           timeChartData={timeChartData}
           dayOfWeekChartData={dayOfWeekChartData}
           resolutionChartData={resolutionChartData}
+          // Year-over-year comparison data
+          yearOverYearCategoryData={yearOverYearCategoryData}
+          yearOverYearTimeData={yearOverYearTimeData}
+          yearOverYearDayData={yearOverYearDayData}
+          yearOverYearResolutionData={yearOverYearResolutionData}
+          selectedMonth={selectedMonth}
+          isYearOverYearMode={true}
         />
 
         {/* Crime Cards */}

@@ -6,7 +6,7 @@
  * Utility functions for data processing, formatting, and color management
  */
 
-import { CATEGORY_COLORS, CRIME_CATEGORIES } from './constants.js';
+import { CATEGORY_COLORS, CRIME_CATEGORIES, COMPARISON_YEARS, YEAR_COMPARISON_COLORS } from './constants.js';
 
 /**
  * Get color for incident category badge
@@ -254,4 +254,178 @@ export const processCategoryExplorerData = (sortedData) => {
       return !isViolent && !isProperty && !isDrug && !isPublicOrder;
     })
   };
+};
+
+/**
+ * ==================================================================================
+ * Year-over-Year Comparison Utilities
+ * ==================================================================================
+ */
+
+/**
+ * Filter data by specific month and year
+ * @param {Array} data - Array of crime incidents
+ * @param {number} month - Month (1-12)
+ * @param {number} year - Year (e.g., 2024, 2025)
+ * @returns {Array} - Filtered data array
+ */
+export const filterDataByMonthYear = (data, month, year) => {
+  if (!data.length) return [];
+
+  return data.filter(incident => {
+    try {
+      const date = new Date(incident.incident_datetime);
+      return date.getMonth() + 1 === month && date.getFullYear() === year;
+    } catch (error) {
+      return false;
+    }
+  });
+};
+
+/**
+ * Calculate percentage change between two values
+ * @param {number} current - Current year value
+ * @param {number} previous - Previous year value
+ * @returns {string} - Formatted percentage change with sign
+ */
+export const calculatePercentageChange = (current, previous) => {
+  if (previous === 0) {
+    return current > 0 ? '+∞%' : '0%';
+  }
+  const change = ((current - previous) / previous) * 100;
+  const sign = change >= 0 ? '+' : '';
+  return `${sign}${change.toFixed(1)}%`;
+};
+
+/**
+ * Process year-over-year comparison data for category groups chart
+ * @param {Array} allData - All crime data
+ * @param {number} selectedMonth - Selected month (1-12)
+ * @returns {Array} - Year-over-year comparison chart data
+ */
+export const processYearOverYearCategoryData = (allData, selectedMonth) => {
+  const currentYearData = filterDataByMonthYear(allData, selectedMonth, COMPARISON_YEARS.current);
+  const previousYearData = filterDataByMonthYear(allData, selectedMonth, COMPARISON_YEARS.previous);
+
+  const currentCategoryData = processCategoryExplorerData(currentYearData);
+  const previousCategoryData = processCategoryExplorerData(previousYearData);
+
+  const currentGroupData = processCategoryGroupChartData(currentCategoryData);
+  const previousGroupData = processCategoryGroupChartData(previousCategoryData);
+
+  // Combine data for side-by-side visualization
+  const categoryNames = ['Violent Crimes', 'Property Crimes', 'Drug Offenses', 'Public Order', 'Other'];
+
+  return categoryNames.map(categoryName => {
+    const currentItem = currentGroupData.find(item => item.category === categoryName) || { count: 0, percentage: '0.0' };
+    const previousItem = previousGroupData.find(item => item.category === categoryName) || { count: 0, percentage: '0.0' };
+
+    const percentageChange = calculatePercentageChange(currentItem.count, previousItem.count);
+
+    return {
+      category: categoryName,
+      current: currentItem.count,
+      previous: previousItem.count,
+      currentPercentage: currentItem.percentage,
+      previousPercentage: previousItem.percentage,
+      change: percentageChange,
+      fill: currentItem.fill || '#6b7280'
+    };
+  }).filter(item => item.current > 0 || item.previous > 0);
+};
+
+/**
+ * Process year-over-year comparison data for time distribution chart
+ * @param {Array} allData - All crime data
+ * @param {number} selectedMonth - Selected month (1-12)
+ * @returns {Array} - Year-over-year time comparison chart data
+ */
+export const processYearOverYearTimeData = (allData, selectedMonth) => {
+  const currentYearData = filterDataByMonthYear(allData, selectedMonth, COMPARISON_YEARS.current);
+  const previousYearData = filterDataByMonthYear(allData, selectedMonth, COMPARISON_YEARS.previous);
+
+  const currentTimeData = processTimeChartData(currentYearData);
+  const previousTimeData = processTimeChartData(previousYearData);
+
+  // Combine data for all 24 hours
+  return Array.from({ length: 24 }, (_, hour) => {
+    const currentHour = currentTimeData.find(item => item.hourNum === hour) || { count: 0 };
+    const previousHour = previousTimeData.find(item => item.hourNum === hour) || { count: 0 };
+
+    return {
+      hour: `${hour}:00`,
+      hourNum: hour,
+      current: currentHour.count,
+      previous: previousHour.count,
+      change: calculatePercentageChange(currentHour.count, previousHour.count)
+    };
+  });
+};
+
+/**
+ * Process year-over-year comparison data for day of week chart
+ * @param {Array} allData - All crime data
+ * @param {number} selectedMonth - Selected month (1-12)
+ * @returns {Array} - Year-over-year day comparison chart data
+ */
+export const processYearOverYearDayData = (allData, selectedMonth) => {
+  const currentYearData = filterDataByMonthYear(allData, selectedMonth, COMPARISON_YEARS.current);
+  const previousYearData = filterDataByMonthYear(allData, selectedMonth, COMPARISON_YEARS.previous);
+
+  const currentDayData = processDayOfWeekChartData(currentYearData);
+  const previousDayData = processDayOfWeekChartData(previousYearData);
+
+  const dayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  return dayOrder.map(day => {
+    const currentDay = currentDayData.find(item => item.day === day) || { count: 0, fullDay: day };
+    const previousDay = previousDayData.find(item => item.day === day) || { count: 0, fullDay: day };
+
+    return {
+      day,
+      fullDay: currentDay.fullDay,
+      current: currentDay.count,
+      previous: previousDay.count,
+      change: calculatePercentageChange(currentDay.count, previousDay.count)
+    };
+  });
+};
+
+/**
+ * Process year-over-year comparison data for resolution status chart
+ * @param {Array} allData - All crime data
+ * @param {number} selectedMonth - Selected month (1-12)
+ * @returns {Array} - Year-over-year resolution comparison chart data
+ */
+export const processYearOverYearResolutionData = (allData, selectedMonth) => {
+  const currentYearData = filterDataByMonthYear(allData, selectedMonth, COMPARISON_YEARS.current);
+  const previousYearData = filterDataByMonthYear(allData, selectedMonth, COMPARISON_YEARS.previous);
+
+  const currentResolutionData = processResolutionChartData(currentYearData);
+  const previousResolutionData = processResolutionChartData(previousYearData);
+
+  // Get all unique resolution types
+  const allResolutions = new Set([
+    ...currentResolutionData.map(item => item.fullName),
+    ...previousResolutionData.map(item => item.fullName)
+  ]);
+
+  const colors = ['#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
+
+  return Array.from(allResolutions).map((resolution, index) => {
+    const currentItem = currentResolutionData.find(item => item.fullName === resolution) || { value: 0, percentage: '0.0' };
+    const previousItem = previousResolutionData.find(item => item.fullName === resolution) || { value: 0, percentage: '0.0' };
+
+    return {
+      name: resolution.length > 20 ? resolution.substring(0, 20) + '...' : resolution,
+      fullName: resolution,
+      current: currentItem.value,
+      previous: previousItem.value,
+      currentPercentage: currentItem.percentage,
+      previousPercentage: previousItem.percentage,
+      change: calculatePercentageChange(currentItem.value, previousItem.value),
+      fill: colors[index % colors.length]
+    };
+  }).filter(item => item.current > 0 || item.previous > 0)
+    .sort((a, b) => (b.current + b.previous) - (a.current + a.previous));
 };

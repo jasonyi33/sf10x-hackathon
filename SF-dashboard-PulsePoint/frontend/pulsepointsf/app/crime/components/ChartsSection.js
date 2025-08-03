@@ -22,13 +22,23 @@ import {
   Area,
   Legend
 } from 'recharts';
+import { YEAR_COMPARISON_COLORS, COMPARISON_YEARS, MONTHS } from '../constants';
 
 const ChartsSection = ({
   categoryGroupChartData,
   timeChartData,
   dayOfWeekChartData,
-  resolutionChartData
+  resolutionChartData,
+  // Year-over-year comparison data
+  yearOverYearCategoryData,
+  yearOverYearTimeData,
+  yearOverYearDayData,
+  yearOverYearResolutionData,
+  selectedMonth,
+  isYearOverYearMode = true
 }) => {
+  // Get selected month name for display
+  const selectedMonthName = MONTHS.find(m => m.value === selectedMonth)?.label || 'Unknown';
   return (
     <div style={{
       marginBottom: '2rem'
@@ -50,7 +60,7 @@ const ChartsSection = ({
         gap: '2rem',
         marginBottom: '2rem'
       }}>
-        {/* Crime Type Overview Chart - Side-by-Side Bar & Pie */}
+        {/* Crime Type Overview Chart - Year-over-Year Comparison */}
         <div style={{
           backgroundColor: '#ffffff',
           border: '1px solid #e5e7eb',
@@ -63,106 +73,97 @@ const ChartsSection = ({
             fontSize: '1.125rem',
             fontWeight: '600',
             color: '#1f2937',
-            marginBottom: '1rem',
+            marginBottom: '0.5rem',
             textAlign: 'center'
           }}>
-            📊 Incidents by Crime Type
+            📊 Incidents by Crime Type - {selectedMonthName} Comparison
           </h3>
-
-          {/* Side-by-side charts container */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '1rem'
+          <p style={{
+            fontSize: '0.875rem',
+            color: '#6b7280',
+            textAlign: 'center',
+            marginBottom: '1rem'
           }}>
-            {/* Bar Chart - Primary */}
-            <div>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  data={categoryGroupChartData}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 40 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis
-                    dataKey="category"
-                    stroke="#6b7280"
-                    fontSize={10}
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                  />
-                  <YAxis
-                    stroke="#6b7280"
-                    fontSize={11}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1f2937',
-                      border: 'none',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontSize: '0.875rem'
-                    }}
-                    formatter={(value, name, props) => [
-                      `${value} incidents (${props.payload.percentage}%)`,
-                      props.payload.category
-                    ]}
-                  />
-                  <Bar
-                    dataKey="count"
-                    radius={[4, 4, 0, 0]}
-                  >
-                    {categoryGroupChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            Comparing {selectedMonthName} {COMPARISON_YEARS.current} vs {selectedMonthName} {COMPARISON_YEARS.previous}
+          </p>
 
-            {/* Pie Chart - Secondary */}
-            <div>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={categoryGroupChartData.map(item => ({
-                      ...item,
-                      name: item.category,
-                      value: item.count
-                    }))}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    innerRadius={40}
-                    paddingAngle={2}
-                    dataKey="value"
-                    label={({ percentage }) => `${percentage}%`}
-                    labelLine={false}
-                  >
-                    {categoryGroupChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1f2937',
-                      border: 'none',
-                      borderRadius: '8px',
-                      color: 'white',
-                      fontSize: '0.875rem'
-                    }}
-                    formatter={(value, name, props) => [
-                      `${value} incidents (${props.payload.percentage}%)`,
-                      props.payload.category
-                    ]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart
+              data={yearOverYearCategoryData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+              <XAxis
+                dataKey="category"
+                stroke="#6b7280"
+                fontSize={10}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+              />
+              <YAxis
+                stroke="#6b7280"
+                fontSize={11}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1f2937',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '0.875rem'
+                }}
+                formatter={(value, name, props) => {
+                  const year = name === 'current' ? COMPARISON_YEARS.current : COMPARISON_YEARS.previous;
+                  return [
+                    `${value} incidents`,
+                    `${year} ${props.payload.category}`
+                  ];
+                }}
+              />
+              <Legend
+                verticalAlign="top"
+                height={36}
+                formatter={(value) => value === 'current' ? `${COMPARISON_YEARS.current}` : `${COMPARISON_YEARS.previous}`}
+              />
+              <Bar
+                dataKey="previous"
+                fill={YEAR_COMPARISON_COLORS.previous}
+                radius={[4, 4, 0, 0]}
+                name="previous"
+              />
+              <Bar
+                dataKey="current"
+                fill={YEAR_COMPARISON_COLORS.current}
+                radius={[4, 4, 0, 0]}
+                name="current"
+              />
+            </BarChart>
+          </ResponsiveContainer>
+
+          {/* Percentage Change Indicators */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.5rem',
+            justifyContent: 'center',
+            marginTop: '1rem'
+          }}>
+            {yearOverYearCategoryData.map((item, index) => (
+              <div key={index} style={{
+                backgroundColor: '#f9fafb',
+                padding: '0.25rem 0.5rem',
+                borderRadius: '6px',
+                fontSize: '0.75rem',
+                color: item.change.startsWith('+') ? '#059669' : item.change.startsWith('-') ? '#dc2626' : '#6b7280'
+              }}>
+                {item.category}: <strong>{item.change}</strong>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Time Distribution Chart */}
+        {/* Time Distribution Chart - Year-over-Year */}
         <div style={{
           backgroundColor: '#ffffff',
           border: '1px solid #e5e7eb',
@@ -174,26 +175,35 @@ const ChartsSection = ({
             fontSize: '1.125rem',
             fontWeight: '600',
             color: '#1f2937',
-            marginBottom: '1rem',
+            marginBottom: '0.5rem',
             textAlign: 'center'
           }}>
-            🕐 24-Hour Crime Pattern
+            🕐 24-Hour Crime Pattern - {selectedMonthName}
           </h3>
+          <p style={{
+            fontSize: '0.875rem',
+            color: '#6b7280',
+            textAlign: 'center',
+            marginBottom: '1rem'
+          }}>
+            {COMPARISON_YEARS.current} vs {COMPARISON_YEARS.previous}
+          </p>
+
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart
-              data={timeChartData}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            <BarChart
+              data={yearOverYearTimeData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis
                 dataKey="hour"
                 stroke="#6b7280"
-                fontSize={11}
-                interval={2}
+                fontSize={10}
+                interval={1}
               />
               <YAxis
                 stroke="#6b7280"
-                fontSize={12}
+                fontSize={11}
               />
               <Tooltip
                 contentStyle={{
@@ -203,20 +213,32 @@ const ChartsSection = ({
                   color: 'white',
                   fontSize: '0.875rem'
                 }}
-                formatter={(value, name) => [
-                  `${value} incidents`,
-                  'Count'
-                ]}
+                formatter={(value, name, props) => {
+                  const year = name === 'current' ? COMPARISON_YEARS.current : COMPARISON_YEARS.previous;
+                  return [
+                    `${value} incidents`,
+                    `${year} - ${props.payload.hour}`
+                  ];
+                }}
               />
-              <Area
-                type="monotone"
-                dataKey="count"
-                stroke="#8b5cf6"
-                fill="#8b5cf6"
-                fillOpacity={0.3}
-                strokeWidth={2}
+              <Legend
+                verticalAlign="top"
+                height={36}
+                formatter={(value) => value === 'current' ? `${COMPARISON_YEARS.current}` : `${COMPARISON_YEARS.previous}`}
               />
-            </AreaChart>
+              <Bar
+                dataKey="previous"
+                fill={YEAR_COMPARISON_COLORS.previous}
+                radius={[2, 2, 0, 0]}
+                name="previous"
+              />
+              <Bar
+                dataKey="current"
+                fill={YEAR_COMPARISON_COLORS.current}
+                radius={[2, 2, 0, 0]}
+                name="current"
+              />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
@@ -227,7 +249,7 @@ const ChartsSection = ({
         gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))',
         gap: '2rem'
       }}>
-        {/* Day of Week Pattern Chart */}
+        {/* Day of Week Pattern Chart - Year-over-Year */}
         <div style={{
           backgroundColor: '#ffffff',
           border: '1px solid #e5e7eb',
@@ -239,15 +261,24 @@ const ChartsSection = ({
             fontSize: '1.125rem',
             fontWeight: '600',
             color: '#1f2937',
-            marginBottom: '1rem',
+            marginBottom: '0.5rem',
             textAlign: 'center'
           }}>
-            📅 Weekly Crime Distribution
+            📅 Weekly Crime Distribution - {selectedMonthName}
           </h3>
+          <p style={{
+            fontSize: '0.875rem',
+            color: '#6b7280',
+            textAlign: 'center',
+            marginBottom: '1rem'
+          }}>
+            {COMPARISON_YEARS.current} vs {COMPARISON_YEARS.previous}
+          </p>
+
           <ResponsiveContainer width="100%" height={300}>
             <BarChart
-              data={dayOfWeekChartData}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              data={yearOverYearDayData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis
@@ -267,21 +298,36 @@ const ChartsSection = ({
                   color: 'white',
                   fontSize: '0.875rem'
                 }}
-                formatter={(value, name, props) => [
-                  `${value} incidents (${props.payload.percentage}%)`,
-                  props.payload.fullDay
-                ]}
+                formatter={(value, name, props) => {
+                  const year = name === 'current' ? COMPARISON_YEARS.current : COMPARISON_YEARS.previous;
+                  return [
+                    `${value} incidents`,
+                    `${year} - ${props.payload.fullDay}`
+                  ];
+                }}
+              />
+              <Legend
+                verticalAlign="top"
+                height={36}
+                formatter={(value) => value === 'current' ? `${COMPARISON_YEARS.current}` : `${COMPARISON_YEARS.previous}`}
               />
               <Bar
-                dataKey="count"
-                fill="#10b981"
+                dataKey="previous"
+                fill={YEAR_COMPARISON_COLORS.previous}
                 radius={[4, 4, 0, 0]}
+                name="previous"
+              />
+              <Bar
+                dataKey="current"
+                fill={YEAR_COMPARISON_COLORS.current}
+                radius={[4, 4, 0, 0]}
+                name="current"
               />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Resolution Status Chart */}
+        {/* Resolution Status Chart - Year-over-Year */}
         <div style={{
           backgroundColor: '#ffffff',
           border: '1px solid #e5e7eb',
@@ -293,26 +339,38 @@ const ChartsSection = ({
             fontSize: '1.125rem',
             fontWeight: '600',
             color: '#1f2937',
-            marginBottom: '1rem',
+            marginBottom: '0.5rem',
             textAlign: 'center'
           }}>
-            ✅ Case Resolution Status
+            ✅ Case Resolution Status - {selectedMonthName}
           </h3>
+          <p style={{
+            fontSize: '0.875rem',
+            color: '#6b7280',
+            textAlign: 'center',
+            marginBottom: '1rem'
+          }}>
+            {COMPARISON_YEARS.current} vs {COMPARISON_YEARS.previous}
+          </p>
+
           <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={resolutionChartData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={2}
-                dataKey="value"
-              >
-                {resolutionChartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Pie>
+            <BarChart
+              data={yearOverYearResolutionData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+              <XAxis
+                dataKey="name"
+                stroke="#6b7280"
+                fontSize={10}
+                angle={-45}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis
+                stroke="#6b7280"
+                fontSize={11}
+              />
               <Tooltip
                 contentStyle={{
                   backgroundColor: '#1f2937',
@@ -321,19 +379,54 @@ const ChartsSection = ({
                   color: 'white',
                   fontSize: '0.875rem'
                 }}
-                formatter={(value, name, props) => [
-                  `${value} cases (${props.payload.percentage}%)`,
-                  props.payload.fullName
-                ]}
+                formatter={(value, name, props) => {
+                  const year = name === 'current' ? COMPARISON_YEARS.current : COMPARISON_YEARS.previous;
+                  return [
+                    `${value} cases`,
+                    `${year} - ${props.payload.fullName}`
+                  ];
+                }}
               />
               <Legend
-                verticalAlign="bottom"
+                verticalAlign="top"
                 height={36}
-                fontSize={12}
-                formatter={(value, entry) => entry.payload.name}
+                formatter={(value) => value === 'current' ? `${COMPARISON_YEARS.current}` : `${COMPARISON_YEARS.previous}`}
               />
-            </PieChart>
+              <Bar
+                dataKey="previous"
+                fill={YEAR_COMPARISON_COLORS.previous}
+                radius={[4, 4, 0, 0]}
+                name="previous"
+              />
+              <Bar
+                dataKey="current"
+                fill={YEAR_COMPARISON_COLORS.current}
+                radius={[4, 4, 0, 0]}
+                name="current"
+              />
+            </BarChart>
           </ResponsiveContainer>
+
+          {/* Percentage Change Indicators for Resolution */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.5rem',
+            justifyContent: 'center',
+            marginTop: '1rem'
+          }}>
+            {yearOverYearResolutionData.slice(0, 4).map((item, index) => (
+              <div key={index} style={{
+                backgroundColor: '#f9fafb',
+                padding: '0.25rem 0.5rem',
+                borderRadius: '6px',
+                fontSize: '0.75rem',
+                color: item.change.startsWith('+') ? '#059669' : item.change.startsWith('-') ? '#dc2626' : '#6b7280'
+              }}>
+                {item.name}: <strong>{item.change}</strong>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
