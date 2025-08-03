@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 // Import global CSS styles that apply to all pages
 import "./globals.css";
 // Import MotherDuck context provider for database connections
-import { MotherDuckClientProvider } from "../motherduck/context/motherduckClientContext";
+import { MotherDuckClientProvider } from "../motherduck/context/motherduckClientContext.js";
 
 // Configure primary sans-serif font (Geist) for body text and UI elements
 const geistSans = Geist({

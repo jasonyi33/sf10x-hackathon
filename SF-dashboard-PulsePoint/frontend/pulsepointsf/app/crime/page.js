@@ -1,29 +1,32 @@
 /**
  * ==================================================================================
- * SF Crime Data Display Page
+ * MotherDuck Connection Test & Logging Dashboard
  * ==================================================================================
  *
- * @fileoverview Displays the most recent 24 hours of SF crime data from DataSF API
- * @description Fetches and displays raw JSON crime incident data with basic formatting
+ * @fileoverview Test interface for MotherDuck connection with comprehensive logging
+ * @description Provides real-time visibility into MotherDuck connection initialization,
+ *              database discovery, and query execution with detailed error handling
  *
  * @author PulsePoint SF Team
- * @version 1.0.0
+ * @version 2.0.0
  * @since 2025-01-08
  *
  * @features
- * - Fetches last 24 hours of SF crime incidents
- * - Displays raw JSON data with proper formatting
- * - Loading states and error handling
- * - Refresh functionality
- * - Responsive design
+ * - Real-time MotherDuck connection status monitoring
+ * - Comprehensive logging system with different log levels
+ * - Token validation and environment variable checks
+ * - Database and table discovery tools
+ * - Interactive connection testing
+ * - SF crime data query testing
+ * - Error diagnosis and troubleshooting aids
  * ==================================================================================
  */
 
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useMotherDuckClientState } from '../../motherduck/context/motherduckClientContext';
+import { useMotherDuckClientState } from '../../motherduck/context/motherduckClientContext.js';
 
-export default function CrimePage() {
+export default function MotherDuckTestPage() {
   // ================================================================================
   // STATE MANAGEMENT
   // ================================================================================
@@ -31,62 +34,100 @@ export default function CrimePage() {
   /** @type {[Array|null, Function]} Crime data from MotherDuck */
   const [crimeData, setCrimeData] = useState(null);
 
-  /** @type {[boolean, Function]} Loading state */
-  const [isLoading, setIsLoading] = useState(true);
+  /** @type {[boolean, Function]} Manual test loading state */
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
 
-  /** @type {[string|null, Function]} Error state */
-  const [error, setError] = useState(null);
+  /** @type {[boolean, Function]} Crime data loading state */
+  const [isFetchingCrimeData, setIsFetchingCrimeData] = useState(false);
 
   /** @type {[Date|null, Function]} Last fetch timestamp */
   const [lastFetched, setLastFetched] = useState(null);
 
-  // Get MotherDuck client from context
-  const { safeEvaluateQuery } = useMotherDuckClientState();
+  /** @type {[string, Function]} Expanded log section */
+  const [expandedSection, setExpandedSection] = useState('connection');
+
+  // Get MotherDuck client from context with all logging capabilities
+  const {
+    safeEvaluateQuery,
+    connectionStatus,
+    connectionError,
+    connectionLogs,
+    testConnection,
+    clearLogs,
+    tokenInfo
+  } = useMotherDuckClientState();
 
   // ================================================================================
-  // DATA FETCHING
+  // CONNECTION TESTING METHODS
   // ================================================================================
 
   /**
-   * Fetch recent crime data from MotherDuck
+   * Handle comprehensive connection test
    */
-  const fetchCrimeData = async () => {
+  const handleTestConnection = async () => {
+    setIsTestingConnection(true);
     try {
-      setIsLoading(true);
-      setError(null);
+      await testConnection();
+    } catch (error) {
+      console.error('Connection test failed:', error);
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
 
-      console.log('Fetching recent SF crime data from MotherDuck...');
+  /**
+   * Fetch sample crime data for testing
+   */
+  const handleFetchCrimeData = async () => {
+    setIsFetchingCrimeData(true);
 
+    try {
       // Calculate 24 hours ago timestamp
       const twentyFourHoursAgo = new Date();
       twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
-      const dateFilter = twentyFourHoursAgo.toISOString().split('T')[0]; // YYYY-MM-DD format
+      const dateFilter = twentyFourHoursAgo.toISOString().split('T')[0];
 
-      // SQL query for last 24 hours of crime data
-      const query = `
-        SELECT
-          "Incident Datetime" as incident_datetime,
-          "Incident Category" as incident_category,
-          "Incident Description" as incident_description,
-          Latitude as latitude,
-          Longitude as longitude
-        FROM sf_crime_stats.data
-        WHERE
-          Latitude IS NOT NULL
-          AND Longitude IS NOT NULL
-          AND "Incident Category" != 'Non-Criminal'
-          AND "Incident Datetime" >= '${dateFilter}'
-        ORDER BY "Incident Datetime" DESC
-        LIMIT 500;
-      `;
+      // Test different table variations
+      const tableVariations = [
+        'sf_crime_stats.data',
+        'data',
+        'crime_data',
+        'incidents'
+      ];
 
-      console.log('Executing MotherDuck query:', query);
+      let successfulQuery = null;
+      let crimeResult = null;
 
-      const result = await safeEvaluateQuery(query);
+      for (const tableName of tableVariations) {
+        const query = `
+          SELECT
+            \\"Incident Datetime\\" as incident_datetime,
+            \\"Incident Category\\" as incident_category,
+            \\"Incident Description\\" as incident_description,
+            Latitude as latitude,
+            Longitude as longitude
+          FROM ${tableName}
+          WHERE
+            Latitude IS NOT NULL
+            AND Longitude IS NOT NULL
+            AND \\"Incident Category\\" != 'Non-Criminal'
+            AND \\"Incident Datetime\\" >= '${dateFilter}'
+          ORDER BY \\"Incident Datetime\\" DESC
+          LIMIT 100;
+        `;
 
-      if (result.success) {
+        const result = await safeEvaluateQuery(query);
+
+        if (result.success) {
+          successfulQuery = tableName;
+          crimeResult = result;
+          break;
+        }
+      }
+
+      if (crimeResult && crimeResult.success) {
         // Convert MotherDuck result to JSON format
-        const incidents = result.result.data.toRows().map((row) => ({
+        const incidents = crimeResult.result.data.toRows().map((row) => ({
           incident_datetime: String(row.incident_datetime),
           incident_category: String(row.incident_category),
           incident_description: String(row.incident_description),
@@ -94,219 +135,416 @@ export default function CrimePage() {
           longitude: Number(row.longitude) || 0,
         }));
 
-        console.log('Crime data fetched successfully from MotherDuck:', incidents.length, 'records');
-
         setCrimeData(incidents);
         setLastFetched(new Date());
-      } else {
-        throw new Error(result.error?.message || 'Failed to execute MotherDuck query');
       }
 
-    } catch (err) {
-      console.error('Failed to fetch crime data from MotherDuck:', err);
-      setError(err.message || 'Failed to fetch crime data');
+    } catch (error) {
+      console.error('Failed to fetch crime data:', error);
     } finally {
-      setIsLoading(false);
+      setIsFetchingCrimeData(false);
     }
   };
 
   /**
-   * Handle manual refresh
+   * Handle clearing logs
    */
-  const handleRefresh = () => {
-    fetchCrimeData();
+  const handleClearLogs = () => {
+    clearLogs();
+    setCrimeData(null);
+    setLastFetched(null);
   };
 
-  // ================================================================================
-  // LIFECYCLE
-  // ================================================================================
-
-  // Fetch data on component mount
-  useEffect(() => {
-    fetchCrimeData();
-  }, []);
+  /**
+   * Toggle expanded log section
+   */
+  const toggleSection = (section) => {
+    setExpandedSection(expandedSection === section ? null : section);
+  };
 
   // ================================================================================
   // RENDER HELPERS
   // ================================================================================
 
   /**
-   * Render loading state
+   * Get connection status color and icon
    */
-  const renderLoading = () => (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      padding: '3rem',
-      color: '#666'
-    }}>
+  const getConnectionStatusStyle = () => {
+    switch (connectionStatus) {
+      case 'connected':
+        return { color: '#22c55e', icon: '✅', text: 'Connected' };
+      case 'connecting':
+        return { color: '#f59e0b', icon: '🔄', text: 'Connecting...' };
+      case 'error':
+        return { color: '#ef4444', icon: '❌', text: 'Error' };
+      case 'disconnected':
+        return { color: '#6b7280', icon: '⭕', text: 'Disconnected' };
+      default:
+        return { color: '#6b7280', icon: '⏳', text: 'Initializing...' };
+    }
+  };
+
+  /**
+   * Get log level color
+   */
+  const getLogLevelColor = (level) => {
+    switch (level) {
+      case 'success': return '#22c55e';
+      case 'error': return '#ef4444';
+      case 'warn': return '#f59e0b';
+      default: return '#6b7280';
+    }
+  };
+
+  /**
+   * Render connection status panel
+   */
+  const renderConnectionStatus = () => {
+    const statusStyle = getConnectionStatusStyle();
+
+    return (
       <div style={{
-        width: '40px',
-        height: '40px',
-        border: '4px solid #f0f0f0',
-        borderTop: '4px solid #007bff',
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite',
-        marginBottom: '1rem'
-      }}></div>
-      <p>Loading SF crime data...</p>
-      <style jsx>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>
-  );
+        backgroundColor: '#f8f9fa',
+        border: '1px solid #dee2e6',
+        borderRadius: '8px',
+        padding: '1.5rem',
+        margin: '1rem'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '1rem'
+        }}>
+          <h3 style={{
+            margin: '0',
+            color: '#212529',
+            fontSize: '1.2rem',
+            fontWeight: '600'
+          }}>
+            🦆 MotherDuck Connection Status
+          </h3>
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '1rem',
+            fontWeight: '500',
+            color: statusStyle.color
+          }}>
+            <span>{statusStyle.icon}</span>
+            <span>{statusStyle.text}</span>
+          </div>
+        </div>
+
+        {/* Token Information */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '1rem',
+          marginBottom: '1rem'
+        }}>
+          <div>
+            <strong>Token Status:</strong>{' '}
+            <span style={{ color: tokenInfo.hasToken ? '#22c55e' : '#ef4444' }}>
+              {tokenInfo.hasToken ? '✅ Loaded' : '❌ Missing'}
+            </span>
+          </div>
+          {tokenInfo.hasToken && (
+            <>
+              <div>
+                <strong>Token Source:</strong> {tokenInfo.tokenSource}
+              </div>
+              <div>
+                <strong>Token Preview:</strong>{' '}
+                <code style={{
+                  backgroundColor: '#e5e7eb',
+                  padding: '0.25rem',
+                  borderRadius: '4px',
+                  fontSize: '0.875rem'
+                }}>
+                  {tokenInfo.tokenPreview}
+                </code>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Connection Error */}
+        {connectionError && (
+          <div style={{
+            backgroundColor: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '6px',
+            padding: '1rem',
+            marginBottom: '1rem'
+          }}>
+            <strong style={{ color: '#dc2626' }}>Connection Error:</strong>
+            <p style={{ margin: '0.5rem 0 0 0', color: '#991b1b' }}>
+              {connectionError}
+            </p>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div style={{
+          display: 'flex',
+          gap: '1rem',
+          flexWrap: 'wrap'
+        }}>
+          <button
+            onClick={handleTestConnection}
+            disabled={isTestingConnection}
+            style={{
+              backgroundColor: isTestingConnection ? '#6b7280' : '#3b82f6',
+              color: 'white',
+              border: 'none',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '6px',
+              cursor: isTestingConnection ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            {isTestingConnection ? '🧪 Testing...' : '🧪 Test Connection'}
+          </button>
+
+          <button
+            onClick={handleFetchCrimeData}
+            disabled={isFetchingCrimeData || connectionStatus !== 'connected'}
+            style={{
+              backgroundColor: (isFetchingCrimeData || connectionStatus !== 'connected') ? '#6b7280' : '#10b981',
+              color: 'white',
+              border: 'none',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '6px',
+              cursor: (isFetchingCrimeData || connectionStatus !== 'connected') ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            {isFetchingCrimeData ? '🔍 Fetching...' : '🔍 Test Crime Data'}
+          </button>
+
+          <button
+            onClick={handleClearLogs}
+            style={{
+              backgroundColor: '#6b7280',
+              color: 'white',
+              border: 'none',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            🗑️ Clear Logs
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   /**
-   * Render error state
+   * Render logs section
    */
-  const renderError = () => (
-    <div style={{
-      padding: '2rem',
-      textAlign: 'center',
-      backgroundColor: '#fff5f5',
-      border: '1px solid #fed7d7',
-      borderRadius: '8px',
-      margin: '1rem'
-    }}>
-      <h3 style={{ color: '#e53e3e', marginBottom: '1rem' }}>
-        Error Loading Crime Data
-      </h3>
-      <p style={{ color: '#666', marginBottom: '1.5rem' }}>
-        {error}
-      </p>
-      <button
-        onClick={handleRefresh}
-        style={{
-          backgroundColor: '#007bff',
-          color: 'white',
-          border: 'none',
-          padding: '0.75rem 1.5rem',
-          borderRadius: '6px',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: '500'
-        }}
-        onMouseOver={(e) => e.target.style.backgroundColor = '#0056b3'}
-        onMouseOut={(e) => e.target.style.backgroundColor = '#007bff'}
-      >
-        Try Again
-      </button>
-    </div>
-  );
-
-  /**
-   * Render header with metadata
-   */
-  const renderHeader = () => (
+  const renderLogsSection = () => (
     <div style={{
       backgroundColor: '#f8f9fa',
       border: '1px solid #dee2e6',
       borderRadius: '8px',
-      padding: '1.5rem',
       margin: '1rem',
-      marginBottom: '1.5rem'
+      overflow: 'hidden'
     }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '1rem'
-      }}>
-        <div>
-          <h2 style={{
-            margin: '0 0 0.5rem 0',
-            color: '#212529',
-            fontSize: '1.5rem',
-            fontWeight: '600'
-          }}>
-            SF Crime Data - Last 24 Hours
-          </h2>
-          <div style={{ fontSize: '0.9rem', color: '#6c757d' }}>
-            <strong>Total Records:</strong> {crimeData?.length || 0}
-            {lastFetched && (
-              <>
-                <br />
-                <strong>Last Updated:</strong> {lastFetched.toLocaleString()}
-              </>
-            )}
-            <br />
-            <strong>Data Source:</strong> MotherDuck (sf_crime_stats database)
-          </div>
-        </div>
-
-        <button
-          onClick={handleRefresh}
-          disabled={isLoading}
-          style={{
-            backgroundColor: isLoading ? '#6c757d' : '#28a745',
-            color: 'white',
-            border: 'none',
-            padding: '0.75rem 1.5rem',
-            borderRadius: '6px',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            fontSize: '14px',
-            fontWeight: '500',
-            whiteSpace: 'nowrap'
-          }}
-          onMouseOver={(e) => {
-            if (!isLoading) e.target.style.backgroundColor = '#218838';
-          }}
-          onMouseOut={(e) => {
-            if (!isLoading) e.target.style.backgroundColor = '#28a745';
-          }}
-        >
-          {isLoading ? 'Refreshing...' : 'Refresh Data'}
-        </button>
+      {/* Logs Header */}
+      <div
+        style={{
+          backgroundColor: '#343a40',
+          color: 'white',
+          padding: '1rem',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+        onClick={() => toggleSection('logs')}
+      >
+        <h3 style={{ margin: '0', fontSize: '1.1rem', fontWeight: '600' }}>
+          📋 Connection Logs ({connectionLogs.length})
+        </h3>
+        <span style={{ fontSize: '1.2rem' }}>
+          {expandedSection === 'logs' ? '🔽' : '▶️'}
+        </span>
       </div>
+
+      {/* Logs Content */}
+      {expandedSection === 'logs' && (
+        <div style={{
+          maxHeight: '400px',
+          overflow: 'auto',
+          backgroundColor: '#1f2937',
+          color: '#f9fafb'
+        }}>
+          {connectionLogs.length === 0 ? (
+            <div style={{
+              padding: '2rem',
+              textAlign: 'center',
+              color: '#9ca3af'
+            }}>
+              No logs yet. Connection will initialize automatically.
+            </div>
+          ) : (
+            <div style={{ padding: '1rem' }}>
+              {connectionLogs.map((log, index) => (
+                <div
+                  key={index}
+                  style={{
+                    marginBottom: '0.5rem',
+                    padding: '0.5rem',
+                    borderRadius: '4px',
+                    backgroundColor: log.level === 'error' ? '#7f1d1d' :
+                                   log.level === 'warn' ? '#78350f' :
+                                   log.level === 'success' ? '#14532d' : '#374151',
+                    borderLeft: `4px solid ${getLogLevelColor(log.level)}`
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: '1rem'
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        color: getLogLevelColor(log.level),
+                        fontWeight: '500',
+                        marginBottom: '0.25rem'
+                      }}>
+                        [{log.level.toUpperCase()}] {log.message}
+                      </div>
+                      {log.details && (
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: '#d1d5db',
+                          marginTop: '0.25rem',
+                          fontFamily: 'Monaco, Menlo, "Ubuntu Mono", Consolas, monospace'
+                        }}>
+                          {typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2)}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: '#9ca3af',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {log.timestamp.toLocaleTimeString()}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
   /**
-   * Render JSON data with formatting
+   * Render crime data section
    */
-  const renderData = () => (
+  const renderCrimeDataSection = () => (
     <div style={{
-      margin: '1rem',
+      backgroundColor: '#f8f9fa',
       border: '1px solid #dee2e6',
       borderRadius: '8px',
+      margin: '1rem',
       overflow: 'hidden'
     }}>
-      {/* JSON Header */}
-      <div style={{
-        backgroundColor: '#343a40',
-        color: 'white',
-        padding: '0.75rem 1rem',
-        fontSize: '0.875rem',
-        fontWeight: '500'
-      }}>
-        Raw JSON Data ({crimeData?.length || 0} incidents)
+      {/* Crime Data Header */}
+      <div
+        style={{
+          backgroundColor: '#059669',
+          color: 'white',
+          padding: '1rem',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+        onClick={() => toggleSection('crimeData')}
+      >
+        <h3 style={{ margin: '0', fontSize: '1.1rem', fontWeight: '600' }}>
+          🚨 SF Crime Data Test Results {crimeData && `(${crimeData.length} records)`}
+        </h3>
+        <span style={{ fontSize: '1.2rem' }}>
+          {expandedSection === 'crimeData' ? '🔽' : '▶️'}
+        </span>
       </div>
 
-      {/* JSON Content */}
-      <div style={{
-        backgroundColor: '#f8f9fa',
-        maxHeight: '70vh',
-        overflow: 'auto',
-        border: 'none'
-      }}>
-        <pre style={{
-          margin: '0',
-          padding: '1.5rem',
-          fontFamily: 'Monaco, Menlo, "Ubuntu Mono", Consolas, monospace',
-          fontSize: '12px',
-          lineHeight: '1.5',
-          color: '#212529',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word'
-        }}>
-          {JSON.stringify(crimeData, null, 2)}
-        </pre>
-      </div>
+      {/* Crime Data Content */}
+      {expandedSection === 'crimeData' && (
+        <div>
+          {crimeData ? (
+            <>
+              {/* Metadata */}
+              <div style={{
+                padding: '1rem',
+                backgroundColor: '#ecfdf5',
+                borderBottom: '1px solid #d1fae5'
+              }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                  <div>
+                    <strong>Total Records:</strong> {crimeData.length}
+                  </div>
+                  {lastFetched && (
+                    <div>
+                      <strong>Last Fetched:</strong> {lastFetched.toLocaleString()}
+                    </div>
+                  )}
+                  <div>
+                    <strong>Query Success:</strong> <span style={{ color: '#22c55e' }}>✅ Success</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* JSON Data */}
+              <div style={{
+                maxHeight: '500px',
+                overflow: 'auto',
+                backgroundColor: '#1f2937'
+              }}>
+                <pre style={{
+                  margin: '0',
+                  padding: '1.5rem',
+                  fontFamily: 'Monaco, Menlo, "Ubuntu Mono", Consolas, monospace',
+                  fontSize: '12px',
+                  lineHeight: '1.5',
+                  color: '#f9fafb',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word'
+                }}>
+                  {JSON.stringify(crimeData, null, 2)}
+                </pre>
+              </div>
+            </>
+          ) : (
+            <div style={{
+              padding: '2rem',
+              textAlign: 'center',
+              color: '#6b7280'
+            }}>
+              <p>No crime data loaded yet.</p>
+              <p style={{ fontSize: '0.875rem', marginTop: '1rem' }}>
+                Click "🔍 Test Crime Data" above to fetch sample crime incidents from MotherDuck.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -324,7 +562,7 @@ export default function CrimePage() {
     }}>
       {/* Page Header */}
       <div style={{
-        backgroundColor: '#007bff',
+        backgroundColor: '#1f2937',
         color: 'white',
         padding: '2rem 1rem',
         textAlign: 'center'
@@ -334,37 +572,27 @@ export default function CrimePage() {
           fontSize: '2rem',
           fontWeight: '700'
         }}>
-          San Francisco Crime Data Monitor
+          🦆 MotherDuck Connection Test Dashboard
         </h1>
         <p style={{
           margin: '0.5rem 0 0 0',
           fontSize: '1.1rem',
           opacity: '0.9'
         }}>
-          Real-time incident reports from SFPD (Last 24 Hours)
+          Real-time connection monitoring & SF crime data testing
         </p>
       </div>
 
-      {/* Content Area */}
+      {/* Dashboard Content */}
       <div style={{ maxWidth: '100%' }}>
-        {isLoading ? (
-          renderLoading()
-        ) : error ? (
-          renderError()
-        ) : crimeData ? (
-          <>
-            {renderHeader()}
-            {renderData()}
-          </>
-        ) : (
-          <div style={{
-            padding: '2rem',
-            textAlign: 'center',
-            color: '#666'
-          }}>
-            No crime data available
-          </div>
-        )}
+        {/* Connection Status Panel */}
+        {renderConnectionStatus()}
+
+        {/* Logs Section */}
+        {renderLogsSection()}
+
+        {/* Crime Data Section */}
+        {renderCrimeDataSection()}
       </div>
 
       {/* Footer */}
@@ -378,7 +606,10 @@ export default function CrimePage() {
         marginTop: '2rem'
       }}>
         <p style={{ margin: '0' }}>
-          Data provided by{' '}
+          MotherDuck Connection Testing Dashboard - Built for debugging and monitoring database connectivity
+        </p>
+        <p style={{ margin: '0.5rem 0 0 0' }}>
+          Data source:{' '}
           <a
             href="https://data.sfgov.org/Public-Safety/Police-Department-Incident-Reports-2018-to-Present/wg3w-h783"
             target="_blank"
@@ -387,7 +618,7 @@ export default function CrimePage() {
           >
             SF Open Data Portal
           </a>
-          {' '}- SFPD Incident Reports (2018 to Present)
+          {' '}— SFPD Incident Reports (2018 to Present)
         </p>
       </div>
     </div>
@@ -410,7 +641,7 @@ export default function CrimePage() {
  * Performance Benefits vs Socrata API:
  * - Server-side SQL filtering reduces network traffic
  * - Only filtered results returned (not massive datasets)
- * - DuckDB's columnar analytics optimized for this workload
+ * - DuckDB columnar analytics optimized for this workload
  * - No API rate limiting concerns
  * - Faster query execution on large datasets
  *
