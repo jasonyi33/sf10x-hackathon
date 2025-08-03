@@ -36,10 +36,11 @@ async def root():
     }
 
 # Import API routers
-from api import categories, transcription, individuals, export
+from api import categories, transcription, individuals, export, photos
 
 # Register routers
 app.include_router(categories.router)
 app.include_router(transcription.router)
 app.include_router(individuals.router)
 app.include_router(export.router)
+app.include_router(photos.router)

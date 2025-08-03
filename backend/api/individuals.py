@@ -35,10 +35,10 @@ def get_current_user_name(user_id: str = Depends(get_current_user)) -> str:
 
 def get_supabase_client() -> Client:
     """Get Supabase client instance"""
-    url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_SERVICE_KEY")
+    url = os.getenv("SUPABASE_URL", "mock")
+    key = os.getenv("SUPABASE_SERVICE_KEY", "mock")
     
-    # For demo/hackathon, use mock client if credentials are mock
+    # For demo/hackathon, use mock client if credentials are mock or missing
     if url == "mock" or key == "mock" or not url or not key:
         print("Using mock Supabase client for demo")
         # Return a mock client that returns demo data
@@ -263,6 +263,13 @@ async def search_individuals(
     offset: int = Query(0, ge=0, description="Pagination offset"),
     sort_by: str = Query("last_seen", pattern="^(last_seen|danger_score|name)$", description="Sort field"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order"),
+    age_min: Optional[int] = Query(None, ge=0, le=120, description="Minimum age filter"),
+    age_max: Optional[int] = Query(None, ge=0, le=120, description="Maximum age filter"),
+    danger_min: Optional[int] = Query(None, ge=0, le=100, description="Minimum danger score filter"),
+    danger_max: Optional[int] = Query(None, ge=0, le=100, description="Maximum danger score filter"),
+    gender: Optional[str] = Query(None, description="Gender filter"),
+    veteran_status: Optional[str] = Query(None, description="Veteran status filter"),
+    housing_priority: Optional[str] = Query(None, description="Housing priority filter"),
     user_id: str = Depends(get_current_user)
 ):
     """
@@ -275,19 +282,116 @@ async def search_individuals(
     - Returns abbreviated addresses for display
     """
     try:
-        # Get Supabase client
-        supabase = get_supabase_client()
+        # For hackathon demo, return mock data if no real credentials
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
         
-        # Initialize service
-        service = IndividualService(supabase)
+        if not supabase_url or not supabase_key or supabase_url == "mock" or supabase_key == "mock":
+            # Using mock client, return mock data
+            mock_individuals = [
+                {
+                    "id": "550e8400-e29b-41d4-a716-446655440001",
+                    "name": "John Doe",
+                    "danger_score": 75,
+                    "danger_override": None,
+                    "data": {"approximate_age": [45, 50], "height": 72, "weight": 180, "gender": "Male"},
+                    "created_at": "2024-01-15T10:30:00Z",
+                    "updated_at": "2024-01-15T10:30:00Z"
+                },
+                {
+                    "id": "550e8400-e29b-41d4-a716-446655440002", 
+                    "name": "Sarah Smith",
+                    "danger_score": 20,
+                    "danger_override": 40,
+                    "data": {"approximate_age": [30, 35], "height": 65, "weight": 140, "gender": "Female"},
+                    "created_at": "2024-01-12T14:20:00Z",
+                    "updated_at": "2024-01-12T14:20:00Z"
+                },
+                {
+                    "id": "550e8400-e29b-41d4-a716-446655440003",
+                    "name": "Robert Johnson", 
+                    "danger_score": 90,
+                    "danger_override": None,
+                    "data": {"approximate_age": [55, 60], "height": 70, "weight": 200, "gender": "Male"},
+                    "created_at": "2024-01-16T09:15:00Z",
+                    "updated_at": "2024-01-16T09:15:00Z"
+                }
+            ]
+            
+            # Apply filters
+            filtered_individuals = []
+            for ind in mock_individuals:
+                data = ind.get("data", {})
+                
+                # Age filter
+                if age_min is not None or age_max is not None:
+                    age_data = data.get("approximate_age", [-1, -1])
+                    if not isinstance(age_data, list) or len(age_data) != 2:
+                        continue
+                    
+                    ind_min, ind_max = age_data
+                    if ind_min == -1:  # Unknown age
+                        continue
+                    
+                    if age_min is not None and ind_max < age_min:
+                        continue
+                    if age_max is not None and ind_min > age_max:
+                        continue
+                
+                # Danger score filter
+                if danger_min is not None:
+                    danger_score = ind.get("danger_override") or ind.get("danger_score", 0)
+                    if danger_score < danger_min:
+                        continue
+                
+                if danger_max is not None:
+                    danger_score = ind.get("danger_override") or ind.get("danger_score", 0)
+                    if danger_score > danger_max:
+                        continue
+                
+                # Gender filter
+                if gender and data.get("gender") != gender:
+                    continue
+                
+                filtered_individuals.append(ind)
+            
+            # Apply pagination
+            total = len(filtered_individuals)
+            paginated = filtered_individuals[offset:offset + limit]
+            
+            # Format results
+            results = []
+            for ind in paginated:
+                danger_score = ind.get("danger_override") or ind.get("danger_score", 0)
+                results.append({
+                    "id": ind["id"],
+                    "name": ind["name"],
+                    "danger_score": danger_score,
+                    "last_seen": ind["updated_at"],
+                    "last_location": "Market St & 5th"
+                })
+            
+            return {
+                "individuals": results,
+                "total": total,
+                "limit": limit,
+                "offset": offset
+            }
         
-        # Perform search
+        # Perform search with real service
         result = await service.search_individuals(
             search=search,
             limit=limit,
             offset=offset,
             sort_by=sort_by,
-            sort_order=sort_order
+            sort_order=sort_order,
+            age_min=age_min,
+            age_max=age_max,
+            danger_min=danger_min,
+            danger_max=danger_max,
+            gender=gender,
+            veteran_status=veteran_status,
+            housing_priority=housing_priority
         )
         
         return result

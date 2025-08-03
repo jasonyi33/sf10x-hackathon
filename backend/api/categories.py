@@ -111,11 +111,78 @@ async def get_categories(user_id: str = Depends(get_current_user)):
     Returns categories with their configuration for use in GPT-4o categorization.
     """
     try:
+        # Check if we have real Supabase credentials
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
+        
+        if not supabase_url or not supabase_key or supabase_url == "mock" or supabase_key == "mock":
+            # Return mock categories for hackathon demo
+            return {
+                "categories": [
+                    {
+                        "id": "1",
+                        "name": "name",
+                        "type": "text",
+                        "is_required": True,
+                        "is_preset": True,
+                        "priority": "high",
+                        "danger_weight": 0,
+                        "auto_trigger": False,
+                        "options": None
+                    },
+                    {
+                        "id": "2", 
+                        "name": "approximate_age",
+                        "type": "range",
+                        "is_required": True,
+                        "is_preset": True,
+                        "priority": "high",
+                        "danger_weight": 0,
+                        "auto_trigger": False,
+                        "options": {"min": 0, "max": 120, "default": "Unknown"}
+                    },
+                    {
+                        "id": "3",
+                        "name": "height",
+                        "type": "number", 
+                        "is_required": False,
+                        "is_preset": True,
+                        "priority": "medium",
+                        "danger_weight": 0,
+                        "auto_trigger": False,
+                        "options": None
+                    },
+                    {
+                        "id": "4",
+                        "name": "weight",
+                        "type": "number",
+                        "is_required": False,
+                        "is_preset": True,
+                        "priority": "medium",
+                        "danger_weight": 0,
+                        "auto_trigger": False,
+                        "options": None
+                    },
+                    {
+                        "id": "5",
+                        "name": "skin_color",
+                        "type": "single_select",
+                        "is_required": False,
+                        "is_preset": True,
+                        "priority": "medium",
+                        "danger_weight": 0,
+                        "auto_trigger": False,
+                        "options": [
+                            {"label": "Light", "value": "light"},
+                            {"label": "Medium", "value": "medium"},
+                            {"label": "Dark", "value": "dark"}
+                        ]
+                    }
+                ]
+            }
+        
         # Initialize Supabase client inside function to ensure env vars are loaded
-        supabase: Client = create_client(
-            os.getenv("SUPABASE_URL"),
-            os.getenv("SUPABASE_SERVICE_KEY")  # Use service key for full access
-        )
+        supabase: Client = create_client(supabase_url, supabase_key)
         
         # Fetch all categories from database
         response = supabase.table("categories").select("*").order("created_at").execute()

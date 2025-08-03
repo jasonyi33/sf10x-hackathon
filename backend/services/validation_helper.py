@@ -5,6 +5,16 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 
 
+def validate_age_range(age_value):
+    """Age is always array: [-1,-1] for Unknown or [min,max]"""
+    if isinstance(age_value, list) and len(age_value) == 2:
+        if age_value == [-1, -1]:  # Unknown
+            return True
+        min_age, max_age = age_value
+        return 0 <= min_age < max_age <= 120
+    return False
+
+
 @dataclass
 class ValidationResult:
     """Result of validation with errors and missing fields"""
@@ -93,6 +103,15 @@ def validate_categorized_data(data: dict, categories: list) -> ValidationResult:
                             "message": f"Invalid option '{selected}' in selection"
                         })
                         break
+                        
+        elif field_type == 'range':
+            # Validate range fields (like age)
+            if field_name == 'approximate_age':
+                if not validate_age_range(value):
+                    validation_errors.append({
+                        "field": field_name,
+                        "message": "Invalid age format. Must be [-1, -1] for Unknown or [min, max] with 0 <= min < max <= 120"
+                    })
                         
         # Text, date, location types - no special validation needed
         # They pass as long as they have a value

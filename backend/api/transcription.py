@@ -26,6 +26,7 @@ class TranscribeResponse(BaseModel):
     categorized_data: Dict[str, Any]
     missing_required: List[str]
     potential_matches: List[Dict[str, Any]]
+    validation_errors: List[Dict[str, Any]] = []  # Track validation errors for debugging
 
 
 @router.post("/api/transcribe", response_model=TranscribeResponse)
@@ -62,14 +63,29 @@ async def transcribe_audio_endpoint(
         # 3. Categorize transcription
         categorized_data = await openai_service.categorize_transcription(transcription, categories)
         
-        # 4. Validate categorized data
+        # 4. Validate categorized data (including age format)
         validation_result = validate_categorized_data(categorized_data, categories)
         missing_required = validation_result.missing_required
         
-        # Note: We could also return validation_errors in the response if needed
-        # For now, we'll just log them for debugging
+        # Handle validation errors, especially age format issues
         if validation_result.validation_errors:
             print(f"Validation errors: {validation_result.validation_errors}")
+            
+            # Check for age-specific validation errors
+            age_errors = [error for error in validation_result.validation_errors 
+                         if error.get("field") == "approximate_age"]
+            
+            if age_errors:
+                # Log age validation errors for debugging
+                print(f"Age validation errors: {age_errors}")
+                
+                # For age format errors, we could either:
+                # 1. Return error to user (strict validation)
+                # 2. Auto-correct to [-1, -1] (lenient validation)
+                # For hackathon simplicity, we'll auto-correct
+                if "approximate_age" in categorized_data:
+                    print("Auto-correcting invalid age format to [-1, -1]")
+                    categorized_data["approximate_age"] = [-1, -1]
         
         # 5. Find potential duplicates
         potential_matches = []
@@ -129,7 +145,8 @@ async def transcribe_audio_endpoint(
             transcription=transcription,
             categorized_data=categorized_data,
             missing_required=missing_required,
-            potential_matches=potential_matches
+            potential_matches=potential_matches,
+            validation_errors=validation_result.validation_errors
         )
         
     except ValueError as e:

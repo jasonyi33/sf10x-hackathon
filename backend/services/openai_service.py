@@ -133,11 +133,17 @@ Rules:
 - For multi-select, return array of matching options
 - For single-select, return one option from the available choices
 - For numbers, extract digits only
-- Always attempt to extract required fields: Name, Height, Weight, Skin Color
+- Always attempt to extract required fields: Name, Height, Weight, Skin Color, Approximate Age
 - Return null for missing non-required information
 - Be conservative - only extract explicitly stated info
 - For skin color, map descriptions to Light/Medium/Dark
 - For height, convert to total inches (e.g., "6 feet" = 72, "5'4\"" = 64)
+- For approximate_age, ALWAYS return as [min, max] array:
+  * "about 45" → [43, 47]
+  * "elderly" → [65, 85]
+  * "young adult" → [18, 30]
+  * "middle-aged" → [40, 60]
+  * No age info → [-1, -1]
 
 Transcription: {transcription}
 
@@ -204,6 +210,13 @@ Return JSON only."""
                             valid_options = cat['options']
                             value = [v for v in value if v in valid_options]
                             
+                # Special validation for age field
+                if field_name == 'approximate_age':
+                    from services.validation_helper import validate_age_range
+                    if not validate_age_range(value):
+                        # If invalid, set to unknown
+                        value = [-1, -1]
+                
                 processed_data[field_name] = value
                 
             return processed_data

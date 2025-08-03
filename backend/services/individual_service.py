@@ -232,7 +232,14 @@ class IndividualService:
         limit: int = 20,
         offset: int = 0,
         sort_by: str = "last_seen",
-        sort_order: str = "desc"
+        sort_order: str = "desc",
+        age_min: Optional[int] = None,
+        age_max: Optional[int] = None,
+        danger_min: Optional[int] = None,
+        danger_max: Optional[int] = None,
+        gender: Optional[str] = None,
+        veteran_status: Optional[str] = None,
+        housing_priority: Optional[str] = None
     ) -> SearchIndividualsResponse:
         """
         Search individuals across all fields.
@@ -281,6 +288,54 @@ class IndividualService:
                         seen_ids.add(ind["id"])
                         unique_individuals.append(ind)
                 individuals = unique_individuals
+            
+            # Apply filters
+            filtered_individuals = []
+            for ind in individuals:
+                data = ind.get("data", {})
+                
+                # Age filter (overlap logic)
+                if age_min is not None or age_max is not None:
+                    age_data = data.get("approximate_age", [-1, -1])
+                    if not isinstance(age_data, list) or len(age_data) != 2:
+                        continue
+                    
+                    ind_min, ind_max = age_data
+                    if ind_min == -1:  # Unknown age
+                        continue
+                    
+                    # Check overlap: NOT (ind_max < filter_min OR ind_min > filter_max)
+                    if age_min is not None and ind_max < age_min:
+                        continue
+                    if age_max is not None and ind_min > age_max:
+                        continue
+                
+                # Danger score filter
+                if danger_min is not None:
+                    danger_score = ind.get("danger_override") or ind.get("danger_score", 0)
+                    if danger_score < danger_min:
+                        continue
+                
+                if danger_max is not None:
+                    danger_score = ind.get("danger_override") or ind.get("danger_score", 0)
+                    if danger_score > danger_max:
+                        continue
+                
+                # Gender filter
+                if gender and data.get("gender") != gender:
+                    continue
+                
+                # Veteran status filter
+                if veteran_status and data.get("veteran_status") != veteran_status:
+                    continue
+                
+                # Housing priority filter
+                if housing_priority and data.get("housing_priority") != housing_priority:
+                    continue
+                
+                filtered_individuals.append(ind)
+            
+            individuals = filtered_individuals
             
             # Get total count
             total = len(individuals)
