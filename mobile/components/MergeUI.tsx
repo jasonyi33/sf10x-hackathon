@@ -24,19 +24,24 @@ export const MergeUI: React.FC<MergeUIProps> = ({
   onCreateNew,
   onCancel,
 }) => {
-  // Initialize field selection - prefer new data for most fields
+  // Initialize field selection - auto-select existing data when new data is empty
   const initialSelection = useMemo(() => {
     const selection: Record<string, 'new' | 'existing'> = {};
     const allFields = new Set([...Object.keys(newData), ...Object.keys(existingData)]);
     
     allFields.forEach(field => {
-      // Prefer new data if it exists, otherwise use existing
-      if (newData[field] !== undefined && newData[field] !== null && newData[field] !== '') {
+      const hasNewData = newData[field] !== undefined && newData[field] !== null && newData[field] !== '';
+      const hasExistingData = existingData[field] !== undefined && existingData[field] !== null && existingData[field] !== '';
+      
+      if (hasNewData) {
+        // If new data exists, prefer it
         selection[field] = 'new';
-      } else if (existingData[field] !== undefined && existingData[field] !== null && existingData[field] !== '') {
+      } else if (hasExistingData) {
+        // If new data is empty but existing data exists, auto-select existing
         selection[field] = 'existing';
       } else {
-        selection[field] = 'new'; // Default to new
+        // If neither has data, default to new
+        selection[field] = 'new';
       }
     });
     

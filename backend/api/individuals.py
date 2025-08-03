@@ -15,8 +15,8 @@ from db.models import (
     LocationData,
     SearchIndividualsResponse,
     IndividualDetailResponse,
-    DangerOverrideRequest,
-    DangerOverrideResponse,
+    UrgencyOverrideRequest,
+    UrgencyOverrideResponse,
     InteractionsResponse
 )
 from services.individual_service import IndividualService
@@ -61,8 +61,8 @@ def get_supabase_client() -> Client:
                         {
                             "id": "550e8400-e29b-41d4-a716-446655440001",
                             "name": "John Doe",
-                            "danger_score": 75,
-                            "danger_override": None,
+                            "urgency_score": 75,
+                            "urgency_override": None,
                             "data": {"age": 45, "height": 72, "weight": 180},
                             "created_at": "2024-01-15T10:30:00Z",
                             "updated_at": "2024-01-15T10:30:00Z"
@@ -70,8 +70,8 @@ def get_supabase_client() -> Client:
                         {
                             "id": "550e8400-e29b-41d4-a716-446655440002", 
                             "name": "Sarah Smith",
-                            "danger_score": 20,
-                            "danger_override": 40,
+                            "urgency_score": 20,
+                            "urgency_override": 40,
                             "data": {"age": 32, "height": 65, "weight": 140},
                             "created_at": "2024-01-12T14:20:00Z",
                             "updated_at": "2024-01-12T14:20:00Z"
@@ -79,8 +79,8 @@ def get_supabase_client() -> Client:
                         {
                             "id": "550e8400-e29b-41d4-a716-446655440003",
                             "name": "Robert Johnson", 
-                            "danger_score": 90,
-                            "danger_override": None,
+                            "urgency_score": 90,
+                            "urgency_override": None,
                             "data": {"age": 58, "height": 70, "weight": 200},
                             "created_at": "2024-01-16T09:15:00Z",
                             "updated_at": "2024-01-16T09:15:00Z"
@@ -132,8 +132,8 @@ def get_supabase_client() -> Client:
                 reverse = desc
                 if field == "created_at":
                     self.mock_data.sort(key=lambda x: x.get("created_at", ""), reverse=reverse)
-                elif field == "danger_score":
-                    self.mock_data.sort(key=lambda x: x.get("danger_score", 0), reverse=reverse)
+                elif field == "urgency_score":
+                    self.mock_data.sort(key=lambda x: x.get("urgency_score", 0), reverse=reverse)
                 elif field == "name":
                     self.mock_data.sort(key=lambda x: x.get("name", ""), reverse=reverse)
                 return self
@@ -189,7 +189,7 @@ def build_filter_cache(supabase: Client) -> Dict[str, Any]:
         genders = set()
         age_min, age_max = 120, 0  # Start with inverted ranges
         height_min, height_max = 300, 0
-        danger_min, danger_max = 100, 0
+        urgency_min, urgency_max = 100, 0
         has_photo_values = set()
         skin_colors = set()
         
@@ -214,10 +214,10 @@ def build_filter_cache(supabase: Client) -> Dict[str, Any]:
                 height_min = min(height_min, data["height"])
                 height_max = max(height_max, data["height"])
             
-            # Danger score (consider override if present)
-            danger_score = ind.get("danger_override") or ind.get("danger_score", 0)
-            danger_min = min(danger_min, danger_score)
-            danger_max = max(danger_max, danger_score)
+            # Urgency score (consider override if present)
+            urgency_score = ind.get("urgency_override") or ind.get("urgency_score", 0)
+            urgency_min = min(urgency_min, urgency_score)
+            urgency_max = max(urgency_max, urgency_score)
             
             # Has photo
             has_photo_values.add(ind.get("photo_url") is not None)
@@ -230,22 +230,22 @@ def build_filter_cache(supabase: Client) -> Dict[str, Any]:
         if not individuals:
             age_min, age_max = 0, 120
             height_min, height_max = 0, 300
-            danger_min, danger_max = 0, 100
+            urgency_min, urgency_max = 0, 100
         else:
             # Fix inverted ranges if no valid data found
             if age_min > age_max:
                 age_min, age_max = 0, 120
             if height_min > height_max:
                 height_min, height_max = 0, 300
-            if danger_min > danger_max:
-                danger_min, danger_max = 0, 100
+            if urgency_min > urgency_max:
+                urgency_min, urgency_max = 0, 100
         
         return {
             "filters": {
                 "gender": sorted(list(genders)),
                 "age_range": {"min": age_min, "max": age_max},
                 "height_range": {"min": height_min, "max": height_max},
-                "danger_score_range": {"min": danger_min, "max": danger_max},
+                "urgency_score_range": {"min": urgency_min, "max": urgency_max},
                 "has_photo": sorted(list(has_photo_values)),
                 "skin_color": sorted(list(skin_colors))
             },
@@ -261,7 +261,7 @@ def build_filter_cache(supabase: Client) -> Dict[str, Any]:
                 "gender": [],
                 "age_range": {"min": 0, "max": 120},
                 "height_range": {"min": 0, "max": 300},
-                "danger_score_range": {"min": 0, "max": 100},
+                "urgency_score_range": {"min": 0, "max": 100},
                 "has_photo": [True, False],
                 "skin_color": []
             },
@@ -401,10 +401,10 @@ async def advanced_search_individuals(
     age_max: Optional[int] = Query(None, ge=0, le=120),
     height_min: Optional[int] = Query(None, ge=0, le=300),
     height_max: Optional[int] = Query(None, ge=0, le=300),
-    danger_min: Optional[int] = Query(None, ge=0, le=100),
-    danger_max: Optional[int] = Query(None, ge=0, le=100),
+    urgency_min: Optional[int] = Query(None, ge=0, le=100),
+    urgency_max: Optional[int] = Query(None, ge=0, le=100),
     has_photo: Optional[bool] = Query(None),
-    sort_by: str = Query("danger_score", pattern="^(danger_score|last_seen|name|distance)$"),
+    sort_by: str = Query("urgency_score", pattern="^(urgency_score|last_seen|name|distance)$"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     limit: int = Query(10, ge=1, le=20),
     offset: int = Query(0, ge=0, le=100),
@@ -420,9 +420,9 @@ async def advanced_search_individuals(
     - Gender filter (comma-separated for OR logic)
     - Age range with overlap logic
     - Height range filter
-    - Danger score range filter
+    - Urgency score range filter
     - Has photo filter
-    - Sorting options: danger_score, last_seen, name, distance
+    - Sorting options: urgency_score, last_seen, name, distance
     - Distance sort requires lat/lon coordinates
     - Pagination with limit/offset
     """
@@ -448,8 +448,8 @@ async def advanced_search_individuals(
             age_max=age_max,
             height_min=height_min,
             height_max=height_max,
-            danger_min=danger_min,
-            danger_max=danger_max,
+            urgency_min=urgency_min,
+            urgency_max=urgency_max,
             has_photo=has_photo,
             sort_by=sort_by,
             sort_order=sort_order,
@@ -483,7 +483,7 @@ async def search_individuals(
     search: Optional[str] = Query(None, description="Search term for name and data fields"),
     limit: int = Query(20, ge=1, le=100, description="Maximum results per page"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    sort_by: str = Query("last_seen", pattern="^(last_seen|danger_score|name)$", description="Sort field"),
+    sort_by: str = Query("last_seen", pattern="^(last_seen|urgency_score|name)$", description="Sort field"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order"),
     user_id: str = Depends(get_current_user)
 ):
@@ -493,7 +493,7 @@ async def search_individuals(
     Features:
     - Search across name and all JSONB data fields
     - Pagination with limit/offset
-    - Sorting by last_seen (default), danger_score, or name
+    - Sorting by last_seen (default), urgency_score, or name
     - Returns abbreviated addresses for display
     """
     try:
@@ -534,7 +534,7 @@ async def get_individual(
     Returns:
     - Full individual data with all fields
     - Last 10 interactions (summary only)
-    - Calculated display danger score
+    - Calculated display urgency score
     - 404 if individual not found
     """
     try:
@@ -567,28 +567,28 @@ async def get_individual(
         )
 
 
-@router.put("/api/individuals/{individual_id}/danger-override", response_model=DangerOverrideResponse)
-async def update_danger_override(
+@router.put("/api/individuals/{individual_id}/urgency-override", response_model=UrgencyOverrideResponse)
+async def update_urgency_override(
     individual_id: UUID,
-    request: DangerOverrideRequest,
+    request: UrgencyOverrideRequest,
     user_id: str = Depends(get_current_user)
 ):
     """
-    Update manual danger score override.
+    Update manual urgency score override.
     
     Features:
-    - Set danger_override to provided value (0-100)
+    - Set urgency_override to provided value (0-100)
     - Pass null to remove override
-    - Returns all danger scores for UI update
+    - Returns all urgency scores for UI update
     - 404 if individual not found
     """
     try:
         # Get Supabase client
         supabase = get_supabase_client()
         
-        # Update the danger_override field
+        # Update the urgency_override field
         update_result = supabase.table("individuals").update({
-            "danger_override": request.danger_override,
+            "urgency_override": request.urgency_override,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }).eq("id", str(individual_id)).execute()
         
@@ -603,11 +603,11 @@ async def update_danger_override(
         individual = update_result.data[0]
         
         # Calculate display score
-        display_score = individual["danger_override"] if individual["danger_override"] is not None else individual["danger_score"]
+        display_score = individual["urgency_override"] if individual["urgency_override"] is not None else individual["urgency_score"]
         
-        return DangerOverrideResponse(
-            danger_score=individual["danger_score"],
-            danger_override=individual["danger_override"],
+        return UrgencyOverrideResponse(
+            urgency_score=individual["urgency_score"],
+            urgency_override=individual["urgency_override"],
             display_score=display_score
         )
         
@@ -616,10 +616,10 @@ async def update_danger_override(
         raise
     except Exception as e:
         # Log error for debugging
-        print(f"Error updating danger override for {individual_id}: {str(e)}")
+        print(f"Error updating urgency override for {individual_id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update danger override: {str(e)}"
+            detail=f"Failed to update urgency override: {str(e)}"
         )
 
 

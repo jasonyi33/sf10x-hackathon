@@ -2,7 +2,7 @@
 -- Task 6.1: Create comprehensive demo data with 20 individuals
 
 -- First, insert custom categories
-INSERT INTO categories (name, type, is_required, is_preset, priority, danger_weight, auto_trigger, options) VALUES
+INSERT INTO categories (name, type, is_required, is_preset, priority, urgency_weight, auto_trigger, options) VALUES
 ('veteran_status', 'single_select', false, false, 'high', 20, false,
  '[{"label": "Yes", "value": 1}, {"label": "No", "value": 0}, {"label": "Unknown", "value": 0}]'::jsonb),
 ('medical_conditions', 'multi_select', false, false, 'high', 0, false,
@@ -13,8 +13,8 @@ INSERT INTO categories (name, type, is_required, is_preset, priority, danger_wei
  '[{"label": "None", "value": 0}, {"label": "Verbal Only", "value": 0.3}, {"label": "Physical", "value": 1}]'::jsonb);
 
 -- Insert 20 individuals with varied profiles
--- Low danger scores (0-33): ~6 individuals
-INSERT INTO individuals (id, name, data, danger_score, danger_override, created_at, updated_at) VALUES
+-- Low urgency scores (0-33): ~6 individuals
+INSERT INTO individuals (id, name, data, urgency_score, urgency_override, created_at, updated_at) VALUES
 ('550e8400-e29b-41d4-a716-446655440001', 'Sarah Smith', 
  '{"age": 32, "height": 65, "weight": 140, "skin_color": "Light", "gender": "Female", "substance_abuse_history": ["None"], "veteran_status": "No", "medical_conditions": ["None"], "housing_priority": "Low"}'::jsonb, 
  15, NULL, '2024-01-10T09:00:00Z', '2024-01-15T14:30:00Z'),
@@ -39,8 +39,8 @@ INSERT INTO individuals (id, name, data, danger_score, danger_override, created_
  '{"age": 52, "height": 72, "weight": 185, "skin_color": "Dark", "gender": "Male", "substance_abuse_history": ["None"], "veteran_status": "Yes", "medical_conditions": ["Heart Disease"], "housing_priority": "High"}'::jsonb, 
  32, NULL, '2024-01-15T11:20:00Z', '2024-01-20T10:45:00Z');
 
--- Medium danger scores (34-66): ~8 individuals
-INSERT INTO individuals (id, name, data, danger_score, danger_override, created_at, updated_at) VALUES
+-- Medium urgency scores (34-66): ~8 individuals
+INSERT INTO individuals (id, name, data, urgency_score, urgency_override, created_at, updated_at) VALUES
 ('550e8400-e29b-41d4-a716-446655440007', 'John Doe', 
  '{"age": 45, "height": 72, "weight": 180, "skin_color": "Light", "gender": "Male", "substance_abuse_history": ["Moderate"], "veteran_status": "No", "medical_conditions": ["Diabetes"], "housing_priority": "High"}'::jsonb, 
  75, NULL, '2024-01-10T08:00:00Z', '2024-01-15T15:30:00Z'),
@@ -73,8 +73,8 @@ INSERT INTO individuals (id, name, data, danger_score, danger_override, created_
  '{"age": 36, "height": 64, "weight": 155, "skin_color": "Medium", "gender": "Female", "substance_abuse_history": ["Mild"], "veteran_status": "No", "medical_conditions": ["None"], "housing_priority": "Medium"}'::jsonb, 
  35, NULL, '2024-01-17T11:00:00Z', '2024-01-22T14:45:00Z');
 
--- High danger scores (67-100): ~6 individuals (including 3 with auto-trigger)
-INSERT INTO individuals (id, name, data, danger_score, danger_override, created_at, updated_at) VALUES
+-- High urgency scores (67-100): ~6 individuals (including 3 with auto-trigger)
+INSERT INTO individuals (id, name, data, urgency_score, urgency_override, created_at, updated_at) VALUES
 ('550e8400-e29b-41d4-a716-446655440015', 'Daniel Taylor', 
  '{"age": 55, "height": 73, "weight": 210, "skin_color": "Dark", "gender": "Male", "substance_abuse_history": ["Severe"], "veteran_status": "Yes", "medical_conditions": ["Chronic Pain"], "housing_priority": "Critical", "violent_behavior": "Physical"}'::jsonb, 
  100, NULL, '2024-01-10T07:30:00Z', '2024-01-15T16:45:00Z'),

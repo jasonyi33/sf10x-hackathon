@@ -43,7 +43,7 @@ def apply_performance_indexes():
         print("  - idx_individuals_gender (for gender filters)")
         print("  - idx_individuals_age_min/max (for age range queries)")
         print("  - idx_individuals_has_photo (for photo filter)")
-        print("  - idx_individuals_danger (for danger score filter/sort)")
+        print("  - idx_individuals_urgency (for urgency score filter/sort)")
         print("  - idx_individuals_updated (for last_seen sort)")
         print("  - idx_individuals_height (for height range filter)")
         print("  - idx_individuals_skin_color (for skin color filter)")

@@ -34,9 +34,9 @@ class SaveIndividualRequest(BaseModel):
         return v
 
 
-class DangerOverrideRequest(BaseModel):
-    """Request to update danger score override"""
-    danger_override: Optional[int] = Field(None, ge=0, le=100)
+class UrgencyOverrideRequest(BaseModel):
+    """Request to update urgency score override"""
+    urgency_override: Optional[int] = Field(None, ge=0, le=100)
 
 
 # Response Models
@@ -44,9 +44,9 @@ class IndividualSummary(BaseModel):
     """Individual summary for list views"""
     id: UUID
     name: str
-    danger_score: int
-    danger_override: Optional[int]
-    display_score: int  # Computed: danger_override if not null, else danger_score
+    urgency_score: int
+    urgency_override: Optional[int]
+    display_score: int  # Computed: urgency_override if not null, else urgency_score
     last_seen: datetime
     last_location: Optional[Dict[str, Any]]  # Simplified location with abbreviated address
 
@@ -55,9 +55,9 @@ class IndividualResponse(BaseModel):
     """Full individual data"""
     id: UUID
     name: str
-    danger_score: int
-    danger_override: Optional[int]
-    display_score: int  # Computed: danger_override if not null, else danger_score
+    urgency_score: int
+    urgency_override: Optional[int]
+    display_score: int  # Computed: urgency_override if not null, else urgency_score
     data: Dict[str, Any]  # All categorized fields
     created_at: datetime
     updated_at: datetime
@@ -102,10 +102,10 @@ class IndividualDetailResponse(BaseModel):
     recent_interactions: List[InteractionSummary]  # Last 10 interactions
 
 
-class DangerOverrideResponse(BaseModel):
-    """Response after updating danger override"""
-    danger_score: int  # Original calculated score
-    danger_override: Optional[int]  # Manual override if set
+class UrgencyOverrideResponse(BaseModel):
+    """Response after updating urgency override"""
+    urgency_score: int  # Original calculated score
+    urgency_override: Optional[int]  # Manual override if set
     display_score: int  # What UI should show
 
 
@@ -120,7 +120,7 @@ class CreateCategoryRequest(BaseModel):
     name: str  # Required, will be capitalized
     type: str = Field(..., pattern="^(text|number|single_select|multi_select|date|location)$")
     priority: Optional[str] = Field("medium", pattern="^(high|medium|low)$")
-    danger_weight: Optional[int] = Field(0, ge=0, le=100)
+    urgency_weight: Optional[int] = Field(0, ge=0, le=100)
     auto_trigger: Optional[bool] = False
     is_required: Optional[bool] = False
     options: Optional[List[Any]] = None  # List[Dict] for single_select, List[str] for multi_select
@@ -152,9 +152,9 @@ class CreateCategoryRequest(BaseModel):
     
     def model_post_init(self, __context):
         """Additional validation after model creation"""
-        # Validate danger_weight only for number/single_select
-        if self.type not in ['number', 'single_select'] and self.danger_weight > 0:
-            raise ValueError(f"danger_weight must be 0 for type {self.type}")
+        # Validate urgency_weight only for number/single_select
+        if self.type not in ['number', 'single_select'] and self.urgency_weight > 0:
+            raise ValueError(f"urgency_weight must be 0 for type {self.type}")
         
         # Validate auto_trigger only for number/single_select
         if self.type not in ['number', 'single_select'] and self.auto_trigger:
@@ -169,7 +169,7 @@ class CategoryResponse(BaseModel):
     is_required: bool
     is_preset: bool
     priority: str
-    danger_weight: int
+    urgency_weight: int
     auto_trigger: bool
     options: Optional[List[Any]]
     created_at: datetime

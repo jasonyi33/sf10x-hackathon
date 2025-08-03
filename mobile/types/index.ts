@@ -1,8 +1,8 @@
 export interface Individual {
   id: string;
   name: string;
-  danger_score: number;
-  danger_override?: number | null;
+  urgency_score: number;
+  urgency_override?: number | null;
   data: Record<string, any>;
   created_at: string;
   updated_at: string;
@@ -12,8 +12,8 @@ export interface Individual {
 export interface SearchResult {
   id: string;
   name: string;
-  danger_score: number;
-  danger_override?: number | null;
+  urgency_score: number;
+  urgency_override?: number | null;
   last_seen_days: number;
   last_interaction_date: string;
   last_seen?: string;
@@ -46,8 +46,8 @@ export interface Interaction {
 export interface IndividualProfile {
   id: string;
   name: string;
-  danger_score: number;
-  danger_override?: number | null;
+  urgency_score: number;
+  urgency_override?: number | null;
   data: Record<string, any>; // All current field values
   created_at: string;
   updated_at: string;

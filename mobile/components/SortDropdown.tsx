@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 
-export type SortOption = 'danger_score' | 'last_seen' | 'name' | 'distance';
+export type SortOption = 'urgency_score' | 'last_seen' | 'name' | 'distance';
 export type SortOrder = 'asc' | 'desc';
 
 interface SortDropdownProps {
@@ -24,7 +24,7 @@ const SORT_OPTIONS: Array<{
   label: string;
   defaultOrder: SortOrder;
 }> = [
-  { value: 'danger_score', label: 'Danger Score', defaultOrder: 'desc' },
+  { value: 'urgency_score', label: 'Urgency Score', defaultOrder: 'desc' },
   { value: 'last_seen', label: 'Last Seen', defaultOrder: 'desc' },
   { value: 'name', label: 'Name A-Z', defaultOrder: 'asc' },
   { value: 'distance', label: 'Distance', defaultOrder: 'asc' },

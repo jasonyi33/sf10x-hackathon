@@ -69,8 +69,8 @@ const mockIndividuals: SearchResult[] = [
   {
     id: '1',
     name: 'John Doe',
-    danger_score: 75,
-    danger_override: null,
+    urgency_score: 75,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-15T10:30:00Z'),
     last_interaction_date: '2024-01-15T10:30:00Z',
     data: {
@@ -82,8 +82,8 @@ const mockIndividuals: SearchResult[] = [
   {
     id: '2',
     name: 'Sarah Smith',
-    danger_score: 20,
-    danger_override: 40,
+    urgency_score: 20,
+    urgency_override: 40,
     last_seen_days: calculateDaysAgo('2024-01-12T14:20:00Z'),
     last_interaction_date: '2024-01-12T14:20:00Z',
     data: {
@@ -95,8 +95,8 @@ const mockIndividuals: SearchResult[] = [
   {
     id: '3',
     name: 'Robert Johnson',
-    danger_score: 90,
-    danger_override: null,
+    urgency_score: 90,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-16T09:15:00Z'),
     last_interaction_date: '2024-01-16T09:15:00Z',
     data: {
@@ -108,8 +108,8 @@ const mockIndividuals: SearchResult[] = [
   {
     id: '4',
     name: 'Maria Garcia',
-    danger_score: 15,
-    danger_override: null,
+    urgency_score: 15,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-10T16:45:00Z'),
     last_interaction_date: '2024-01-10T16:45:00Z',
     data: {
@@ -121,8 +121,8 @@ const mockIndividuals: SearchResult[] = [
   {
     id: '5',
     name: 'David Wilson',
-    danger_score: 60,
-    danger_override: null,
+    urgency_score: 60,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-14T11:30:00Z'),
     last_interaction_date: '2024-01-14T11:30:00Z',
     data: {
@@ -135,8 +135,8 @@ const mockIndividuals: SearchResult[] = [
   {
     id: '6',
     name: 'Test Person 6',
-    danger_score: 35,
-    danger_override: null,
+    urgency_score: 35,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-13T10:00:00Z'),
     last_interaction_date: '2024-01-13T10:00:00Z',
     data: {
@@ -148,8 +148,8 @@ const mockIndividuals: SearchResult[] = [
   {
     id: '7',
     name: 'Test Person 7',
-    danger_score: 25,
-    danger_override: null,
+    urgency_score: 25,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-12T10:00:00Z'),
     last_interaction_date: '2024-01-12T10:00:00Z',
     data: {
@@ -161,8 +161,8 @@ const mockIndividuals: SearchResult[] = [
   {
     id: '8',
     name: 'Test Person 8',
-    danger_score: 45,
-    danger_override: null,
+    urgency_score: 45,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-11T10:00:00Z'),
     last_interaction_date: '2024-01-11T10:00:00Z',
     data: {
@@ -174,8 +174,8 @@ const mockIndividuals: SearchResult[] = [
   {
     id: '9',
     name: 'Test Person 9',
-    danger_score: 55,
-    danger_override: null,
+    urgency_score: 55,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-10T10:00:00Z'),
     last_interaction_date: '2024-01-10T10:00:00Z',
     data: {
@@ -187,8 +187,8 @@ const mockIndividuals: SearchResult[] = [
   {
     id: '10',
     name: 'Test Person 10',
-    danger_score: 30,
-    danger_override: null,
+    urgency_score: 30,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-09T10:00:00Z'),
     last_interaction_date: '2024-01-09T10:00:00Z',
     data: {
@@ -200,8 +200,8 @@ const mockIndividuals: SearchResult[] = [
   {
     id: '11',
     name: 'Test Person 11',
-    danger_score: 40,
-    danger_override: null,
+    urgency_score: 40,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-08T10:00:00Z'),
     last_interaction_date: '2024-01-08T10:00:00Z',
     data: {
@@ -213,8 +213,8 @@ const mockIndividuals: SearchResult[] = [
   {
     id: '12',
     name: 'Test Person 12',
-    danger_score: 50,
-    danger_override: null,
+    urgency_score: 50,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-07T10:00:00Z'),
     last_interaction_date: '2024-01-07T10:00:00Z',
     data: {
@@ -230,8 +230,8 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
   '1': {
     id: '1',
     name: 'John Doe',
-    danger_score: 75,
-    danger_override: null,
+    urgency_score: 75,
+    urgency_override: null,
     data: {
       name: 'John Doe',
       height: 72,
@@ -281,8 +281,8 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
   '2': {
     id: '2',
     name: 'Sarah Smith',
-    danger_score: 20,
-    danger_override: 40,
+    urgency_score: 20,
+    urgency_override: 40,
     data: {
       name: 'Sarah Smith',
       height: 65,
@@ -327,8 +327,8 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440001": {
       id: "550e8400-e29b-41d4-a716-446655440001",
       name: "John Doe",
-      danger_score: 75,
-      danger_override: null,
+      urgency_score: 75,
+      urgency_override: null,
       data: {
         age: [45, 50], // Changed from approximate_age
         height: 72,
@@ -383,8 +383,8 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440002": {
       id: "550e8400-e29b-41d4-a716-446655440002",
       name: "Sarah Smith",
-      danger_score: 20,
-      danger_override: null,
+      urgency_score: 20,
+      urgency_override: null,
       data: {
         age: [30, 35], // Changed to array format
         height: 65,
@@ -406,8 +406,8 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440003": {
       id: "550e8400-e29b-41d4-a716-446655440003",
       name: "Robert Johnson",
-      danger_score: 90,
-      danger_override: null,
+      urgency_score: 90,
+      urgency_override: null,
       data: {
         age: 58,
         height: 70,
@@ -552,15 +552,15 @@ export const api = {
         // Convert mock data store to search results with display scores
         const mockResults: SearchResult[] = Object.values(mockDataStore.individuals).map(individual => {
           // Calculate display score (override or calculated)
-          const displayScore = individual.danger_override !== null && individual.danger_override !== undefined 
-            ? individual.danger_override 
-            : individual.danger_score;
+          const displayScore = individual.urgency_override !== null && individual.urgency_override !== undefined 
+            ? individual.urgency_override 
+            : individual.urgency_score;
           
           return {
             id: individual.id,
             name: individual.name,
-            danger_score: displayScore, // Use display score instead of original
-            danger_override: individual.danger_override,
+            urgency_score: displayScore, // Use display score instead of original
+            urgency_override: individual.urgency_override,
             last_seen: individual.last_interaction_date,
             last_seen_days: 2, // Mock value
             last_interaction_date: individual.last_interaction_date,
@@ -609,32 +609,32 @@ export const api = {
     }
   },
 
-  // Update danger override
-  updateDangerOverride: async (individualId: string, overrideValue: number | null): Promise<boolean> => {
+  // Update urgency override
+  updateUrgencyOverride: async (individualId: string, overrideValue: number | null): Promise<boolean> => {
     try {
       // Skip real API calls if disabled
       if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
-        console.log('Mock danger override update');
+        console.log('Mock urgency override update');
         // Simulate update delay
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Update the mock data store
         if (mockDataStore.individuals[individualId]) {
-          mockDataStore.individuals[individualId].danger_override = overrideValue;
+          mockDataStore.individuals[individualId].urgency_override = overrideValue;
           mockDataStore.individuals[individualId].updated_at = new Date().toISOString();
-          console.log(`Updated danger override for ${individualId} to ${overrideValue}`);
+          console.log(`Updated urgency override for ${individualId} to ${overrideValue}`);
         }
         
         return true;
       }
 
-      await apiRequest(`/api/individuals/${individualId}/danger-override`, {
+      await apiRequest(`/api/individuals/${individualId}/urgency-override`, {
         method: 'PUT',
-        body: JSON.stringify({ danger_override: overrideValue }),
+        body: JSON.stringify({ urgency_override: overrideValue }),
       });
       return true;
     } catch (error) {
-      console.log('Mock danger override update');
+      console.log('Mock urgency override update');
       return true; // Mock success
     }
   },

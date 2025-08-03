@@ -7,30 +7,30 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { getDangerScoreColor, getDisplayDangerScore } from '../utils/dangerScore';
+import { getUrgencyScoreColor, getDisplayUrgencyScore } from '../utils/urgencyScore';
 
-interface DangerScoreProps {
+interface UrgencyScoreProps {
   individual: {
     id: string;
-    danger_score: number;
-    danger_override?: number | null;
+    urgency_score: number;
+    urgency_override?: number | null;
   };
   onOverrideChange: (value: number | null) => void;
   showSlider?: boolean; // Optional prop to show/hide slider
 }
 
-export default function DangerScore({ 
+export default function UrgencyScore({ 
   individual, 
   onOverrideChange, 
   showSlider = false 
-}: DangerScoreProps) {
+}: UrgencyScoreProps) {
   // State for the slider value
   const [sliderValue, setSliderValue] = useState<number>(0);
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
   // Get the display score (override or calculated)
-  const displayScore = getDisplayDangerScore(individual);
-  const scoreColor = getDangerScoreColor(displayScore);
+  const displayScore = getDisplayUrgencyScore(individual);
+  const scoreColor = getUrgencyScoreColor(displayScore);
 
   // Initialize slider value when component mounts or individual changes
   useEffect(() => {
@@ -40,7 +40,7 @@ export default function DangerScore({
   // Reset slider when individual changes
   useEffect(() => {
     setSliderValue(displayScore);
-  }, [individual.danger_score, individual.danger_override]);
+  }, [individual.urgency_score, individual.urgency_override]);
 
   // Handle slider value change
   const handleSliderChange = (value: number) => {
@@ -55,7 +55,7 @@ export default function DangerScore({
     // Show confirmation dialog for manual override
     Alert.alert(
       'Set Manual Override',
-      `Set danger score to ${newValue}?`,
+      `Set urgency score to ${newValue}?`,
       [
         {
           text: 'Cancel',
@@ -90,7 +90,7 @@ export default function DangerScore({
           text: 'Clear Override',
           onPress: () => {
             onOverrideChange(null);
-            setSliderValue(individual.danger_score);
+            setSliderValue(individual.urgency_score);
             setIsEditing(false);
           },
         },
@@ -100,13 +100,13 @@ export default function DangerScore({
 
   return (
     <View style={styles.container}>
-      {/* Large Danger Score Display */}
+      {/* Large Urgency Score Display */}
       <View style={[styles.scoreContainer, { backgroundColor: scoreColor }]}>
-        <Text style={styles.scoreLabel}>Danger Score</Text>
+        <Text style={styles.scoreLabel}>Urgency Score</Text>
         <Text style={styles.scoreValue}>{displayScore}</Text>
         
         {/* Manual Override Indicator */}
-        {individual.danger_override !== null && (
+        {individual.urgency_override !== null && (
           <View style={styles.manualIndicator}>
             <Text style={styles.manualLabel}>Manual Override</Text>
             <TouchableOpacity onPress={handleClearOverride}>
@@ -138,8 +138,8 @@ export default function DangerScore({
           />
           
           <View style={styles.sliderRange}>
-            <Text style={styles.rangeLabel}>Low Risk</Text>
-            <Text style={styles.rangeLabel}>High Risk</Text>
+            <Text style={styles.rangeLabel}>Low Urgency</Text>
+            <Text style={styles.rangeLabel}>High Urgency</Text>
           </View>
         </View>
       )}

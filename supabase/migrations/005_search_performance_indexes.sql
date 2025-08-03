@@ -21,8 +21,8 @@ CREATE INDEX IF NOT EXISTS idx_individuals_age_max ON individuals(((data->'appro
 -- 5. Has photo index (boolean expression index)
 CREATE INDEX IF NOT EXISTS idx_individuals_has_photo ON individuals((photo_url IS NOT NULL));
 
--- 6. Danger score index for sorting and filtering
-CREATE INDEX IF NOT EXISTS idx_individuals_danger ON individuals(danger_score);
+-- 6. Urgency score index for sorting and filtering
+CREATE INDEX IF NOT EXISTS idx_individuals_urgency ON individuals(urgency_score);
 
 -- 7. Updated at index for last_seen sorting
 CREATE INDEX IF NOT EXISTS idx_individuals_updated ON individuals(updated_at);
@@ -36,8 +36,8 @@ CREATE INDEX IF NOT EXISTS idx_individuals_weight ON individuals(((data->>'weigh
 -- 10. Skin color index for filter queries
 CREATE INDEX IF NOT EXISTS idx_individuals_skin_color ON individuals((data->>'skin_color'));
 
--- 11. Compound index for danger override check
-CREATE INDEX IF NOT EXISTS idx_individuals_danger_composite ON individuals(danger_score, danger_override);
+-- 11. Compound index for urgency override check
+CREATE INDEX IF NOT EXISTS idx_individuals_urgency_composite ON individuals(urgency_score, urgency_override);
 
 -- 12. Add index on interactions for faster last_seen queries
 CREATE INDEX IF NOT EXISTS idx_interactions_individual_created ON interactions(individual_id, created_at DESC);
@@ -52,7 +52,7 @@ COMMENT ON INDEX idx_individuals_gender IS 'Index on gender field in JSONB data 
 COMMENT ON INDEX idx_individuals_age_min IS 'Index on minimum age for age range overlap queries';
 COMMENT ON INDEX idx_individuals_age_max IS 'Index on maximum age for age range overlap queries';
 COMMENT ON INDEX idx_individuals_has_photo IS 'Boolean expression index for has_photo filter';
-COMMENT ON INDEX idx_individuals_danger IS 'Index on danger_score for sorting and filtering';
+COMMENT ON INDEX idx_individuals_urgency IS 'Index on urgency_score for sorting and filtering';
 COMMENT ON INDEX idx_individuals_updated IS 'Index on updated_at for last_seen sorting';
 COMMENT ON INDEX idx_interactions_individual_created IS 'Compound index for efficient last interaction lookup';
 

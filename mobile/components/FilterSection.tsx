@@ -18,8 +18,8 @@ export interface FilterState {
   ageMax: number;
   heightMin: number;
   heightMax: number;
-  dangerMin: number;
-  dangerMax: number;
+  urgencyMin: number;
+  urgencyMax: number;
   hasPhoto: 'any' | 'yes' | 'no';
 }
 
@@ -44,8 +44,8 @@ export default function FilterSection({
     ageMax: initialFilters?.ageMax || -1,
     heightMin: initialFilters?.heightMin || 0,
     heightMax: initialFilters?.heightMax || 0,
-    dangerMin: initialFilters?.dangerMin || 0,
-    dangerMax: initialFilters?.dangerMax || 100,
+    urgencyMin: initialFilters?.urgencyMin || 0,
+    urgencyMax: initialFilters?.urgencyMax || 100,
     hasPhoto: initialFilters?.hasPhoto || 'any',
   });
 
@@ -59,7 +59,7 @@ export default function FilterSection({
     if (filters.gender.length > 0) count += filters.gender.length;
     if (filters.ageMin > -1 || filters.ageMax > -1) count++;
     if (filters.heightMin > 0 || filters.heightMax > 0) count++;
-    if (filters.dangerMin > 0 || filters.dangerMax < 100) count++;
+    if (filters.urgencyMin > 0 || filters.urgencyMax < 100) count++;
     if (filters.hasPhoto !== 'any') count++;
     return count;
   };
@@ -107,8 +107,8 @@ export default function FilterSection({
     setFilters(prev => ({ ...prev, heightMin: min, heightMax: max }));
   };
 
-  const updateDangerRange = (min: number, max: number) => {
-    setFilters(prev => ({ ...prev, dangerMin: min, dangerMax: max }));
+  const updateUrgencyRange = (min: number, max: number) => {
+    setFilters(prev => ({ ...prev, urgencyMin: min, urgencyMax: max }));
   };
 
   const updateHasPhoto = (value: 'any' | 'yes' | 'no') => {
@@ -128,8 +128,8 @@ export default function FilterSection({
       case 'height':
         updateHeightRange(0, 0);
         break;
-      case 'danger':
-        updateDangerRange(0, 100);
+      case 'urgency':
+        updateUrgencyRange(0, 100);
         break;
       case 'photo':
         updateHasPhoto('any');
@@ -144,8 +144,8 @@ export default function FilterSection({
       ageMax: -1,
       heightMin: 0,
       heightMax: 0,
-      dangerMin: 0,
-      dangerMax: 100,
+      urgencyMin: 0,
+      urgencyMax: 100,
       hasPhoto: 'any',
     });
     onClearAll();
@@ -250,11 +250,11 @@ export default function FilterSection({
                 'filter-tag-height'
               )
             }
-            {(filters.dangerMin > 0 || filters.dangerMax < 100) && 
+            {(filters.urgencyMin > 0 || filters.urgencyMax < 100) && 
               renderFilterTag(
-                `Danger: ${filters.dangerMin}-${filters.dangerMax}`,
-                () => updateDangerRange(0, 100),
-                'filter-tag-danger'
+                `Urgency: ${filters.urgencyMin}-${filters.urgencyMax}`,
+                () => updateUrgencyRange(0, 100),
+                'filter-tag-urgency'
               )
             }
             {filters.hasPhoto !== 'any' && 
@@ -361,9 +361,9 @@ export default function FilterSection({
             </View>
           </View>
 
-          {/* Danger Score Filter */}
+          {/* Urgency Score Filter */}
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Danger Score</Text>
+            <Text style={styles.filterLabel}>Urgency Score</Text>
             <View style={styles.rangeContainer}>
               <View style={styles.sliderRow}>
                 <Text style={styles.rangeLabel}>Min:</Text>
@@ -372,11 +372,11 @@ export default function FilterSection({
                   minimumValue={0}
                   maximumValue={100}
                   step={5}
-                  value={filters.dangerMin}
-                  onValueChange={(value) => updateDangerRange(value, filters.dangerMax)}
-                  testID="danger-slider-min"
+                  value={filters.urgencyMin}
+                  onValueChange={(value) => updateUrgencyRange(value, filters.urgencyMax)}
+                  testID="urgency-slider-min"
                 />
-                <Text style={styles.rangeValue}>{filters.dangerMin}</Text>
+                <Text style={styles.rangeValue}>{filters.urgencyMin}</Text>
               </View>
               <View style={styles.sliderRow}>
                 <Text style={styles.rangeLabel}>Max:</Text>
@@ -385,11 +385,11 @@ export default function FilterSection({
                   minimumValue={0}
                   maximumValue={100}
                   step={5}
-                  value={filters.dangerMax}
-                  onValueChange={(value) => updateDangerRange(filters.dangerMin, value)}
-                  testID="danger-slider-max"
+                  value={filters.urgencyMax}
+                  onValueChange={(value) => updateUrgencyRange(filters.urgencyMin, value)}
+                  testID="urgency-slider-max"
                 />
-                <Text style={styles.rangeValue}>{filters.dangerMax}</Text>
+                <Text style={styles.rangeValue}>{filters.urgencyMax}</Text>
               </View>
             </View>
           </View>

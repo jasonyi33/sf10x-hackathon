@@ -20,7 +20,7 @@ router = APIRouter()
 async def export_csv(user_id: str = Depends(get_current_user)):
     """
     Export all individuals data as CSV file.
-    Returns CSV with columns: name, height, weight, skin_color, danger_score, last_seen
+    Returns CSV with columns: name, height, weight, skin_color, urgency_score, last_seen
     Multi-select values are comma-separated.
     """
     try:
@@ -45,7 +45,7 @@ async def export_csv(user_id: str = Depends(get_current_user)):
         
         # Write header
         writer.writerow([
-            'Name', 'Height', 'Weight', 'Skin Color', 'Danger Score', 'Last Seen',
+            'Name', 'Height', 'Weight', 'Skin Color', 'Urgency Score', 'Last Seen',
             'Age', 'Gender', 'Substance Abuse History', 'Medical Conditions',
             'Veteran Status', 'Housing Priority', 'Violent Behavior'
         ])
@@ -63,15 +63,15 @@ async def export_csv(user_id: str = Depends(get_current_user)):
             if isinstance(medical_conditions, list):
                 medical_conditions = ", ".join(medical_conditions)
             
-            # Calculate display danger score (override or calculated)
-            danger_score = individual.get("danger_override") or individual.get("danger_score", 0)
+            # Calculate display urgency score (override or calculated)
+            urgency_score = individual.get("urgency_override") or individual.get("urgency_score", 0)
             
             writer.writerow([
                 individual.get("name", ""),
                 data.get("height", ""),
                 data.get("weight", ""),
                 data.get("skin_color", ""),
-                danger_score,
+                urgency_score,
                 individual.get("updated_at", ""),
                 data.get("age", ""),
                 data.get("gender", ""),
@@ -131,7 +131,7 @@ async def get_categories(user_id: str = Depends(get_current_user)):
                 "is_required": category["is_required"],
                 "is_preset": category["is_preset"],
                 "priority": category.get("priority", "medium"),
-                "danger_weight": category.get("danger_weight", 0),
+                "urgency_weight": category.get("urgency_weight", 0),
                 "auto_trigger": category.get("auto_trigger", False),
                 "options": category.get("options", None)
             }
@@ -152,7 +152,7 @@ async def create_category(
     Create a new custom category with validation.
     
     Validation rules:
-    - Only number and single_select types can have danger_weight > 0
+    - Only number and single_select types can have urgency_weight > 0
     - Only number and single_select types can have auto_trigger = true
     - Category names must be unique (case insensitive)
     - Single-select options must be list of {label, value} objects
@@ -182,7 +182,7 @@ async def create_category(
             "is_required": request.is_required,
             "is_preset": False,  # Custom categories are never preset
             "priority": request.priority,
-            "danger_weight": request.danger_weight,
+            "urgency_weight": request.urgency_weight,
             "auto_trigger": request.auto_trigger,
             "options": request.options,
             "created_at": now,
@@ -207,7 +207,7 @@ async def create_category(
             is_required=created["is_required"],
             is_preset=created["is_preset"],
             priority=created["priority"],
-            danger_weight=created["danger_weight"],
+            urgency_weight=created["urgency_weight"],
             auto_trigger=created["auto_trigger"],
             options=created["options"],
             created_at=created["created_at"],

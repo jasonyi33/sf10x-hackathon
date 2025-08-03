@@ -31,11 +31,11 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
     ageMax: -1,
     heightMin: 0,
     heightMax: 0,
-    dangerMin: 0,
-    dangerMax: 100,
+    urgencyMin: 0,
+    urgencyMax: 100,
     hasPhoto: 'any',
   });
-  const [currentSort, setCurrentSort] = useState<SortOption>('danger_score');
+  const [currentSort, setCurrentSort] = useState<SortOption>('urgency_score');
   const [currentOrder, setCurrentOrder] = useState<SortOrder>('desc');
 
   // Search as user types (with debounce)
@@ -93,8 +93,8 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
       ageMax: -1,
       heightMin: 0,
       heightMax: 0,
-      dangerMin: 0,
-      dangerMax: 100,
+      urgencyMin: 0,
+      urgencyMax: 100,
       hasPhoto: 'any',
     });
   };
