@@ -204,109 +204,247 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
   },
 };
 
-// Mock data store for persistence
+// Mock data store for persistence - All 20 individuals from demo data
 const mockDataStore = {
   individuals: {
     "550e8400-e29b-41d4-a716-446655440001": {
       id: "550e8400-e29b-41d4-a716-446655440001",
-      name: "John Doe",
-      danger_score: 75,
+      name: "Sarah Smith",
+      danger_score: 15,
       danger_override: null,
-      data: {
-        age: 45,
-        height: 72,
-        weight: 180,
-        skin_color: "Light",
-        gender: "Male",
-        substance_abuse_history: ["Moderate"],
-        medical_conditions: ["Diabetes"],
-        veteran_status: "Yes",
-        housing_priority: "High",
-        violent_behavior: "None"
-      },
-      created_at: "2024-01-15T10:30:00Z",
-      updated_at: "2024-01-15T10:30:00Z",
-      total_interactions: 3,
-      last_interaction_date: "2024-01-15T10:30:00Z",
-      interactions: [
-        {
-          id: "550e8400-e29b-41d4-a716-446655440101",
-          individual_id: "550e8400-e29b-41d4-a716-446655440001",
-          user_id: "user1",
-          transcription: "Met John near Market Street. About 45 years old, 6 feet tall, maybe 180 pounds. Light skin. Shows signs of moderate substance abuse, been on streets 3 months. Needs diabetes medication.",
-          data: {
-            name: "John",
-            age: 45,
-            height: 72,
-            weight: 180,
-            skin_color: "Light",
-            substance_abuse: "Moderate",
-            medical_conditions: "Diabetes"
-          },
-          location: { lat: 37.7749, lng: -122.4194 },
-          created_at: "2024-01-15T10:30:00Z",
-          worker_name: "Officer Johnson",
-          abbreviated_address: "Market St & 5th"
-        },
-        {
-          id: "550e8400-e29b-41d4-a716-446655440102",
-          individual_id: "550e8400-e29b-41d4-a716-446655440001",
-          user_id: "user1",
-          data: {
-            veteran_status: "Yes",
-            housing_priority: "High"
-          },
-          location: { lat: 37.7858, lng: -122.4064 },
-          created_at: "2024-01-12T14:20:00Z",
-          worker_name: "Officer Smith",
-          abbreviated_address: "Ellis St & 6th"
-        }
-      ]
+      data: { age: 32, height: 65, weight: 140, skin_color: "Light", gender: "Female", substance_abuse_history: ["None"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Low" },
+      created_at: "2024-01-10T09:00:00Z",
+      updated_at: "2024-01-15T14:30:00Z",
+      total_interactions: 2,
+      last_interaction_date: "2024-01-15T14:30:00Z",
+      interactions: []
     },
     "550e8400-e29b-41d4-a716-446655440002": {
       id: "550e8400-e29b-41d4-a716-446655440002",
-      name: "Sarah Smith",
-      danger_score: 20,
+      name: "Michael Chen",
+      danger_score: 25,
       danger_override: null,
-      data: {
-        age: 32,
-        height: 65,
-        weight: 140,
-        skin_color: "Medium",
-        gender: "Female",
-        substance_abuse_history: ["None"],
-        medical_conditions: ["Anxiety"],
-        veteran_status: "No",
-        housing_priority: "Medium",
-        violent_behavior: "None"
-      },
-      created_at: "2024-01-12T14:20:00Z",
-      updated_at: "2024-01-12T14:20:00Z",
-      total_interactions: 2,
-      last_interaction_date: "2024-01-12T14:20:00Z",
+      data: { age: 28, height: 68, weight: 155, skin_color: "Medium", gender: "Male", substance_abuse_history: ["None"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Medium" },
+      created_at: "2024-01-11T10:15:00Z",
+      updated_at: "2024-01-16T11:45:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-16T11:45:00Z",
       interactions: []
     },
     "550e8400-e29b-41d4-a716-446655440003": {
       id: "550e8400-e29b-41d4-a716-446655440003",
+      name: "Emily Rodriguez",
+      danger_score: 30,
+      danger_override: null,
+      data: { age: 35, height: 62, weight: 130, skin_color: "Medium", gender: "Female", substance_abuse_history: ["Mild"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Medium" },
+      created_at: "2024-01-12T08:30:00Z",
+      updated_at: "2024-01-17T16:20:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-17T16:20:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440004": {
+      id: "550e8400-e29b-41d4-a716-446655440004",
+      name: "David Wilson",
+      danger_score: 20,
+      danger_override: null,
+      data: { age: 45, height: 70, weight: 175, skin_color: "Light", gender: "Male", substance_abuse_history: ["None"], veteran_status: "Yes", medical_conditions: ["None"], housing_priority: "High" },
+      created_at: "2024-01-13T12:00:00Z",
+      updated_at: "2024-01-18T09:15:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-18T09:15:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440005": {
+      id: "550e8400-e29b-41d4-a716-446655440005",
+      name: "Lisa Thompson",
+      danger_score: 18,
+      danger_override: null,
+      data: { age: 29, height: 64, weight: 145, skin_color: "Light", gender: "Female", substance_abuse_history: ["Mild"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Low" },
+      created_at: "2024-01-14T14:45:00Z",
+      updated_at: "2024-01-19T13:30:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-19T13:30:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440006": {
+      id: "550e8400-e29b-41d4-a716-446655440006",
+      name: "James Brown",
+      danger_score: 32,
+      danger_override: null,
+      data: { age: 52, height: 72, weight: 185, skin_color: "Dark", gender: "Male", substance_abuse_history: ["None"], veteran_status: "Yes", medical_conditions: ["Heart Disease"], housing_priority: "High" },
+      created_at: "2024-01-15T11:20:00Z",
+      updated_at: "2024-01-20T10:45:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-20T10:45:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440007": {
+      id: "550e8400-e29b-41d4-a716-446655440007",
+      name: "John Doe",
+      danger_score: 75,
+      danger_override: null,
+      data: { age: 45, height: 72, weight: 180, skin_color: "Light", gender: "Male", substance_abuse_history: ["Moderate"], veteran_status: "No", medical_conditions: ["Diabetes"], housing_priority: "High" },
+      created_at: "2024-01-10T08:00:00Z",
+      updated_at: "2024-01-15T15:30:00Z",
+      total_interactions: 2,
+      last_interaction_date: "2024-01-15T15:30:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440008": {
+      id: "550e8400-e29b-41d4-a716-446655440008",
+      name: "Maria Garcia",
+      danger_score: 55,
+      danger_override: null,
+      data: { age: 38, height: 63, weight: 150, skin_color: "Medium", gender: "Female", substance_abuse_history: ["Moderate"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Critical" },
+      created_at: "2024-01-11T09:30:00Z",
+      updated_at: "2024-01-16T12:15:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-16T12:15:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440009": {
+      id: "550e8400-e29b-41d4-a716-446655440009",
       name: "Robert Johnson",
       danger_score: 90,
       danger_override: null,
-      data: {
-        age: 58,
-        height: 70,
-        weight: 200,
-        skin_color: "Dark",
-        gender: "Male",
-        substance_abuse_history: ["Severe"],
-        medical_conditions: ["Schizophrenia"],
-        veteran_status: "Yes",
-        housing_priority: "Critical",
-        violent_behavior: "History"
-      },
-      created_at: "2024-01-16T09:15:00Z",
-      updated_at: "2024-01-16T09:15:00Z",
+      data: { age: 58, height: 70, weight: 200, skin_color: "Medium", gender: "Male", substance_abuse_history: ["Severe"], veteran_status: "Yes", medical_conditions: ["Chronic Pain"], housing_priority: "Critical" },
+      created_at: "2024-01-12T10:45:00Z",
+      updated_at: "2024-01-17T14:20:00Z",
       total_interactions: 1,
-      last_interaction_date: "2024-01-16T09:15:00Z",
+      last_interaction_date: "2024-01-17T14:20:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440010": {
+      id: "550e8400-e29b-41d4-a716-446655440010",
+      name: "Jennifer Lee",
+      danger_score: 45,
+      danger_override: null,
+      data: { age: 42, height: 66, weight: 160, skin_color: "Light", gender: "Female", substance_abuse_history: ["Mild"], veteran_status: "No", medical_conditions: ["Mobility Issues"], housing_priority: "High" },
+      created_at: "2024-01-13T13:15:00Z",
+      updated_at: "2024-01-18T11:45:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-18T11:45:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440011": {
+      id: "550e8400-e29b-41d4-a716-446655440011",
+      name: "Thomas Anderson",
+      danger_score: 60,
+      danger_override: null,
+      data: { age: 49, height: 71, weight: 190, skin_color: "Dark", gender: "Male", substance_abuse_history: ["Moderate"], veteran_status: "Yes", medical_conditions: ["Heart Disease"], housing_priority: "High" },
+      created_at: "2024-01-14T15:00:00Z",
+      updated_at: "2024-01-19T16:30:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-19T16:30:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440012": {
+      id: "550e8400-e29b-41d4-a716-446655440012",
+      name: "Amanda White",
+      danger_score: 50,
+      danger_override: null,
+      data: { age: 33, height: 65, weight: 145, skin_color: "Light", gender: "Female", substance_abuse_history: ["Severe"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Critical" },
+      created_at: "2024-01-15T12:30:00Z",
+      updated_at: "2024-01-20T13:15:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-20T13:15:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440013": {
+      id: "550e8400-e29b-41d4-a716-446655440013",
+      name: "Christopher Davis",
+      danger_score: 40,
+      danger_override: null,
+      data: { age: 47, height: 69, weight: 175, skin_color: "Medium", gender: "Male", substance_abuse_history: ["Moderate"], veteran_status: "No", medical_conditions: ["Diabetes"], housing_priority: "High" },
+      created_at: "2024-01-16T09:45:00Z",
+      updated_at: "2024-01-21T10:20:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-21T10:20:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440014": {
+      id: "550e8400-e29b-41d4-a716-446655440014",
+      name: "Jessica Martinez",
+      danger_score: 35,
+      danger_override: null,
+      data: { age: 36, height: 64, weight: 155, skin_color: "Medium", gender: "Female", substance_abuse_history: ["Mild"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Medium" },
+      created_at: "2024-01-17T11:00:00Z",
+      updated_at: "2024-01-22T14:45:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-22T14:45:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440015": {
+      id: "550e8400-e29b-41d4-a716-446655440015",
+      name: "Daniel Taylor",
+      danger_score: 100,
+      danger_override: null,
+      data: { age: 55, height: 73, weight: 210, skin_color: "Dark", gender: "Male", substance_abuse_history: ["Severe"], veteran_status: "Yes", medical_conditions: ["Chronic Pain"], housing_priority: "Critical", violent_behavior: "Physical" },
+      created_at: "2024-01-10T07:30:00Z",
+      updated_at: "2024-01-15T16:45:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-15T16:45:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440016": {
+      id: "550e8400-e29b-41d4-a716-446655440016",
+      name: "Nicole Clark",
+      danger_score: 100,
+      danger_override: null,
+      data: { age: 41, height: 67, weight: 170, skin_color: "Light", gender: "Female", substance_abuse_history: ["Severe"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Critical", violent_behavior: "Physical" },
+      created_at: "2024-01-11T08:45:00Z",
+      updated_at: "2024-01-16T17:20:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-16T17:20:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440017": {
+      id: "550e8400-e29b-41d4-a716-446655440017",
+      name: "Kevin Lewis",
+      danger_score: 100,
+      danger_override: null,
+      data: { age: 44, height: 70, weight: 185, skin_color: "Medium", gender: "Male", substance_abuse_history: ["Moderate"], veteran_status: "Yes", medical_conditions: ["Heart Disease"], housing_priority: "Critical", violent_behavior: "Physical" },
+      created_at: "2024-01-12T10:15:00Z",
+      updated_at: "2024-01-17T18:30:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-17T18:30:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440018": {
+      id: "550e8400-e29b-41d4-a716-446655440018",
+      name: "Rachel Green",
+      danger_score: 85,
+      danger_override: null,
+      data: { age: 39, height: 65, weight: 160, skin_color: "Light", gender: "Female", substance_abuse_history: ["Severe"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Critical" },
+      created_at: "2024-01-13T12:45:00Z",
+      updated_at: "2024-01-18T19:15:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-18T19:15:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440019": {
+      id: "550e8400-e29b-41d4-a716-446655440019",
+      name: "Steven Hall",
+      danger_score: 80,
+      danger_override: null,
+      data: { age: 51, height: 71, weight: 195, skin_color: "Dark", gender: "Male", substance_abuse_history: ["Severe"], veteran_status: "Yes", medical_conditions: ["Chronic Pain"], housing_priority: "Critical" },
+      created_at: "2024-01-14T14:00:00Z",
+      updated_at: "2024-01-19T20:45:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-19T20:45:00Z",
+      interactions: []
+    },
+    "550e8400-e29b-41d4-a716-446655440020": {
+      id: "550e8400-e29b-41d4-a716-446655440020",
+      name: "Michelle Adams",
+      danger_score: 70,
+      danger_override: null,
+      data: { age: 37, height: 66, weight: 165, skin_color: "Medium", gender: "Female", substance_abuse_history: ["Moderate"], veteran_status: "No", medical_conditions: ["Mobility Issues"], housing_priority: "High" },
+      created_at: "2024-01-15T15:30:00Z",
+      updated_at: "2024-01-20T21:30:00Z",
+      total_interactions: 1,
+      last_interaction_date: "2024-01-20T21:30:00Z",
       interactions: []
     }
   }
