@@ -69,7 +69,10 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
               text: 'Merge', 
               onPress: async () => {
                 try {
-                  const mergedData = { ...categorizedData, existing_individual_id: highConfidenceMatch.id };
+                  const mergedData = { 
+                    ...categorizedData, 
+                    existing_individual_id: highConfidenceMatch.id 
+                  };
                   await api.saveIndividual(mergedData);
                   Toast.show({
                     type: 'success',
@@ -94,13 +97,17 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
         return;
       } else {
         // No meaningful match (< 60% or no matches), save as new
-        await api.saveIndividual(categorizedData);
+        const saveData = {
+          ...categorizedData,
+          // Add any additional context data here if needed
+        };
+        await api.saveIndividual(saveData);
         Toast.show({
           type: 'success',
           text1: 'Success',
           text2: 'Data saved successfully!'
         });
-        onSave(categorizedData);
+        onSave(saveData);
       }
     } catch (error) {
       Alert.alert('Error', error.message);

@@ -55,24 +55,17 @@ export const RecordScreen: React.FC = () => {
       setIsUploading(true);
       setUploadError(null);
       
-      console.log('Starting audio upload...');
-      const result = await api.uploadAudio(uri);
+      console.log('🎤 Starting real voice transcription...');
+      console.log('📁 Audio file:', uri);
       
-      if (result.error) {
-        console.error('Upload failed:', result.error);
-        setUploadError(result.error);
-        const error = ErrorHandler.handleError(new Error(result.error), 'Audio Upload');
-        ErrorHandler.showError(error);
-      } else if (result.url) {
-        console.log('Upload successful:', result.url);
-        setUploadedUrl(result.url);
-        ErrorHandler.showSuccess('Audio uploaded successfully');
-        
-        // Start transcription immediately after upload
-        await transcribeAudio(result.url);
-      }
+      // Skip upload and go directly to transcription
+      setUploadedUrl(uri);
+      ErrorHandler.showSuccess('Audio processing started');
+      
+      // Start transcription with the actual audio file
+      await transcribeAudio(uri);
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('❌ Upload error:', error);
       setUploadError('Upload failed');
       const appError = ErrorHandler.handleError(error, 'Audio Upload');
       ErrorHandler.showError(appError);
@@ -86,14 +79,18 @@ export const RecordScreen: React.FC = () => {
       setIsTranscribing(true);
       setTranscriptionError(null);
       
-      console.log('Starting transcription...');
+      console.log('🎤 Starting OpenAI Whisper transcription...');
+      console.log('📤 Sending to backend:', audioUrl);
+      
       const result = await api.transcribe(audioUrl);
       
-      console.log('Transcription result:', result);
+      console.log('✅ Transcription completed!');
+      console.log('📝 Raw transcription:', result.transcription);
+      console.log('🏷️  Categorized data:', result.categorized_data);
       setTranscriptionResult(result);
       ErrorHandler.showSuccess('Transcription completed successfully');
     } catch (error) {
-      console.error('Transcription error:', error);
+      console.error('❌ Transcription error:', error);
       setTranscriptionError('Transcription failed');
       const appError = ErrorHandler.handleError(error, 'Audio Transcription');
       ErrorHandler.showError(appError);
@@ -104,14 +101,8 @@ export const RecordScreen: React.FC = () => {
 
   const handleSaveTranscription = async (data: Record<string, any>) => {
     try {
-      const saveData = {
-        ...data,
-        location: selectedLocation?.location,
-        audio_url: uploadedUrl,
-        transcription: transcriptionResult?.transcription,
-      };
-      
-      await api.saveIndividual(saveData);
+      // Data is already saved in TranscriptionResults component
+      // Just reset the state here
       ErrorHandler.showSuccess('Data saved successfully');
       
       // Reset state
