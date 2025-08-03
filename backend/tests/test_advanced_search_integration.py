@@ -272,18 +272,21 @@ class TestAdvancedSearchIntegration:
         assert "John Doe" in names
         assert "Jane Smith" in names
     
-    def test_distance_sort_validation(self):
+    @patch('api.individuals.get_supabase_client')
+    def test_distance_sort_validation(self, mock_get_supabase):
         """Test that distance sort requires coordinates"""
-        # Try distance sort without coordinates - this should fail before calling the service
-        response = client.get("/api/individuals/search?sort_by=distance")
+        # This should fail with 400 before calling any service
+        mock_supabase = MagicMock()
+        mock_get_supabase.return_value = mock_supabase
         
-        # Debug info
-        if response.status_code != 400:
-            print(f"Unexpected status: {response.status_code}")
-            print(f"Response: {response.json()}")
+        # Try distance sort without coordinates
+        response = client.get("/api/individuals/search?sort_by=distance")
         
         assert response.status_code == 400
         assert "Distance sort requires lat and lon parameters" in response.json()["detail"]
+        
+        # Verify the service was never called since validation should fail first
+        mock_get_supabase.assert_not_called()
     
     @patch('api.individuals.get_supabase_client')
     def test_pagination(self, mock_get_supabase):
