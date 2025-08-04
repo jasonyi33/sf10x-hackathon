@@ -255,3 +255,175 @@ export const processCategoryExplorerData = (sortedData) => {
     })
   };
 };
+
+/**
+ * ==================================================================================
+ * SPATIAL CLUSTERING FOR 3D VISUALIZATION
+ * ==================================================================================
+ */
+
+/**
+ * Spatial clustering function for crime incidents
+ * @param {Array} incidents - Crime data from DataSF API
+ * @param {number} radius - Clustering radius in meters (default: 200)
+ * @param {string} category - Crime category to filter (default: 'Assault')
+ * @returns {Array} Array of cluster objects
+ */
+export function spatialCluster(incidents, radius = 200, category = 'Assault') {
+  console.log(`🔍 Clustering ${category} incidents within ${radius}m radius...`);
+
+  // Filter incidents by category and validate coordinates
+  const filtered = incidents.filter(incident =>
+    incident.incident_category === category &&
+    incident.latitude && incident.longitude &&
+    !isNaN(parseFloat(incident.latitude)) &&
+    !isNaN(parseFloat(incident.longitude))
+  );
+
+  console.log(`📊 Found ${filtered.length} valid ${category} incidents`);
+
+  const clusters = [];
+  const processed = new Set();
+
+  filtered.forEach((incident, index) => {
+    if (processed.has(index)) return;
+
+    // Initialize cluster with first incident
+    const cluster = {
+      id: `cluster-${clusters.length}`,
+      centroid: {
+        lat: parseFloat(incident.latitude),
+        lng: parseFloat(incident.longitude)
+      },
+      incidentCount: 1,
+      category: category,
+      incidents: [incident],
+      timeRange: {
+        earliest: incident.incident_datetime,
+        latest: incident.incident_datetime
+      },
+      neighborhoods: new Set([incident.analysis_neighborhood]),
+      resolutions: { open: 0, closed: 0 }
+    };
+
+    // Count resolution status
+    if (incident.resolution === 'Open or Active') {
+      cluster.resolutions.open = 1;
+    } else {
+      cluster.resolutions.closed = 1;
+    }
+
+    // Find nearby incidents within radius
+    filtered.forEach((other, otherIndex) => {
+      if (processed.has(otherIndex) || index === otherIndex) return;
+
+      const distance = haversineDistance(
+        parseFloat(incident.latitude), parseFloat(incident.longitude),
+        parseFloat(other.latitude), parseFloat(other.longitude)
+      );
+
+      if (distance <= radius) {
+        // Add to cluster
+        cluster.incidents.push(other);
+        cluster.incidentCount++;
+        processed.add(otherIndex);
+
+        // Update centroid (weighted average)
+        const oldLat = cluster.centroid.lat;
+        const oldLng = cluster.centroid.lng;
+        const weight = cluster.incidentCount - 1;
+
+        cluster.centroid.lat = (oldLat * weight + parseFloat(other.latitude)) / cluster.incidentCount;
+        cluster.centroid.lng = (oldLng * weight + parseFloat(other.longitude)) / cluster.incidentCount;
+
+        // Update time range
+        if (other.incident_datetime < cluster.timeRange.earliest) {
+          cluster.timeRange.earliest = other.incident_datetime;
+        }
+        if (other.incident_datetime > cluster.timeRange.latest) {
+          cluster.timeRange.latest = other.incident_datetime;
+        }
+
+        // Update neighborhoods
+        if (other.analysis_neighborhood) {
+          cluster.neighborhoods.add(other.analysis_neighborhood);
+        }
+
+        // Update resolutions
+        if (other.resolution === 'Open or Active') {
+          cluster.resolutions.open++;
+        } else {
+          cluster.resolutions.closed++;
+        }
+      }
+    });
+
+    // Convert neighborhoods set to array
+    cluster.neighborhoods = Array.from(cluster.neighborhoods);
+
+    clusters.push(cluster);
+    processed.add(index);
+  });
+
+  console.log(`✅ Created ${clusters.length} spatial clusters`);
+  console.log(`📈 Cluster sizes: [${clusters.map(c => c.incidentCount).join(', ')}]`);
+
+  return clusters;
+}
+
+/**
+ * Calculate distance between two lat/lng points using Haversine formula
+ * @param {number} lat1 - First point latitude
+ * @param {number} lon1 - First point longitude
+ * @param {number} lat2 - Second point latitude
+ * @param {number} lon2 - Second point longitude
+ * @returns {number} Distance in meters
+ */
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Earth radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+/**
+ * Get cluster statistics for display
+ * @param {Array} clusters - Array of cluster objects
+ * @returns {Object} Statistics summary
+ */
+export function getClusterStats(clusters) {
+  if (!clusters.length) return null;
+
+  const totalIncidents = clusters.reduce((sum, cluster) => sum + cluster.incidentCount, 0);
+  const avgClusterSize = totalIncidents / clusters.length;
+  const maxClusterSize = Math.max(...clusters.map(c => c.incidentCount));
+  const minClusterSize = Math.min(...clusters.map(c => c.incidentCount));
+
+  return {
+    clusterCount: clusters.length,
+    totalIncidents,
+    avgClusterSize: Math.round(avgClusterSize * 10) / 10,
+    maxClusterSize,
+    minClusterSize
+  };
+}
+
+/**
+ * Convert hex color to RGB array
+ * @param {string} hex - Hex color code
+ * @returns {Array} RGB array [r, g, b]
+ */
+export function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? [
+    parseInt(result[1], 16),
+    parseInt(result[2], 16),
+    parseInt(result[3], 16)
+  ] : [239, 68, 68]; // Default red
+}

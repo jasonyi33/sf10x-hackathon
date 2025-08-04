@@ -7,6 +7,7 @@ import 'core-js/actual/promise/with-resolvers';
 // MotherDuck Connection Context with Enhanced Logging
 // ================================================================================
 
+/*
 export const MotherDuckContext = createContext(null);
 
 export function MotherDuckClientProvider({ children, database }) {
@@ -368,11 +369,8 @@ export function MotherDuckClientProvider({ children, database }) {
     </MotherDuckContext.Provider>
   );
 }
+*/
 
 export function useMotherDuckClientState() {
-  const context = useContext(MotherDuckContext);
-  if (!context) {
-    throw new Error('useMotherDuckClientState must be used within MotherDuckClientProvider');
-  }
-  return context;
+  throw new Error('MotherDuck integration is currently commented out.');
 }

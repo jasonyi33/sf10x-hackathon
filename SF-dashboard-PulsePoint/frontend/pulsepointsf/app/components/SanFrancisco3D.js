@@ -38,10 +38,12 @@
  */
 
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import * as maptilersdk from '@maptiler/sdk';
 import { MapboxOverlay } from '@deck.gl/mapbox';
-import { GeoJsonLayer } from '@deck.gl/layers';
+import { GeoJsonLayer, ColumnLayer } from '@deck.gl/layers';
+import { spatialCluster, getClusterStats, hexToRgb } from '../crime/utils.js';
+import { CATEGORY_COLORS } from '../crime/constants.js';
 
 /**
  * SanFrancisco3D - Interactive 3D Map Component
@@ -53,6 +55,11 @@ import { GeoJsonLayer } from '@deck.gl/layers';
  * @component
  * @param {Object} props - Component props
  * @param {boolean} [props.isFullScreen=false] - Whether to render in full-screen mode
+ * @param {Array} [props.crimeData=null] - Crime data from DataSF API
+ * @param {string} [props.selectedCategory='Assault'] - Crime category to cluster
+ * @param {boolean} [props.showCrimeClusters=false] - Whether to show crime clusters
+ * @param {Function} [props.onClusterHover=null] - Callback for cluster hover events
+ * @param {Function} [props.onClusterClick=null] - Callback for cluster click events
  * @returns {JSX.Element} Rendered map container div
  *
  * @example
@@ -62,13 +69,25 @@ import { GeoJsonLayer } from '@deck.gl/layers';
  * function Dashboard() {
  *   return (
  *     <div className="dashboard">
- *       <SanFrancisco3D isFullScreen={false} />
+ *       <SanFrancisco3D
+ *         isFullScreen={false}
+ *         crimeData={crimeData}
+ *         selectedCategory="Assault"
+ *         showCrimeClusters={true}
+ *       />
  *     </div>
  *   );
  * }
  * ```
  */
-export default function SanFrancisco3D({ isFullScreen = false }) {
+export default function SanFrancisco3D({
+  isFullScreen = false,
+  crimeData = null,
+  selectedCategory = 'Assault',
+  showCrimeClusters = false,
+  onClusterHover = null,
+  onClusterClick = null
+}) {
   // ================================================================================
   // STATE & REFS
   // ================================================================================
@@ -90,6 +109,28 @@ export default function SanFrancisco3D({ isFullScreen = false }) {
 
   /** @type {[string|null, Function]} Error state for data loading */
   const [error, setError] = useState(null);
+
+  /** @type {[Object|null, Function]} Cluster statistics for display */
+  const [clusterStats, setClusterStats] = useState(null);
+
+  /** @type {[Object|null, Function]} Currently hovered cluster */
+  const [hoveredCluster, setHoveredCluster] = useState(null);
+
+  // ================================================================================
+  // CRIME CLUSTERING LOGIC
+  // ================================================================================
+
+  // Process crime clusters when data changes
+  const crimeClusters = useMemo(() => {
+    if (!crimeData || !showCrimeClusters) return [];
+
+    const clusters = spatialCluster(crimeData, 200, selectedCategory);
+    const stats = getClusterStats(clusters);
+    setClusterStats(stats);
+
+    console.log(`🏙️ Generated ${clusters.length} crime clusters for 3D visualization`);
+    return clusters;
+  }, [crimeData, selectedCategory, showCrimeClusters]);
 
   // ================================================================================
   // DATA LOADING
@@ -217,92 +258,172 @@ export default function SanFrancisco3D({ isFullScreen = false }) {
   // ================================================================================
 
   useEffect(() => {
-    // Update deck.gl overlay layers when building data is loaded
-    if (overlay.current && buildingData) {
-      console.log('Updating deck.gl layers with building data...');
+    // Update deck.gl overlay layers when building data or crime clusters change
+    if (overlay.current && (buildingData || crimeClusters.length > 0)) {
+      console.log('Updating deck.gl layers with building and crime data...');
 
-      /** @type {GeoJsonLayer} 3D buildings layer */
-      const buildingsLayer = new GeoJsonLayer({
-        id: 'sf-iconic-buildings',
-        data: buildingData,
+      const layers = [];
 
-        // 3D Configuration
-        extruded: true,                     // Enable 3D building extrusion
-        wireframe: false,                   // Solid buildings (not wireframes)
-        filled: true,                       // Fill building polygons
+      // Add buildings layer if available
+      if (buildingData) {
+        /** @type {GeoJsonLayer} 3D buildings layer */
+        const buildingsLayer = new GeoJsonLayer({
+          id: 'sf-iconic-buildings',
+          data: buildingData,
 
-        // Height and Elevation
-        getElevation: (feature) => {
-          // Extract height from properties with fallback
-          const height = feature.properties?.height || 30;
-          return Math.max(height, 5); // Minimum 5m height for visibility
-        },
+          // 3D Configuration
+          extruded: true,                     // Enable 3D building extrusion
+          wireframe: false,                   // Solid buildings (not wireframes)
+          filled: true,                       // Fill building polygons
 
-        // Visual Styling - Twin Towers Demo with Distinctive Colors
-        getFillColor: (feature) => {
-          const category = feature.properties?.category;
-          const name = feature.properties?.name;
-          const height = feature.properties?.height || 30;
+          // Height and Elevation
+          getElevation: (feature) => {
+            // Extract height from properties with fallback
+            const height = feature.properties?.height || 30;
+            return Math.max(height, 5); // Minimum 5m height for visibility
+          },
 
-          // Special styling for Twin Towers - Metallic Silver/Blue
-          if (category === 'historic_monument' && name?.includes('Tower')) {
-            if (name.includes('North Tower')) {
-              return [200, 220, 240, 255]; // Slightly blue-tinted silver for North Tower
-            } else if (name.includes('South Tower')) {
-              return [220, 240, 255, 255]; // Slightly lighter blue-silver for South Tower
+          // Visual Styling - Twin Towers Demo with Distinctive Colors
+          getFillColor: (feature) => {
+            const category = feature.properties?.category;
+            const name = feature.properties?.name;
+            const height = feature.properties?.height || 30;
+
+            // Special styling for Twin Towers - Metallic Silver/Blue
+            if (category === 'historic_monument' && name?.includes('Tower')) {
+              if (name.includes('North Tower')) {
+                return [200, 220, 240, 255]; // Slightly blue-tinted silver for North Tower
+              } else if (name.includes('South Tower')) {
+                return [220, 240, 255, 255]; // Slightly lighter blue-silver for South Tower
+              }
             }
+
+            // Color based on building category for visual distinction
+            switch (category) {
+              case 'historic_monument':
+                return [180, 200, 220, 240]; // Silver-blue for historic monuments
+              case 'office':
+                return [160, 160, 160, 220]; // Medium grey for office buildings
+              case 'residential':
+                return [180, 180, 180, 200]; // Lighter grey for residential
+              case 'religious':
+                return [140, 140, 140, 230]; // Medium-dark grey for religious buildings
+              case 'government':
+                return [100, 100, 100, 250]; // Dark grey for government buildings
+              default:
+                // Height-based gradient for uncategorized buildings
+                const intensity = Math.min(140 + (height / 100) * 40, 200);
+                return [intensity, intensity, intensity, 210];
+            }
+          },
+
+          // Building Outlines
+          getLineColor: [60, 60, 60, 255],    // Dark grey outlines
+          getLineWidth: 1,                    // Thin building outlines
+          lineWidthScale: 1,                  // Scale factor for line width
+
+          // Interactivity
+          pickable: false,                    // Disable picking for performance
+
+          // Performance Optimization
+          updateTriggers: {
+            getFillColor: [buildingData],     // Re-render when data changes
+            getElevation: [buildingData]
+          },
+
+          // Material Properties for Realistic 3D Rendering
+          material: {
+            ambient: 0.35,                    // Ambient light reflection
+            diffuse: 0.6,                     // Diffuse light reflection
+            shininess: 32,                    // Surface shininess
+            specularColor: [30, 30, 30]       // Specular highlight color
           }
+        });
 
-          // Color based on building category for visual distinction
-          switch (category) {
-            case 'historic_monument':
-              return [180, 200, 220, 240]; // Silver-blue for historic monuments
-            case 'office':
-              return [160, 160, 160, 220]; // Medium grey for office buildings
-            case 'residential':
-              return [180, 180, 180, 200]; // Lighter grey for residential
-            case 'religious':
-              return [140, 140, 140, 230]; // Medium-dark grey for religious buildings
-            case 'government':
-              return [100, 100, 100, 250]; // Dark grey for government buildings
-            default:
-              // Height-based gradient for uncategorized buildings
-              const intensity = Math.min(140 + (height / 100) * 40, 200);
-              return [intensity, intensity, intensity, 210];
+        layers.push(buildingsLayer);
+      }
+
+      // Add crime clusters layer if available
+      if (crimeClusters.length > 0) {
+        /** @type {ColumnLayer} Crime clusters column layer */
+        const crimeClusterLayer = new ColumnLayer({
+          id: 'crime-clusters',
+          data: crimeClusters,
+
+          // Position at cluster centroid
+          getPosition: d => [d.centroid.lng, d.centroid.lat],
+
+          // Column height - direct incident count representation
+          getElevation: d => {
+            const directHeight = d.incidentCount * 500; // 5 meters per incident
+            return Math.max(directHeight, 10); // Minimum 10m for visibility
+          },
+
+          // Column radius - reduced by 10x for cleaner visualization
+          getRadius: d => {
+            // Make columns visible but much smaller, still proportional to incident count
+            // Typical range: 2-10 meters for most clusters
+            return Math.max(Math.sqrt(d.incidentCount) * 0.8, 2);
+          },
+
+          // Color by category with intensity based on count
+          getFillColor: d => {
+            const baseColor = CATEGORY_COLORS[d.category] || '#ef4444';
+            const rgb = hexToRgb(baseColor);
+
+            // Increase intensity for larger clusters
+            const intensity = Math.min(d.incidentCount / 10, 1);
+            const alpha = 150 + (intensity * 105); // 150-255 alpha range
+
+            return [...rgb, alpha];
+          },
+
+          // Visual properties
+          elevationScale: 1,
+          filled: true,
+          stroked: true,
+          getLineColor: [60, 60, 60, 200],
+          getLineWidth: 1,
+
+          // Interactivity
+          pickable: true,
+          onHover: (info) => {
+            setHoveredCluster(info.object);
+            if (onClusterHover && info.object) {
+              onClusterHover(info.object);
+            }
+          },
+          onClick: (info) => {
+            if (onClusterClick && info.object) {
+              onClusterClick(info.object);
+            }
+          },
+
+          // Performance optimizations
+          updateTriggers: {
+            getFillColor: [selectedCategory, crimeClusters],
+            getElevation: [crimeClusters],
+            getRadius: [crimeClusters]
+          },
+
+          // Material for realistic 3D rendering
+          material: {
+            ambient: 0.4,
+            diffuse: 0.8,
+            shininess: 16,
+            specularColor: [50, 50, 50]
           }
-        },
+        });
 
-        // Building Outlines
-        getLineColor: [60, 60, 60, 255],    // Dark grey outlines
-        getLineWidth: 1,                    // Thin building outlines
-        lineWidthScale: 1,                  // Scale factor for line width
+        layers.push(crimeClusterLayer);
+      }
 
-        // Interactivity
-        pickable: false,                    // Disable picking for performance
+      // Update overlay with all layers
+      overlay.current.setProps({ layers });
 
-        // Performance Optimization
-        updateTriggers: {
-          getFillColor: [buildingData],     // Re-render when data changes
-          getElevation: [buildingData]
-        },
-
-        // Material Properties for Realistic 3D Rendering
-        material: {
-          ambient: 0.35,                    // Ambient light reflection
-          diffuse: 0.6,                     // Diffuse light reflection
-          shininess: 32,                    // Surface shininess
-          specularColor: [30, 30, 30]       // Specular highlight color
-        }
-      });
-
-      // Update overlay with new layers
-      overlay.current.setProps({
-        layers: [buildingsLayer]
-      });
-
-      console.log(`Updated deck.gl overlay with ${buildingData.features.length} 3D buildings`);
+      console.log(`Updated deck.gl overlay with ${buildingData ? buildingData.features.length : 0} buildings and ${crimeClusters.length} crime clusters`);
     }
-  }, [buildingData]); // Re-run when building data changes
+  }, [buildingData, crimeClusters, selectedCategory, onClusterHover, onClusterClick]); // Re-run when any of these change
 
   // ================================================================================
   // HANDLE FULL-SCREEN MODE CHANGES
@@ -398,8 +519,57 @@ export default function SanFrancisco3D({ isFullScreen = false }) {
         </div>
       )}
 
+      {/* Cluster Statistics Overlay */}
+      {clusterStats && showCrimeClusters && (
+        <div style={{
+          position: 'absolute',
+          top: '16px',
+          right: '16px',
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          fontSize: '13px',
+          color: '#374151',
+          zIndex: 1000,
+          minWidth: '200px'
+        }}>
+          <div style={{ fontWeight: '600', marginBottom: '8px', color: '#111827' }}>
+            {selectedCategory} Clusters
+          </div>
+          <div>📍 {clusterStats.clusterCount} spatial clusters</div>
+          <div>🔢 {clusterStats.totalIncidents} total incidents</div>
+          <div>📊 {clusterStats.avgClusterSize} avg per cluster</div>
+          <div>📈 {clusterStats.maxClusterSize} max cluster size</div>
+        </div>
+      )}
+
+      {/* Cluster Hover Tooltip */}
+      {hoveredCluster && (
+        <div style={{
+          position: 'absolute',
+          bottom: '16px',
+          left: '16px',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          color: 'white',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          fontSize: '14px',
+          zIndex: 1000,
+          maxWidth: '300px'
+        }}>
+          <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+            {hoveredCluster.category} Cluster
+          </div>
+          <div>📍 {hoveredCluster.incidentCount} incidents</div>
+          <div>🏘️ {hoveredCluster.neighborhoods.join(', ')}</div>
+          <div>📅 {new Date(hoveredCluster.timeRange.earliest).toLocaleDateString()} - {new Date(hoveredCluster.timeRange.latest).toLocaleDateString()}</div>
+          <div>⚖️ {hoveredCluster.resolutions.open} open, {hoveredCluster.resolutions.closed} closed</div>
+        </div>
+      )}
+
       {/* Building Count Info */}
-      {buildingData && !isLoading && (
+      {buildingData && !isLoading && !showCrimeClusters && (
         <div style={{
           position: 'absolute',
           bottom: '8px',

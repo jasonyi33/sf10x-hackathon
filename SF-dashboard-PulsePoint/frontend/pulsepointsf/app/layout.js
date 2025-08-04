@@ -2,8 +2,10 @@
 import { Geist, Geist_Mono } from "next/font/google";
 // Import global CSS styles that apply to all pages
 import "./globals.css";
+/*
 // Import MotherDuck context provider for database connections
 import { MotherDuckClientProvider } from "../motherduck/context/motherduckClientContext.js";
+*/
 
 // Configure primary sans-serif font (Geist) for body text and UI elements
 const geistSans = Geist({
@@ -48,11 +50,12 @@ export default function RootLayout({ children }) {
         // Prevent flash of unstyled content and ensure smooth font loading
         style={{ fontFamily: 'var(--font-geist-sans)' }}
       >
-        {/* Wrap the app with MotherDuck provider for database access */}
-        <MotherDuckClientProvider database="sf_crime_stats">
-          {/* Render the specific page content passed as children */}
+        {/* MotherDuck provider commented out */}
+        {/* <MotherDuckClientProvider database="sf_crime_stats">
           {children}
-        </MotherDuckClientProvider>
+        </MotherDuckClientProvider> */}
+        {/* Render the specific page content passed as children */}
+        {children}
       </body>
     </html>
   );

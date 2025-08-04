@@ -1,28 +1,8 @@
-/**
- * ==================================================================================
- * SF Crime Data Dashboard - Modularized Version
- * ==================================================================================
- *
- * @fileoverview Modular crime dashboard with separated components and utilities
- * @description Clean, maintainable version using component-based architecture
- *
- * @author PulsePoint SF Team
- * @version 3.0.0 - Modularized
- * @since 2025-01-08
- *
- * @features
- * - Modular component architecture
- * - Separated constants and utilities
- * - MotherDuck connection integration ready
- * - Clean code organization
- * ==================================================================================
- */
-
 'use client';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 
-// Import modular components and utilities
-import { API_QUERY, INITIAL_VISIBLE_ITEMS, ITEMS_PER_LOAD, SCROLL_THRESHOLD } from './constants.js';
+import { useCrimeData } from '../../lib/hooks/useCrimeData.js';
+import { INITIAL_VISIBLE_ITEMS, ITEMS_PER_LOAD, SCROLL_THRESHOLD, CRIME_CATEGORIES } from './constants.js';
 import {
   processCategoryGroupChartData,
   processTimeChartData,
@@ -31,137 +11,49 @@ import {
   processCategoryExplorerData
 } from './utils.js';
 
-// Import UI components
 import DashboardHeader from './components/DashboardHeader.js';
 import StatsBar from './components/StatsBar.js';
 import CategoryExplorer from './components/CategoryExplorer.js';
 import ChartsSection from './components/ChartsSection.js';
 import CrimeCard from './components/CrimeCard.js';
+import SanFrancisco3D from '../components/SanFrancisco3D.js';
 
-// Import MotherDuck context (ready for integration)
-// import { useMotherDuckClient } from '../../motherduck/context/motherduckClientContext.js';
+function getAllCategories() {
+  return Array.from(
+    new Set(
+      Object.values(CRIME_CATEGORIES).flat()
+    )
+  );
+}
+
+const DEFAULT_CATEGORY = 'Assault';
 
 export default function CrimeDataDashboard() {
-  // ================================================================================
-  // STATE MANAGEMENT
-  // ================================================================================
+  // Shared crime data (global cache)
+  const { crimeData, isLoading, error, lastFetched, refetch } = useCrimeData();
 
-  /** @type {[Array|null, Function]} Crime data from DataSF API */
-  const [crimeData, setCrimeData] = useState(null);
-
-  /** @type {[boolean, Function]} Data loading state */
-  const [isLoading, setIsLoading] = useState(true);
-
-  /** @type {[string|null, Function]} Error message */
-  const [error, setError] = useState(null);
-
-  /** @type {[string, Function]} Sort order: 'newest' or 'oldest' */
+  // Dashboard state
   const [sortOrder, setSortOrder] = useState('newest');
-
-  /** @type {[number, Function]} Number of visible items for infinite scroll */
   const [visibleItems, setVisibleItems] = useState(INITIAL_VISIBLE_ITEMS);
-
-  /** @type {[Date|null, Function]} Last fetch timestamp */
-  const [lastFetched, setLastFetched] = useState(null);
-
-  /** @type {[boolean, Function]} Category explorer visibility state */
   const [showCategoryExplorer, setShowCategoryExplorer] = useState(false);
 
-  // MotherDuck integration (ready for future use)
-  // const { testConnection, connectionStatus } = useMotherDuckClient();
+  // 3D map state
+  const [selectedCategory, setSelectedCategory] = useState(DEFAULT_CATEGORY);
 
-  // ================================================================================
-  // DATA FETCHING
-  // ================================================================================
-
-  /**
-   * Fetch crime data from DataSF API
-   * TODO: Add MotherDuck integration option
-   */
-  const fetchCrimeData = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    console.log('🔍 [MotherDuck Ready] Initializing crime data fetch...');
-    console.log('📡 Using DataSF API endpoint:', API_QUERY);
-
-    try {
-      const startTime = Date.now();
-      const response = await fetch(API_QUERY);
-
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      const endTime = Date.now();
-      const fetchTime = endTime - startTime;
-
-      console.log(`✅ Successfully fetched ${data.length} crime records in ${fetchTime}ms`);
-      console.log('🦆 [MotherDuck Integration] Ready for database connection testing');
-
-      // Validate and clean data
-      const validRecords = data.filter(record =>
-        record.incident_datetime &&
-        record.incident_category &&
-        record.incident_description &&
-        record.latitude &&
-        record.longitude
-      );
-
-      console.log(`📊 Valid records after filtering: ${validRecords.length}`);
-      console.log('💾 [MotherDuck Logging] Connection initialization can be tested here');
-
-      setCrimeData(validRecords);
-      setLastFetched(new Date());
-
-    } catch (err) {
-      console.error('❌ Failed to fetch crime data:', err);
-      console.log('🦆 [MotherDuck Debug] Connection testing will be logged here');
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Fetch data on component mount
-  useEffect(() => {
-    console.log('🚀 [Crime Dashboard] Component mounted - MotherDuck integration ready');
-    fetchCrimeData();
-  }, [fetchCrimeData]);
-
-  // ================================================================================
-  // DATA PROCESSING
-  // ================================================================================
-
-  /**
-   * Sort and process crime data based on current sort order
-   */
+  // Data processing
   const sortedData = useMemo(() => {
     if (!crimeData) return [];
-
     const sorted = [...crimeData].sort((a, b) => {
       const dateA = new Date(a.incident_datetime);
       const dateB = new Date(b.incident_datetime);
-
-      return sortOrder === 'newest' ?
-        dateB.getTime() - dateA.getTime() :
-        dateA.getTime() - dateB.getTime();
+      return sortOrder === 'newest'
+        ? dateB.getTime() - dateA.getTime()
+        : dateA.getTime() - dateB.getTime();
     });
-
     return sorted;
   }, [crimeData, sortOrder]);
 
-  /**
-   * Get visible items for infinite scroll
-   */
-  const visibleData = useMemo(() => {
-    return sortedData.slice(0, visibleItems);
-  }, [sortedData, visibleItems]);
-
-  // ================================================================================
-  // CHART DATA PROCESSING (using modular utilities)
-  // ================================================================================
+  const visibleData = useMemo(() => sortedData.slice(0, visibleItems), [sortedData, visibleItems]);
 
   const categoryExplorerData = useMemo(() =>
     processCategoryExplorerData(sortedData), [sortedData]);
@@ -178,58 +70,36 @@ export default function CrimeDataDashboard() {
   const resolutionChartData = useMemo(() =>
     processResolutionChartData(sortedData), [sortedData]);
 
-  // ================================================================================
-  // EVENT HANDLERS
-  // ================================================================================
-
-  /**
-   * Toggle sort order between newest and oldest
-   */
+  // Event handlers
   const handleSortToggle = useCallback(() => {
     setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest');
-    console.log('🔄 Sort order changed - MotherDuck query logging can be added here');
   }, []);
 
-  /**
-   * Load more items for infinite scroll
-   */
   const loadMoreItems = useCallback(() => {
     setVisibleItems(prev => Math.min(prev + ITEMS_PER_LOAD, sortedData.length));
   }, [sortedData.length]);
 
-  /**
-   * Handle scroll event for infinite loading
-   */
   const handleScroll = useCallback((e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
     const scrollPercentage = scrollTop / (scrollHeight - clientHeight);
-
-    // Load more when user scrolls to threshold
     if (scrollPercentage > SCROLL_THRESHOLD && visibleItems < sortedData.length) {
       loadMoreItems();
     }
   }, [visibleItems, sortedData.length, loadMoreItems]);
 
-  /**
-   * Toggle category explorer visibility
-   */
   const handleToggleCategoryExplorer = useCallback(() => {
     setShowCategoryExplorer(prev => !prev);
-    console.log('📁 Category Explorer toggled - MotherDuck category queries can be logged here');
   }, []);
 
-  /**
-   * Retry data fetch on error
-   */
+  const handleCategorySelect = useCallback((category) => {
+    setSelectedCategory(category);
+  }, []);
+
   const handleRetry = useCallback(() => {
-    console.log('🔄 Retrying data fetch - MotherDuck connection retry can be tested here');
-    fetchCrimeData();
-  }, [fetchCrimeData]);
+    refetch();
+  }, [refetch]);
 
-  // ================================================================================
-  // LOADING & ERROR STATES
-  // ================================================================================
-
+  // Loading & error states
   if (isLoading) {
     return (
       <div style={{
@@ -255,12 +125,6 @@ export default function CrimeDataDashboard() {
           fontWeight: '500'
         }}>
           Loading SF Crime Data...
-        </div>
-        <div style={{
-          fontSize: '0.875rem',
-          color: '#6b7280'
-        }}>
-          🦆 MotherDuck connection initialization ready
         </div>
         <style jsx>{`
           @keyframes spin {
@@ -311,13 +175,6 @@ export default function CrimeDataDashboard() {
           }}>
             {error}
           </p>
-          <p style={{
-            color: '#6b7280',
-            fontSize: '0.875rem',
-            marginBottom: '1.5rem'
-          }}>
-            🦆 MotherDuck connection logging available for debugging
-          </p>
           <button
             onClick={handleRetry}
             style={{
@@ -345,10 +202,7 @@ export default function CrimeDataDashboard() {
     );
   }
 
-  // ================================================================================
-  // MAIN RENDER
-  // ================================================================================
-
+  // Main render
   return (
     <div style={{
       minHeight: '100vh',
@@ -362,6 +216,76 @@ export default function CrimeDataDashboard() {
         sortOrder={sortOrder}
         onSortToggle={handleSortToggle}
       />
+
+      {/* 3D Map and Category Selector at Top */}
+      <div style={{
+        maxWidth: '1200px',
+        margin: '0 auto',
+        padding: '2rem 1rem 0 1rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.5rem'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1.5rem',
+          marginBottom: '1rem'
+        }}>
+          <h2 style={{
+            fontSize: '1.25rem',
+            fontWeight: 600,
+            color: '#111827',
+            margin: 0
+          }}>
+            🌐 3D Crime Clusters
+          </h2>
+          <label htmlFor="category-select" style={{ fontWeight: 500, fontSize: 15, color: '#222' }}>
+            Category:
+          </label>
+          <select
+            id="category-select"
+            value={selectedCategory}
+            onChange={e => handleCategorySelect(e.target.value)}
+            style={{
+              padding: '8px',
+              borderRadius: 4,
+              border: '1px solid #d1d5db',
+              fontSize: 15,
+              background: 'white',
+              color: '#222',
+              fontWeight: 500,
+              minWidth: 180
+            }}
+          >
+            {getAllCategories().map(category => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+          <span style={{ fontSize: 13, color: '#666', marginLeft: 8 }}>
+            {crimeData
+              ? `${crimeData.filter(d => d.incident_category === selectedCategory).length} incidents`
+              : "Loading..."}
+          </span>
+        </div>
+        <div style={{
+          width: '100%',
+          height: '500px',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          border: '1px solid #e5e7eb',
+          position: 'relative'
+        }}>
+          <SanFrancisco3D
+            isFullScreen={false}
+            crimeData={sortedData}
+            selectedCategory={selectedCategory}
+            showCrimeClusters={true}
+          />
+        </div>
+      </div>
 
       {/* Content Container */}
       <div
@@ -425,13 +349,6 @@ export default function CrimeDataDashboard() {
               margin: '0 auto 1rem'
             }}></div>
             Loading more incidents...
-            <div style={{
-              fontSize: '0.75rem',
-              marginTop: '0.5rem',
-              opacity: '0.7'
-            }}>
-              🦆 MotherDuck pagination ready
-            </div>
           </div>
         )}
 
@@ -444,45 +361,9 @@ export default function CrimeDataDashboard() {
             fontSize: '0.875rem'
           }}>
             ✅ Showing all {sortedData.length} incidents
-            <div style={{
-              fontSize: '0.75rem',
-              marginTop: '0.5rem',
-              opacity: '0.7'
-            }}>
-              🦆 MotherDuck connection testing ready for /crime route
-            </div>
           </div>
         )}
       </div>
     </div>
   );
 }
-
-/**
- * ==================================================================================
- * MODULAR ARCHITECTURE NOTES
- * ==================================================================================
- *
- * File Structure:
- * - constants.js - All configuration constants and API settings
- * - utils.js - Data processing and formatting utilities
- * - components/DashboardHeader.js - Header with sort controls
- * - components/StatsBar.js - Statistics and controls bar
- * - components/CategoryExplorer.js - Expandable category breakdown
- * - components/ChartsSection.js - All analytics charts
- * - components/CrimeCard.js - Individual crime incident cards
- *
- * MotherDuck Integration Ready:
- * - Connection context imported and ready
- * - Logging points established throughout
- * - Error handling prepared for database connections
- * - /crime route optimized for testing MotherDuck initialization
- *
- * Benefits:
- * - Maintainable component-based architecture
- * - Reusable utilities and constants
- * - Easy to test individual components
- * - Prepared for database integration
- * - Clean separation of concerns
- * ==================================================================================
- */

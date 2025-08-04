@@ -24,7 +24,9 @@
 
 'use client';
 import React, { useState, useEffect } from 'react';
+/*
 import { useMotherDuckClientState } from '../../motherduck/context/motherduckClientContext.js';
+*/
 
 export default function MotherDuckTestPage() {
   // ================================================================================
@@ -52,6 +54,7 @@ export default function MotherDuckTestPage() {
   /** @type {[Array|null, Function]} Write test results */
   const [writeTestResults, setWriteTestResults] = useState(null);
 
+  /*
   // Get MotherDuck client from context with all logging capabilities
   const {
     safeEvaluateQuery,
@@ -62,6 +65,7 @@ export default function MotherDuckTestPage() {
     clearLogs,
     tokenInfo
   } = useMotherDuckClientState();
+  */
 
   // ================================================================================
   // CONNECTION TESTING METHODS
