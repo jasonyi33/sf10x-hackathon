@@ -2,16 +2,16 @@
 // Update these values when backend becomes available
 
 export const API_CONFIG = {
-  // Backend API URL - using localhost for development
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8001',
+  // Backend API URL - using Railway or local IP
+  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://sf10x-demo-test-production.up.railway.app',
   
-  // Enable real API calls (set to false to use mock data only)
-  USE_REAL_API: false, // Set to false to use mock data only
+  // Enable real API calls (set to true to use real transcription)
+  USE_REAL_API: true, // Set to true to use real transcription
   
   // Supabase Configuration (for direct frontend access if needed)
   SUPABASE: {
-    URL: 'https://vhfyquescrbwbbvvhxdg.supabase.co/', // TODO: Replace with your Supabase URL
-    ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZnlxdWVzY3Jid2JidnZoeGRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjQ5NDksImV4cCI6MjA2OTcwMDk0OX0.3grO_YeaqeM73db9jzvBV0WyLBwuD_ynW9lH3Z4Os4g', // TODO: Replace with your anon key
+    URL: 'https://vhfyquescrbwbbvvhxdg.supabase.co/', // Your Supabase URL
+    ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZnlxdWVzY3Jid2JidnZoeGRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjQ5NDksImV4cCI6MjA2OTcwMDk0OX0.3grO_YeaqeM73db9jzvBV0WyLBwuD_ynW9lH3Z4Os4g', // Your anon key
   },
   
   // API Endpoints (PRD Section 3.2, 4.3, 4.4, 4.5)
@@ -27,12 +27,12 @@ export const API_CONFIG = {
   },
   
   // Request timeout (in milliseconds)
-  TIMEOUT: 10000,
+  TIMEOUT: 60000, // 60 seconds for OpenAI transcription
   
   // Demo configuration
   DEMO: {
     // Use mock data for demo (set to false to use real API)
-    USE_MOCK_DATA: true,
+    USE_MOCK_DATA: false, // Set to false to use real transcription
     
     // Mock response delays (ms)
     MOCK_DELAY: 1000,
