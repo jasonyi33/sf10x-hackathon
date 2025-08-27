@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SearchResult } from '../types';
-import { getDangerScoreColor, getDisplayDangerScore, calculateDaysAgo } from '../utils/dangerScore';
-import DangerScore from './DangerScore';
+import { getUrgencyScoreColor, getDisplayUrgencyScore, calculateDaysAgo } from '../utils/urgencyScore';
+import UrgencyScore from './UrgencyScore';
 
 interface SearchResultItemProps {
   result: SearchResult;
@@ -17,7 +17,7 @@ export default function SearchResultItem({ result, onPress }: SearchResultItemPr
       <View style={styles.content}>
         <Text style={styles.name}>{result.name}</Text>
         <View style={styles.details}>
-          <DangerScore
+          <UrgencyScore
             individual={result}
             onOverrideChange={() => {}} // No override in search results
             showSlider={false}

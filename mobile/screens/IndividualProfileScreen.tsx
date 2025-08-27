@@ -11,10 +11,10 @@ import {
 } from 'react-native';
 import { IndividualProfile, IndividualProfileScreenProps } from '../types';
 import { api } from '../services/api';
-import { getDangerScoreColor, getDisplayDangerScore } from '../utils/dangerScore';
+import { getUrgencyScoreColor, getDisplayUrgencyScore } from '../utils/urgencyScore';
 import FieldDisplay from '../components/FieldDisplay';
 import InteractionHistoryItem from '../components/InteractionHistoryItem';
-import DangerScore from '../components/DangerScore';
+import UrgencyScore from '../components/UrgencyScore';
 import InteractionDetailModal from '../components/InteractionDetailModal';
 
 export default function IndividualProfileScreen({ navigation, route }: any) {
@@ -72,29 +72,29 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
     setSelectedInteraction(null);
   };
 
-  // Function to handle danger override change
-  const handleDangerOverrideChange = async (overrideValue: number | null) => {
+  // Function to handle urgency override change
+  const handleUrgencyOverrideChange = async (overrideValue: number | null) => {
     if (!profile) return;
     
     // Immediately update local state for instant UI feedback
     const updatedProfile = {
       ...profile,
-      danger_override: overrideValue,
+      urgency_override: overrideValue,
     };
     setProfile(updatedProfile);
     
     try {
-      const success = await api.updateDangerOverride(profile.id, overrideValue);
+      const success = await api.updateUrgencyOverride(profile.id, overrideValue);
       if (!success) {
         // Revert the change if the API call failed
         setProfile(profile);
-        Alert.alert('Error', 'Failed to update danger override');
+        Alert.alert('Error', 'Failed to update urgency override');
       }
     } catch (error) {
       // Revert the change if there was an error
       setProfile(profile);
-      console.error('Error updating danger override:', error);
-      Alert.alert('Error', 'Failed to update danger override');
+      console.error('Error updating urgency override:', error);
+      Alert.alert('Error', 'Failed to update urgency override');
     }
   };
 
@@ -145,9 +145,9 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
     );
   }
 
-  // Calculate the display danger score
-  const displayScore = getDisplayDangerScore(profile);
-  const scoreColor = getDangerScoreColor(displayScore);
+  // Calculate the display urgency score
+  const displayScore = getDisplayUrgencyScore(profile);
+  const scoreColor = getUrgencyScoreColor(displayScore);
 
   return (
     <View style={styles.container}>
@@ -160,10 +160,10 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
         <View style={styles.header}>
           <Text style={styles.name}>{profile.name}</Text>
           
-          {/* Danger Score Component */}
-          <DangerScore
+          {/* Urgency Score Component */}
+          <UrgencyScore
             individual={profile}
-            onOverrideChange={handleDangerOverrideChange}
+            onOverrideChange={handleUrgencyOverrideChange}
             showSlider={true}
           />
         </View>

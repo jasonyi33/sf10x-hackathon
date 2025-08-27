@@ -91,8 +91,8 @@ class TestIndividualService:
         # Mock categories response
         categories_mock = Mock()
         categories_mock.data = [
-            {"name": "height", "type": "number", "danger_weight": 10},
-            {"name": "weight", "type": "number", "danger_weight": 5}
+            {"name": "height", "type": "number", "urgency_weight": 10},
+            {"name": "weight", "type": "number", "urgency_weight": 5}
         ]
         
         # Mock individual insert
@@ -101,8 +101,8 @@ class TestIndividualService:
         individual_mock.data = [{
             "id": individual_id,
             "name": "Jane Smith",
-            "danger_score": 25,
-            "danger_override": None,
+            "urgency_score": 25,
+            "urgency_override": None,
             "data": {
                 "name": "Jane Smith",
                 "height": 65,
@@ -166,7 +166,7 @@ class TestIndividualService:
         # Verify result
         assert isinstance(result, SaveIndividualResponse)
         assert result.individual.name == "Jane Smith"
-        assert result.individual.danger_score >= 0
+        assert result.individual.urgency_score >= 0
         assert result.interaction.has_transcription is False
         
         # Verify Supabase calls
@@ -196,8 +196,8 @@ class TestIndividualService:
         mock_supabase.table.return_value.update.return_value.eq.return_value.execute.return_value.data = [{
             "id": merge_id,
             "name": "John Doe",
-            "danger_score": 0,
-            "danger_override": None,
+            "urgency_score": 0,
+            "urgency_override": None,
             "data": {
                 "name": "John Doe",
                 "height": 73,
@@ -266,8 +266,8 @@ class TestIndividualService:
             {
                 "id": str(uuid4()),
                 "name": "John Smith",
-                "danger_score": 50,
-                "danger_override": None,
+                            "urgency_score": 50,
+            "urgency_override": None,
                 "created_at": datetime.utcnow().isoformat()
             }
         ]
@@ -294,8 +294,8 @@ class TestIndividualService:
             {
                 "id": str(uuid4()),
                 "name": f"Person {i}",
-                "danger_score": i * 10,
-                "danger_override": None,
+                "urgency_score": i * 10,
+                "urgency_override": None,
                 "created_at": datetime.utcnow().isoformat()
             }
             for i in range(25)
@@ -323,8 +323,8 @@ class TestIndividualService:
         mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value.execute.return_value.data = {
             "id": str(individual_id),
             "name": "Test Person",
-            "danger_score": 60,
-            "danger_override": 75,
+            "urgency_score": 60,
+            "urgency_override": 75,
             "data": {"name": "Test Person", "height": 70, "weight": 160, "skin_color": "Light"},
             "created_at": datetime.utcnow().isoformat(),
             "updated_at": datetime.utcnow().isoformat()
@@ -360,41 +360,41 @@ class TestIndividualService:
         assert result is None
     
     @pytest.mark.asyncio
-    async def test_update_danger_override(self, service, mock_supabase):
+    async def test_update_urgency_override(self, service, mock_supabase):
         """Test updating danger override"""
         individual_id = uuid4()
         
         # Mock update response
         mock_supabase.table.return_value.update.return_value.eq.return_value.execute.return_value.data = [{
             "id": str(individual_id),
-            "danger_score": 50,
-            "danger_override": 80
+            "urgency_score": 50,
+            "urgency_override": 80
         }]
         
         # Test update
-        result = await service.update_danger_override(individual_id, 80)
+        result = await service.update_urgency_override(individual_id, 80)
         
-        assert result.danger_score == 50
-        assert result.danger_override == 80
+        assert result.urgency_score == 50
+        assert result.urgency_override == 80
         assert result.display_score == 80
     
     @pytest.mark.asyncio
-    async def test_update_danger_override_remove(self, service, mock_supabase):
+    async def test_update_urgency_override_remove(self, service, mock_supabase):
         """Test removing danger override"""
         individual_id = uuid4()
         
         # Mock update response
         mock_supabase.table.return_value.update.return_value.eq.return_value.execute.return_value.data = [{
             "id": str(individual_id),
-            "danger_score": 50,
-            "danger_override": None
+            "urgency_score": 50,
+            "urgency_override": None
         }]
         
         # Test remove override
-        result = await service.update_danger_override(individual_id, None)
+        result = await service.update_urgency_override(individual_id, None)
         
-        assert result.danger_score == 50
-        assert result.danger_override is None
+        assert result.urgency_score == 50
+        assert result.urgency_override is None
         assert result.display_score == 50  # Back to calculated
     
     @pytest.mark.asyncio

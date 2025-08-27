@@ -100,7 +100,7 @@ export default function CategoriesScreen() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryType, setNewCategoryType] = useState<'text' | 'number' | 'single-select' | 'multi-select' | 'date' | 'location'>('text');
   const [newCategoryPriority, setNewCategoryPriority] = useState<'high' | 'medium' | 'low'>('medium');
-  const [newCategoryDangerWeight, setNewCategoryDangerWeight] = useState(0);
+  const [newCategoryUrgencyWeight, setNewCategoryUrgencyWeight] = useState(0);
   const [newCategoryAutoTrigger, setNewCategoryAutoTrigger] = useState(false);
   const [newCategoryOptions, setNewCategoryOptions] = useState<string[]>([]);
 
@@ -149,7 +149,7 @@ export default function CategoriesScreen() {
         veteranStatus: true,
         medicalConditions: 'Diabetes',
         housingPriority: 'High',
-        dangerScore: 75,
+        urgencyScore: 75,
         lastInteraction: '2024-01-15',
       },
       {
@@ -161,7 +161,7 @@ export default function CategoriesScreen() {
         veteranStatus: false,
         medicalConditions: 'None',
         housingPriority: 'Medium',
-        dangerScore: 20,
+        urgencyScore: 20,
         lastInteraction: '2024-01-14',
       },
       {
@@ -173,7 +173,7 @@ export default function CategoriesScreen() {
         veteranStatus: true,
         medicalConditions: 'Substance Abuse',
         housingPriority: 'High',
-        dangerScore: 90,
+        urgencyScore: 90,
         lastInteraction: '2024-01-13',
       },
     ];
@@ -219,7 +219,7 @@ export default function CategoriesScreen() {
       type: newCategoryType,
       required: false,
       priority: newCategoryPriority,
-      danger_weight: (newCategoryType === 'number' || newCategoryType === 'single-select') ? newCategoryDangerWeight : undefined,
+      urgency_weight: (newCategoryType === 'number' || newCategoryType === 'single-select') ? newCategoryUrgencyWeight : undefined,
       auto_trigger: (newCategoryType === 'number' || newCategoryType === 'single-select') ? newCategoryAutoTrigger : undefined,
       options: (newCategoryType === 'single-select' || newCategoryType === 'multi-select') ? newCategoryOptions : undefined,
       active: true,
@@ -342,14 +342,14 @@ export default function CategoriesScreen() {
         </View>
         
         {(newCategoryType === 'number' || newCategoryType === 'single-select') && (
-          <View style={styles.dangerWeightContainer}>
-            <Text style={styles.dangerWeightLabel}>Danger Weight: {newCategoryDangerWeight}</Text>
+          <View style={styles.urgencyWeightContainer}>
+                          <Text style={styles.urgencyWeightLabel}>Urgency Weight: {newCategoryUrgencyWeight}</Text>
             <TouchableOpacity 
               style={[styles.autoTriggerButton, newCategoryAutoTrigger && styles.autoTriggerButtonActive]}
               onPress={() => setNewCategoryAutoTrigger(!newCategoryAutoTrigger)}
             >
               <Text style={styles.autoTriggerText}>
-                Auto-Trigger Danger: {newCategoryAutoTrigger ? 'ON' : 'OFF'}
+                Auto-Trigger Urgency: {newCategoryAutoTrigger ? 'ON' : 'OFF'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -370,7 +370,7 @@ export default function CategoriesScreen() {
         <Text style={styles.infoText}>
           • CSV includes all individuals in the database{'\n'}
           • All active categories are included as columns{'\n'}
-          • Danger scores and last interaction dates included{'\n'}
+          • Urgency scores and last interaction dates included{'\n'}
           • Multi-select values are comma-separated{'\n'}
           • File is named with current date and time
         </Text>
@@ -545,13 +545,13 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontWeight: '500',
   },
-  dangerWeightContainer: {
+  urgencyWeightContainer: {
     marginTop: 10,
     padding: 10,
     backgroundColor: '#F9FAFB',
     borderRadius: 8,
   },
-  dangerWeightLabel: {
+  urgencyWeightLabel: {
     fontSize: 14,
     fontWeight: '500',
     color: '#374151',

@@ -78,40 +78,40 @@ const mockIndividuals: SearchResult[] = [
   {
     id: '1',
     name: 'John Doe',
-    danger_score: 75,
-    danger_override: null,
+    urgency_score: 75,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-15T10:30:00Z'),
     last_interaction_date: '2024-01-15T10:30:00Z',
   },
   {
     id: '2',
     name: 'Sarah Smith',
-    danger_score: 20,
-    danger_override: 40,
+    urgency_score: 20,
+    urgency_override: 40,
     last_seen_days: calculateDaysAgo('2024-01-12T14:20:00Z'),
     last_interaction_date: '2024-01-12T14:20:00Z',
   },
   {
     id: '3',
     name: 'Robert Johnson',
-    danger_score: 90,
-    danger_override: null,
+    urgency_score: 90,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-16T09:15:00Z'),
     last_interaction_date: '2024-01-16T09:15:00Z',
   },
   {
     id: '4',
     name: 'Maria Garcia',
-    danger_score: 15,
-    danger_override: null,
+    urgency_score: 15,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-10T16:45:00Z'),
     last_interaction_date: '2024-01-10T16:45:00Z',
   },
   {
     id: '5',
     name: 'David Wilson',
-    danger_score: 60,
-    danger_override: null,
+    urgency_score: 60,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-14T11:30:00Z'),
     last_interaction_date: '2024-01-14T11:30:00Z',
   },
@@ -173,8 +173,8 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
   '2': {
     id: '2',
     name: 'Sarah Smith',
-    danger_score: 20,
-    danger_override: 40,
+    urgency_score: 20,
+    urgency_override: 40,
     data: {
       name: 'Sarah Smith',
       height: 65,
@@ -219,8 +219,8 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440001": {
       id: "550e8400-e29b-41d4-a716-446655440001",
       name: "Sarah Smith",
-      danger_score: 15,
-      danger_override: null,
+      urgency_score: 15,
+      urgency_override: null,
       data: { age: 32, height: 65, weight: 140, skin_color: "Light", gender: "Female", substance_abuse_history: ["None"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Low" },
       created_at: "2024-01-10T09:00:00Z",
       updated_at: "2024-01-15T14:30:00Z",
@@ -231,8 +231,8 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440002": {
       id: "550e8400-e29b-41d4-a716-446655440002",
       name: "Michael Chen",
-      danger_score: 25,
-      danger_override: null,
+      urgency_score: 25,
+      urgency_override: null,
       data: { age: 28, height: 68, weight: 155, skin_color: "Medium", gender: "Male", substance_abuse_history: ["None"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Medium" },
       created_at: "2024-01-11T10:15:00Z",
       updated_at: "2024-01-16T11:45:00Z",
@@ -555,7 +555,7 @@ export const api = {
       console.log('Data to save:', data);
       
       // Extract categorized data (age, height, weight, etc.) from the data
-      const { Name, name, id, danger_score, danger_override, data: existingData, ...categorizedData } = data;
+      const { Name, name, id, urgency_score, urgency_override, data: existingData, ...categorizedData } = data;
       
       // Convert categorized data field names to lowercase for profile display
       const processedData = {};
@@ -574,8 +574,8 @@ export const api = {
           id: id || generateUUID(),
           name: Name || name || 'Unknown Individual',
           data: existingData || processedData || {},
-          danger_score: danger_score || 0,
-          danger_override: danger_override || null,
+          urgency_score: urgency_score || 0,
+          urgency_override: urgency_override || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -632,14 +632,14 @@ export const api = {
       // Convert to SearchResult format
       const searchResults: SearchResult[] = individuals.map(individual => {
         // Calculate display score (override or calculated)
-        const displayScore = individual.danger_override !== null && individual.danger_override !== undefined 
-          ? individual.danger_override 
-          : individual.danger_score;
+        const displayScore = individual.urgency_override !== null && individual.urgency_override !== undefined 
+          ? individual.urgency_override 
+          : individual.urgency_score;
         
         return {
           id: individual.id,
           name: individual.name,
-          danger_score: displayScore,
+          urgency_score: displayScore,
           last_seen: individual.updated_at,
           last_seen_days: calculateDaysAgo(individual.updated_at),
           last_interaction_date: individual.updated_at,
@@ -679,8 +679,8 @@ export const api = {
       const profile: IndividualProfile = {
         id: individual.id,
         name: individual.name,
-        danger_score: individual.danger_score,
-        danger_override: individual.danger_override,
+        urgency_score: individual.urgency_score,
+        urgency_override: individual.urgency_override,
         data: individual.data || {},
         created_at: individual.created_at,
         updated_at: individual.updated_at,
@@ -694,10 +694,10 @@ export const api = {
     }
   },
 
-  // Update danger override
-  updateDangerOverride: async (individualId: string, overrideValue: number | null): Promise<boolean> => {
+  // Update urgency override
+  updateUrgencyOverride: async (individualId: string, overrideValue: number | null): Promise<boolean> => {
     try {
-      console.log('⚠️ Updating danger override in database...');
+      console.log('⚠️ Updating urgency override in database...');
       console.log('Individual ID:', individualId);
       console.log('Override value:', overrideValue);
       
@@ -705,7 +705,7 @@ export const api = {
       const { data, error } = await supabase
         .from('individuals')
         .update({ 
-          danger_override: overrideValue,
+          urgency_override: overrideValue,
           updated_at: new Date().toISOString()
         })
         .eq('id', individualId)
@@ -717,10 +717,10 @@ export const api = {
         return false;
       }
 
-      console.log('✅ Successfully updated danger override:', data);
+      console.log('✅ Successfully updated urgency override:', data);
       return true;
     } catch (error) {
-      console.error('❌ Update danger override error:', error);
+      console.error('❌ Update urgency override error:', error);
       return false;
     }
   },
