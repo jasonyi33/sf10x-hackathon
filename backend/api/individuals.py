@@ -15,8 +15,8 @@ from db.models import (
     LocationData,
     SearchIndividualsResponse,
     IndividualDetailResponse,
-    UrgencyOverrideRequest,
-    UrgencyOverrideResponse,
+    DangerOverrideRequest,
+    DangerOverrideResponse,
     InteractionsResponse
 )
 from services.individual_service import IndividualService
@@ -57,8 +57,8 @@ def get_supabase_client() -> Client:
                         {
                             "id": "550e8400-e29b-41d4-a716-446655440001",
                             "name": "John Doe",
-                            "urgency_score": 75,
-                            "urgency_override": None,
+                            "danger_score": 75,
+                            "danger_override": None,
                             "data": {"age": 45, "height": 72, "weight": 180},
                             "created_at": "2024-01-15T10:30:00Z",
                             "updated_at": "2024-01-15T10:30:00Z"
@@ -66,8 +66,8 @@ def get_supabase_client() -> Client:
                         {
                             "id": "550e8400-e29b-41d4-a716-446655440002", 
                             "name": "Sarah Smith",
-                            "urgency_score": 20,
-                            "urgency_override": 40,
+                            "danger_score": 20,
+                            "danger_override": 40,
                             "data": {"age": 32, "height": 65, "weight": 140},
                             "created_at": "2024-01-12T14:20:00Z",
                             "updated_at": "2024-01-12T14:20:00Z"
@@ -75,8 +75,8 @@ def get_supabase_client() -> Client:
                         {
                             "id": "550e8400-e29b-41d4-a716-446655440003",
                             "name": "Robert Johnson", 
-                            "urgency_score": 90,
-                            "urgency_override": None,
+                            "danger_score": 90,
+                            "danger_override": None,
                             "data": {"age": 58, "height": 70, "weight": 200},
                             "created_at": "2024-01-16T09:15:00Z",
                             "updated_at": "2024-01-16T09:15:00Z"
@@ -345,28 +345,28 @@ async def get_individual(
         )
 
 
-@router.put("/api/individuals/{individual_id}/urgency-override", response_model=UrgencyOverrideResponse)
-async def update_urgency_override(
+@router.put("/api/individuals/{individual_id}/danger-override", response_model=DangerOverrideResponse)
+async def update_danger_override(
     individual_id: UUID,
-    request: UrgencyOverrideRequest,
+    request: DangerOverrideRequest,
     user_id: str = Depends(get_current_user)
 ):
     """
-    Update manual urgency score override.
+    Update manual danger score override.
     
     Features:
-    - Set urgency_override to provided value (0-100)
+    - Set danger_override to provided value (0-100)
     - Pass null to remove override
-    - Returns all urgency scores for UI update
+    - Returns all danger scores for UI update
     - 404 if individual not found
     """
     try:
         # Get Supabase client
         supabase = get_supabase_client()
         
-        # Update the urgency_override field
+        # Update the danger_override field
         update_result = supabase.table("individuals").update({
-            "urgency_override": request.urgency_override,
+            "danger_override": request.danger_override,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }).eq("id", str(individual_id)).execute()
         
@@ -381,11 +381,11 @@ async def update_urgency_override(
         individual = update_result.data[0]
         
         # Calculate display score
-        display_score = individual["urgency_override"] if individual["urgency_override"] is not None else individual["urgency_score"]
+        display_score = individual["danger_override"] if individual["danger_override"] is not None else individual["danger_score"]
         
-        return UrgencyOverrideResponse(
-            urgency_score=individual["urgency_score"],
-            urgency_override=individual["urgency_override"],
+        return DangerOverrideResponse(
+            danger_score=individual["danger_score"],
+            danger_override=individual["danger_override"],
             display_score=display_score
         )
         
@@ -394,10 +394,10 @@ async def update_urgency_override(
         raise
     except Exception as e:
         # Log error for debugging
-        print(f"Error updating urgency override for {individual_id}: {str(e)}")
+        print(f"Error updating danger override for {individual_id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update urgency override: {str(e)}"
+            detail=f"Failed to update danger override: {str(e)}"
         )
 
 

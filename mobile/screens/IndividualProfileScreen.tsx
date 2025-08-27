@@ -11,10 +11,10 @@ import {
 } from 'react-native';
 import { IndividualProfile, IndividualProfileScreenProps } from '../types';
 import { api } from '../services/api';
-import { getUrgencyScoreColor, getDisplayUrgencyScore } from '../utils/urgencyScore';
+import { getDangerScoreColor, getDisplayDangerScore } from '../utils/dangerScore';
 import FieldDisplay from '../components/FieldDisplay';
 import InteractionHistoryItem from '../components/InteractionHistoryItem';
-import UrgencyScore from '../components/UrgencyScore';
+import DangerScore from '../components/DangerScore';
 import InteractionDetailModal from '../components/InteractionDetailModal';
 
 export default function IndividualProfileScreen({ navigation, route }: any) {
@@ -73,7 +73,7 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
   };
 
   // Function to handle urgency override change
-  const handleUrgencyOverrideChange = async (overrideValue: number | null) => {
+  const handleDangerOverrideChange = async (overrideValue: number | null) => {
     if (!profile) return;
     
     // Immediately update local state for instant UI feedback
@@ -84,7 +84,7 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
     setProfile(updatedProfile);
     
     try {
-      const success = await api.updateUrgencyOverride(profile.id, overrideValue);
+              const success = await api.updateDangerOverride(profile.id, overrideValue);
       if (!success) {
         // Revert the change if the API call failed
         setProfile(profile);
@@ -146,8 +146,8 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
   }
 
   // Calculate the display urgency score
-  const displayScore = getDisplayUrgencyScore(profile);
-  const scoreColor = getUrgencyScoreColor(displayScore);
+  const displayScore = getDisplayDangerScore(profile);
+  const scoreColor = getDangerScoreColor(displayScore);
 
   return (
     <View style={styles.container}>
@@ -161,9 +161,9 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
           <Text style={styles.name}>{profile.name}</Text>
           
           {/* Urgency Score Component */}
-          <UrgencyScore
+          <DangerScore
             individual={profile}
-            onOverrideChange={handleUrgencyOverrideChange}
+            onOverrideChange={handleDangerOverrideChange}
             showSlider={true}
           />
         </View>

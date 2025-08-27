@@ -100,7 +100,7 @@ export default function CategoriesScreen() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryType, setNewCategoryType] = useState<'text' | 'number' | 'single-select' | 'multi-select' | 'date' | 'location'>('text');
   const [newCategoryPriority, setNewCategoryPriority] = useState<'high' | 'medium' | 'low'>('medium');
-  const [newCategoryUrgencyWeight, setNewCategoryUrgencyWeight] = useState(0);
+  const [newCategoryDangerWeight, setNewCategoryDangerWeight] = useState(0);
   const [newCategoryAutoTrigger, setNewCategoryAutoTrigger] = useState(false);
   const [newCategoryOptions, setNewCategoryOptions] = useState<string[]>([]);
 
@@ -149,7 +149,7 @@ export default function CategoriesScreen() {
         veteranStatus: true,
         medicalConditions: 'Diabetes',
         housingPriority: 'High',
-        urgencyScore: 75,
+        dangerScore: 75,
         lastInteraction: '2024-01-15',
       },
       {
@@ -219,7 +219,7 @@ export default function CategoriesScreen() {
       type: newCategoryType,
       required: false,
       priority: newCategoryPriority,
-      urgency_weight: (newCategoryType === 'number' || newCategoryType === 'single-select') ? newCategoryUrgencyWeight : undefined,
+              danger_weight: (newCategoryType === 'number' || newCategoryType === 'single-select') ? newCategoryDangerWeight : undefined,
       auto_trigger: (newCategoryType === 'number' || newCategoryType === 'single-select') ? newCategoryAutoTrigger : undefined,
       options: (newCategoryType === 'single-select' || newCategoryType === 'multi-select') ? newCategoryOptions : undefined,
       active: true,
@@ -342,8 +342,8 @@ export default function CategoriesScreen() {
         </View>
         
         {(newCategoryType === 'number' || newCategoryType === 'single-select') && (
-          <View style={styles.urgencyWeightContainer}>
-                          <Text style={styles.urgencyWeightLabel}>Urgency Weight: {newCategoryUrgencyWeight}</Text>
+                  <View style={styles.dangerWeightContainer}>
+          <Text style={styles.dangerWeightLabel}>Danger Weight: {newCategoryDangerWeight}</Text>
             <TouchableOpacity 
               style={[styles.autoTriggerButton, newCategoryAutoTrigger && styles.autoTriggerButtonActive]}
               onPress={() => setNewCategoryAutoTrigger(!newCategoryAutoTrigger)}
@@ -545,13 +545,13 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontWeight: '500',
   },
-  urgencyWeightContainer: {
+      dangerWeightContainer: {
     marginTop: 10,
     padding: 10,
     backgroundColor: '#F9FAFB',
     borderRadius: 8,
   },
-  urgencyWeightLabel: {
+      dangerWeightLabel: {
     fontSize: 14,
     fontWeight: '500',
     color: '#374151',

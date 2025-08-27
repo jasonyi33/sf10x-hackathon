@@ -7,30 +7,30 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { getUrgencyScoreColor, getDisplayUrgencyScore } from '../utils/urgencyScore';
+import { getDangerScoreColor, getDisplayDangerScore } from '../utils/dangerScore';
 
-interface UrgencyScoreProps {
+interface DangerScoreProps {
   individual: {
     id: string;
-    urgency_score: number;
-    urgency_override?: number | null;
+    danger_score: number;
+    danger_override?: number | null;
   };
   onOverrideChange: (value: number | null) => void;
   showSlider?: boolean; // Optional prop to show/hide slider
 }
 
-export default function UrgencyScore({ 
+export default function DangerScore({ 
   individual, 
   onOverrideChange, 
   showSlider = false 
-}: UrgencyScoreProps) {
+}: DangerScoreProps) {
   // State for the slider value
   const [sliderValue, setSliderValue] = useState<number>(0);
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
   // Get the display score (override or calculated)
-  const displayScore = getDisplayUrgencyScore(individual);
-  const scoreColor = getUrgencyScoreColor(displayScore);
+  const displayScore = getDisplayDangerScore(individual);
+  const scoreColor = getDangerScoreColor(displayScore);
 
   // Initialize slider value when component mounts or individual changes
   useEffect(() => {
@@ -40,7 +40,7 @@ export default function UrgencyScore({
   // Reset slider when individual changes
   useEffect(() => {
     setSliderValue(displayScore);
-  }, [individual.urgency_score, individual.urgency_override]);
+  }, [individual.danger_score, individual.danger_override]);
 
   // Handle slider value change
   const handleSliderChange = (value: number) => {
@@ -90,7 +90,7 @@ export default function UrgencyScore({
           text: 'Clear Override',
           onPress: () => {
             onOverrideChange(null);
-            setSliderValue(individual.urgency_score);
+            setSliderValue(individual.danger_score);
             setIsEditing(false);
           },
         },
@@ -102,11 +102,11 @@ export default function UrgencyScore({
     <View style={styles.container}>
       {/* Large Urgency Score Display */}
       <View style={[styles.scoreContainer, { backgroundColor: scoreColor }]}>
-        <Text style={styles.scoreLabel}>Urgency Score</Text>
+        <Text style={styles.scoreLabel}>Danger Score</Text>
         <Text style={styles.scoreValue}>{displayScore}</Text>
         
         {/* Manual Override Indicator */}
-        {individual.urgency_override !== null && (
+        {individual.danger_override !== null && (
           <View style={styles.manualIndicator}>
             <Text style={styles.manualLabel}>Manual Override</Text>
             <TouchableOpacity onPress={handleClearOverride}>
@@ -138,8 +138,8 @@ export default function UrgencyScore({
           />
           
           <View style={styles.sliderRange}>
-            <Text style={styles.rangeLabel}>Low Urgency</Text>
-            <Text style={styles.rangeLabel}>High Urgency</Text>
+            <Text style={styles.rangeLabel}>Low Risk</Text>
+            <Text style={styles.rangeLabel}>High Risk</Text>
           </View>
         </View>
       )}

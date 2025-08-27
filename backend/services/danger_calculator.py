@@ -4,7 +4,7 @@ Urgency score calculation service
 from typing import Dict, List, Any
 
 
-def calculate_urgency_score(individual_data: dict, categories: list) -> int:
+def calculate_danger_score(individual_data: dict, categories: list) -> int:
     """
     Calculate urgency score based on weighted category values
     
@@ -33,8 +33,8 @@ def calculate_urgency_score(individual_data: dict, categories: list) -> int:
     weighted_sum = 0
     
     for category in categories:
-        # Skip if no urgency weight or not applicable type
-        if category.get('urgency_weight', 0) == 0:
+        # Skip if no danger weight or not applicable type
+        if category.get('danger_weight', 0) == 0:
             continue
         if category['type'] not in ['number', 'single_select']:
             continue
@@ -43,7 +43,7 @@ def calculate_urgency_score(individual_data: dict, categories: list) -> int:
         if value is None:
             continue
             
-        weight = category['urgency_weight']
+        weight = category['danger_weight']
         total_weight += weight
         
         if category['type'] == 'number':
@@ -51,11 +51,11 @@ def calculate_urgency_score(individual_data: dict, categories: list) -> int:
             normalized = min(float(value) / 300, 1.0)
             weighted_sum += normalized * weight
         elif category['type'] == 'single_select':
-            # Find the urgency value for selected option
+            # Find the danger value for selected option
             if category.get('options'):
                 for option in category['options']:
                     if option.get('label') == value:
-                        # option['value'] is the urgency value (0-1)
+                        # option['value'] is the danger value (0-1)
                         weighted_sum += float(option.get('value', 0)) * weight
                         break
     
@@ -65,16 +65,16 @@ def calculate_urgency_score(individual_data: dict, categories: list) -> int:
     return int((weighted_sum / total_weight) * 100)
 
 
-def get_display_urgency_score(individual: dict) -> int:
+def get_display_danger_score(individual: dict) -> int:
     """
-    Get urgency score to display (override or calculated)
+    Get danger score to display (override or calculated)
     
     Args:
-        individual: Individual record with urgency_score and urgency_override fields
+        individual: Individual record with danger_score and danger_override fields
         
     Returns:
-        Integer urgency score to display
+        Integer danger score to display
     """
-    if individual.get('urgency_override') is not None:
-        return individual['urgency_override']
-    return individual.get('urgency_score', 0)
+    if individual.get('danger_override') is not None:
+        return individual['danger_override']
+    return individual.get('danger_score', 0)
