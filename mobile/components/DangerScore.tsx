@@ -44,7 +44,8 @@ export default function DangerScore({
 
   // Handle slider value change
   const handleSliderChange = (value: number) => {
-    setSliderValue(value);
+    const roundedValue = Math.round(value)
+    setSliderValue(roundedValue);
     setIsEditing(true);
   };
 
