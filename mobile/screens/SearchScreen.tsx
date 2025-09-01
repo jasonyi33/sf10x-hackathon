@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { SearchResult } from '../types';
 import { api } from '../services/api';
 import SearchResultItem from '../components/SearchResultItem';
+import { supabase } from '../services/supabase';
 
 // NOTE: This component requires @react-navigation/stack to be installed
 // When Tasks 1, 2, 3 are completed, install: npm install @react-navigation/stack react-native-gesture-handler
@@ -19,34 +20,62 @@ import SearchResultItem from '../components/SearchResultItem';
 export default function SearchScreen({ navigation }: { navigation: any }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [allIndividuals, setAllIndividuals] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  const loadAllIndividuals = async () => {
+    try{
+      setIsLoading(true);
+      console.log('🔄 Loading all individuals...');
+      
+      const results = await api.searchIndividuals('');
+      console.log('✅ Loaded all individuals:', results);
+      setAllIndividuals(results);
+      setSearchResults(results); // Also set search results to show all individuals initially
+    }
+    catch (error) {
+      console.error('Error loading all individuals:', error);
+      Alert.alert('Error', 'Failed to load all individuals. Please try again.');
+    }
+    finally{
+      setIsLoading(false);
+    }
+  };
+
+  // Load all individuals when component mounts
+  useEffect(() => {
+    loadAllIndividuals();
+  }, []);
 
   // Refresh search results when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       if (searchQuery.trim()) {
         performSearch();
+      } else{
+        setSearchResults(allIndividuals);
       }
-    }, [searchQuery])
+    }, [searchQuery, allIndividuals])
   );
 
-  // Search as user types (with debounce)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchQuery.trim()) {
-        performSearch();
-      } else {
-        setSearchResults([]);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+    // Search as user types (with debounce)
+    useEffect(() => {
+      const timeoutId = setTimeout(() => {
+        if (searchQuery.trim()) {
+          performSearch();
+        } else{
+          setSearchResults(allIndividuals);
+        }
+      }, 300);
+      return () => clearTimeout(timeoutId);
+    },[searchQuery, allIndividuals]);
 
   const performSearch = async () => {
     try {
       setIsLoading(true);
+      console.log('🔍 Performing search for:', searchQuery);
       const results = await api.searchIndividuals(searchQuery);
+      console.log('✅ Search results:', results);
       setSearchResults(results);
     } catch (error) {
       console.error('Error searching individuals:', error);
@@ -88,25 +117,29 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
       </View>
 
       {/* Search Results */}
-      {searchQuery.trim() ? (
+      {isLoading ? (
         <View style={styles.resultsContainer}>
-          {renderSectionHeader('Search Results')}
-          {isLoading ? (
-            <ActivityIndicator style={styles.loader} size="large" color="#007AFF" />
-          ) : searchResults.length > 0 ? (
-            <FlatList
-              data={searchResults}
-              renderItem={renderSearchResult}
-              keyExtractor={(item) => item.id}
-              showsVerticalScrollIndicator={false}
-            />
+          <ActivityIndicator style={styles.loader} size="large" color="#007AFF" />
+        </View>
+      ) : searchResults.length > 0 ? (
+        <View style={styles.resultsContainer}>
+          {searchQuery.trim() ? (
+            renderSectionHeader('Search Results')
           ) : (
-            <Text style={styles.noResults}>No individuals found</Text>
+            renderSectionHeader('All Individuals')
           )}
+          <FlatList
+            data={searchResults}
+            renderItem={renderSearchResult}
+            keyExtractor={(item) => item.id}
+            showsVerticalScrollIndicator={false}
+          />
         </View>
       ) : (
         <View style={styles.resultsContainer}>
-          <Text style={styles.noResults}>Enter a search term to find individuals</Text>
+          <Text style={styles.noResults}>
+            {searchQuery.trim() ? 'No individuals found' : 'No individuals available'}
+          </Text>
         </View>
       )}
     </View>

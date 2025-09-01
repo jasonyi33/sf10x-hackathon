@@ -614,13 +614,25 @@ export const api = {
     try {
       console.log('🔍 Searching individuals in database...');
       console.log('Query:', query);
+      console.log('Query trimmed:', query.trim());
+      console.log('Query length:', query.length);
       
       // Use direct Supabase query for real database
-      const { data: individuals, error } = await supabase
+      let supabaseQuery = supabase
         .from('individuals')
         .select('*')
-        .or(`name.ilike.%${query}%,data->>'Name'.ilike.%${query}%`)
         .order('created_at', { ascending: false });
+
+      // Only apply search filter if query is not empty
+      if (query.trim()) {
+        console.log('🔍 Applying search filter for query:', query);
+        supabaseQuery = supabaseQuery.or(`name.ilike.%${query}%,data->>'Name'.ilike.%${query}%`);
+      } else {
+        console.log('🔍 No search query, fetching all individuals');
+      }
+
+      console.log('🔍 Executing Supabase query...');
+      const { data: individuals, error } = await supabaseQuery;
 
       if (error) {
         console.error('❌ Search error:', error);
@@ -628,6 +640,7 @@ export const api = {
       }
 
       console.log('✅ Found individuals:', individuals);
+      console.log('✅ Number of individuals found:', individuals?.length || 0);
       
       // Convert to SearchResult format
       const searchResults: SearchResult[] = individuals.map(individual => {
@@ -648,6 +661,7 @@ export const api = {
       });
 
       console.log('📋 Search results:', searchResults);
+      console.log('📋 Final results count:', searchResults.length);
       return searchResults;
     } catch (error) {
       console.error('❌ Search individuals error:', error);
@@ -853,5 +867,49 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  // Get all individuals (NEW METHOD)
+  getAllIndividuals: async (): Promise<SearchResult[]> => {
+    try {
+      console.log('📋 Fetching all individuals from database...');
+      
+      // Use direct Supabase query for real database
+      const { data: individuals, error } = await supabase
+        .from('individuals')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Get all individuals error:', error);
+        return [];
+      }
+
+      console.log('✅ Found individuals:', individuals);
+      
+      // Convert to SearchResult format
+      const searchResults: SearchResult[] = individuals.map(individual => {
+        // Calculate display score (override or calculated)
+        const displayScore = individual.danger_override !== null && individual.danger_override !== undefined
+          ? individual.danger_override
+          : individual.danger_score;
+        
+        return {
+          id: individual.id,
+          name: individual.name,
+          danger_score: displayScore,
+          last_seen: individual.updated_at,
+          last_seen_days: calculateDaysAgo(individual.updated_at),
+          last_interaction_date: individual.updated_at,
+          abbreviated_address: "Market St & 5th" // Mock address for now
+        };
+      });
+
+      console.log('📋 All individuals results:', searchResults);
+      return searchResults;
+    } catch (error) {
+      console.error('❌ Get all individuals error:', error);
+      return [];
+    }
   },
 }; 
