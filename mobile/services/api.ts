@@ -669,6 +669,61 @@ export const api = {
     }
   },
 
+  // Semantic search using embeddings
+  semanticSearchIndividuals: async (query: string): Promise<SearchResult[]> => {
+    try {
+      console.log('🧠 Performing semantic search with embeddings...');
+      console.log('Query:', query);
+      
+      // Call the embedding search endpoint
+              const result = await apiRequest('/api/embeddings/search', {
+          method: 'POST',
+          body: JSON.stringify({ 
+            query: query,
+            top_k: 20,
+            similarity_threshold: 0.15  // Lower threshold for better semantic matching
+          }),
+        });
+      
+      console.log('✅ Semantic search results:', result);
+      
+      if (!result.results || !Array.isArray(result.results)) {
+        console.log('⚠️ No semantic search results, falling back to regular search');
+        return api.searchIndividuals(query);
+      }
+      
+      // Convert hybrid search results to SearchResult format
+      const searchResults: SearchResult[] = result.results.map((item: any) => {
+        // Calculate display score (override or calculated)
+        const displayScore = item.danger_override !== null && item.danger_override !== undefined
+          ? item.danger_override
+          : item.danger_score;
+        
+        return {
+          id: item.id,
+          name: item.name,
+          danger_score: displayScore,
+          last_seen: new Date().toISOString(), // We don't have this in embedding results
+          last_seen_days: 0, // We don't have this in embedding results
+          last_interaction_date: new Date().toISOString(), // We don't have this in embedding results
+          abbreviated_address: "Market St & 5th", // Mock address for now
+          similarity_score: item.similarity_score, // Add similarity score for display
+          search_type: item.search_type // Add search type (exact/semantic)
+        };
+      });
+      
+      console.log('📋 Hybrid search results converted:', searchResults);
+      console.log(`📊 Found ${result.normal_results || 0} exact matches and ${result.semantic_results || 0} semantic matches`);
+      return searchResults;
+      
+    } catch (error) {
+      console.error('❌ Semantic search error:', error);
+      console.log('🔄 Falling back to regular search...');
+      // Fall back to regular search if embedding search fails
+      return api.searchIndividuals(query);
+    }
+  },
+
   // Get individual profile
   getIndividualProfile: async (individualId: string): Promise<IndividualProfile | null> => {
     try {

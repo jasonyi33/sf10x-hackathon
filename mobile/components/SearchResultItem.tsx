@@ -22,9 +22,16 @@ export default function SearchResultItem({ result, onPress }: SearchResultItemPr
             onOverrideChange={() => {}} // No override in search results
             showSlider={false}
           />
-          <Text style={styles.lastSeen}>
-            Last seen: {daysAgo} {daysAgo === 1 ? 'day' : 'days'} ago
-          </Text>
+          <View style={styles.rightDetails}>
+            {result.similarity_score && (
+              <Text style={styles.similarityScore}>
+                {result.search_type === 'exact' ? '🔍 Exact Match' : `🧠 Match: ${Math.round(result.similarity_score * 100)}%`}
+              </Text>
+            )}
+            <Text style={styles.lastSeen}>
+              Last seen: {daysAgo} {daysAgo === 1 ? 'day' : 'days'} ago
+            </Text>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -55,5 +62,13 @@ const styles = StyleSheet.create({
   lastSeen: {
     fontSize: 14,
     color: '#6B7280',
+  },
+  rightDetails: {
+    alignItems: 'flex-end',
+  },
+  similarityScore: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 4,
   },
 }); 

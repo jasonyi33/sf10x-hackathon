@@ -74,8 +74,20 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
     try {
       setIsLoading(true);
       console.log('🔍 Performing search for:', searchQuery);
-      const results = await api.searchIndividuals(searchQuery);
-      console.log('✅ Search results:', results);
+      
+      // Try semantic search first, fall back to regular search if it fails
+      let results;
+      try {
+        console.log('🧠 Attempting semantic search...');
+        results = await api.semanticSearchIndividuals(searchQuery);
+        console.log('✅ Semantic search successful:', results);
+      } catch (semanticError) {
+        console.log('⚠️ Semantic search failed, using regular search:', semanticError);
+        results = await api.searchIndividuals(searchQuery);
+        console.log('✅ Regular search successful:', results);
+      }
+      
+      console.log('✅ Final search results:', results);
       setSearchResults(results);
     } catch (error) {
       console.error('Error searching individuals:', error);
