@@ -2,11 +2,12 @@
 Individual management API endpoints
 """
 import os
-from fastapi import APIRouter, HTTPException, Depends, status, Query
+from fastapi import APIRouter, HTTPException, Depends, status, Query, BackgroundTasks
 from uuid import UUID
 from typing import Optional
 from datetime import datetime, timezone
 from supabase import create_client, Client
+from dotenv import load_dotenv
 
 from api.auth import get_current_user
 from db.models import (
@@ -34,146 +35,70 @@ def get_current_user_name(user_id: str = Depends(get_current_user)) -> str:
 
 
 def get_supabase_client() -> Client:
-    """Get Supabase client instance"""
+    """Get Supabase client with credentials from environment"""
+    load_dotenv()
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_SERVICE_KEY")
     
-    # For demo/hackathon, use mock client if credentials are mock
-    if url == "mock" or key == "mock" or not url or not key:
-        print("Using mock Supabase client for demo")
-        # Return a mock client that returns demo data
-        class MockSupabaseClient:
-            def table(self, name):
-                return MockTable(name)
-        
-        class MockTable:
-            def __init__(self, table_name):
-                self.table_name = table_name
-                self.mock_data = self._get_mock_data()
-            
-            def _get_mock_data(self):
-                if self.table_name == "individuals":
-                    return [
-                        {
-                            "id": "550e8400-e29b-41d4-a716-446655440001",
-                            "name": "John Doe",
-                            "danger_score": 75,
-                            "danger_override": None,
-                            "data": {"age": 45, "height": 72, "weight": 180},
-                            "created_at": "2024-01-15T10:30:00Z",
-                            "updated_at": "2024-01-15T10:30:00Z"
-                        },
-                        {
-                            "id": "550e8400-e29b-41d4-a716-446655440002", 
-                            "name": "Sarah Smith",
-                            "danger_score": 20,
-                            "danger_override": 40,
-                            "data": {"age": 32, "height": 65, "weight": 140},
-                            "created_at": "2024-01-12T14:20:00Z",
-                            "updated_at": "2024-01-12T14:20:00Z"
-                        },
-                        {
-                            "id": "550e8400-e29b-41d4-a716-446655440003",
-                            "name": "Robert Johnson", 
-                            "danger_score": 90,
-                            "danger_override": None,
-                            "data": {"age": 58, "height": 70, "weight": 200},
-                            "created_at": "2024-01-16T09:15:00Z",
-                            "updated_at": "2024-01-16T09:15:00Z"
-                        }
-                    ]
-                elif self.table_name == "interactions":
-                    return [
-                        {
-                            "id": "550e8400-e29b-41d4-a716-446655440101",
-                            "individual_id": "550e8400-e29b-41d4-a716-446655440001",
-                            "user_id": "user1",
-                            "created_at": "2024-01-15T10:30:00Z",
-                            "location": {"lat": 37.7749, "lng": -122.4194, "address": "Market St & 5th"}
-                        },
-                        {
-                            "id": "550e8400-e29b-41d4-a716-446655440102", 
-                            "individual_id": "550e8400-e29b-41d4-a716-446655440002",
-                            "user_id": "user1", 
-                            "created_at": "2024-01-12T14:20:00Z",
-                            "location": {"lat": 37.7858, "lng": -122.4064, "address": "Ellis St & 6th"}
-                        }
-                    ]
-                elif self.table_name == "categories":
-                    return [
-                        {"id": "550e8400-e29b-41d4-a716-446655440201", "name": "name", "type": "text", "is_required": True},
-                        {"id": "550e8400-e29b-41d4-a716-446655440202", "name": "height", "type": "number", "is_required": True},
-                        {"id": "550e8400-e29b-41d4-a716-446655440203", "name": "weight", "type": "number", "is_required": True}
-                    ]
-                return []
-            
-            def select(self, *args):
-                return self
-            
-            def eq(self, field, value):
-                # Filter by field value
-                if field == "individual_id":
-                    self.mock_data = [item for item in self.mock_data if item.get("individual_id") == value]
-                return self
-            
-            def ilike(self, field, value):
-                # Filter by name (case insensitive)
-                if field == "name":
-                    search_term = value.replace("%", "").lower()
-                    self.mock_data = [item for item in self.mock_data if search_term in item.get("name", "").lower()]
-                return self
-            
-            def order(self, field, desc=False):
-                # Sort by field
-                reverse = desc
-                if field == "created_at":
-                    self.mock_data.sort(key=lambda x: x.get("created_at", ""), reverse=reverse)
-                elif field == "danger_score":
-                    self.mock_data.sort(key=lambda x: x.get("danger_score", 0), reverse=reverse)
-                elif field == "name":
-                    self.mock_data.sort(key=lambda x: x.get("name", ""), reverse=reverse)
-                return self
-            
-            def limit(self, count):
-                # Limit results
-                self.mock_data = self.mock_data[:count]
-                return self
-            
-            def update(self, data):
-                # Update the first matching record
-                if self.mock_data:
-                    self.mock_data[0].update(data)
-                return MockResponse(self.mock_data)
-            
-            def single(self):
-                # Return single result (for get by ID)
-                if self.mock_data:
-                    return MockResponse([self.mock_data[0]])
-                return MockResponse([])
-            
-            def execute(self):
-                return MockResponse(self.mock_data)
-        
-        class MockResponse:
-            def __init__(self, data):
-                self._data = data
-            
-            @property
-            def data(self):
-                return self._data
-            
-            def execute(self):
-                # MockResponse should also support execute() for consistency
-                return self
-    
     if not url or not key:
-        raise ValueError("Supabase configuration missing")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Missing Supabase credentials"
+        )
+    
     return create_client(url, key)
+
+
+async def generate_embedding_background(individual_id: str, individual_data: dict):
+    """
+    Background task to generate embedding for an individual
+    
+    Args:
+        individual_id: ID of the individual
+        individual_data: Individual data dictionary
+    """
+    try:
+        from services.embedding_service import EmbeddingService
+        
+        # Get Supabase client
+        supabase = get_supabase_client()
+        
+        # Initialize embedding service
+        embedding_service = EmbeddingService()
+        
+        # Generate embedding
+        embedding = await embedding_service.generate_individual_embedding(individual_data)
+        
+        # Create text representation for storage
+        text_parts = []
+        if individual_data.get('name'):
+            text_parts.append(f"Name: {individual_data['name']}")
+        if individual_data.get('data'):
+            data = individual_data['data']
+            if isinstance(data, dict):
+                for key, value in data.items():
+                    if value and str(value).strip():
+                        text_parts.append(f"{key}: {value}")
+        
+        embedding_text = " | ".join(text_parts)
+        
+        # Store embedding in database
+        supabase.table("individual_embeddings").upsert({
+            "individual_id": individual_id,
+            "embedding_data": embedding,
+            "embedding_text": embedding_text
+        }).execute()
+        
+        print(f"✅ Background task: Generated embedding for individual: {individual_data.get('name', 'Unknown')}")
+        
+    except Exception as e:
+        print(f"❌ Background task: Failed to generate embedding for {individual_data.get('name', 'Unknown')}: {str(e)}")
 
 
 @router.post("/api/individuals", response_model=SaveIndividualResponse)
 async def save_individual(
     request: SaveIndividualRequest,
+    background_tasks: BackgroundTasks,
     user_id: str = Depends(get_current_user),
     user_name: str = Depends(get_current_user_name)
 ):
@@ -234,6 +159,17 @@ async def save_individual(
             location=request.location,
             transcription=request.transcription,
             audio_url=request.audio_url
+        )
+        
+        # Add background task to generate embedding
+        background_tasks.add_task(
+            generate_embedding_background,
+            result.individual.id,
+            {
+                "id": result.individual.id,
+                "name": result.individual.name,
+                "data": result.individual.data
+            }
         )
         
         return result

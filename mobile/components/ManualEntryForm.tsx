@@ -1,5 +1,17 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { api } from '../services/api';
+
+interface Category {
+  id: string;
+  name: string;
+  type: string;
+  is_required: boolean;
+  options?: any;
+  priority: string;
+  danger_weight: number;
+  auto_trigger: boolean;
+}
 
 interface ManualEntryFormProps {
   onSave: (data: Record<string, any>) => void;
@@ -25,9 +37,37 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Required fields from PRD
-  const requiredFields = ['name', 'height', 'weight', 'skin_color'];
+  // Fetch categories from API on component mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.getCategories();
+      setCategories(response || []);
+      
+      // Initialize form data with empty values for all categories
+      const initialData: Record<string, any> = {};
+      response?.forEach((cat: Category) => {
+        initialData[cat.name] = '';
+      });
+      setFormData(initialData);
+      
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+      Alert.alert('Error', 'Failed to load form fields. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Get required fields from categories
+  const requiredFields = categories.filter(cat => cat.is_required).map(cat => cat.name);
 
   // Field configurations
   const fieldConfig = {
@@ -57,7 +97,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     notes: { type: 'text', label: 'Notes', required: false },
   };
 
-  const handleFieldChange = (fieldName: string, value: string) => {
+  const handleFieldChange = (fieldName: string, value: string | string[]) => {
     setFormData(prev => ({
       ...prev,
       [fieldName]: value,
@@ -104,10 +144,10 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     let isValid = true;
 
     // Validate all fields
-    Object.keys(fieldConfig).forEach(fieldName => {
-      const error = validateField(fieldName, formData[fieldName]);
+    categories.forEach(category => {
+      const error = validateField(category.name, formData[category.name]);
       if (error) {
-        newErrors[fieldName] = error;
+        newErrors[category.name] = error;
         isValid = false;
       }
     });
@@ -139,58 +179,58 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     }
   };
 
-  const renderField = (fieldName: string) => {
-    const config = fieldConfig[fieldName as keyof typeof fieldConfig];
-    const value = formData[fieldName];
-    const error = errors[fieldName];
-    const isRequired = config.required;
+  const renderField = (category: Category) => {
+    const value = formData[category.name];
+    const error = errors[category.name];
+    const isRequired = category.is_required;
 
     return (
-      <View key={fieldName} style={styles.fieldContainer}>
+      <View key={category.id} style={styles.fieldContainer}>
         <Text style={[
           styles.fieldLabel,
           isRequired && styles.requiredLabel,
           error && styles.errorLabel
         ]}>
-          {config.label}
+          {category.name.charAt(0).toUpperCase() + category.name.slice(1).replace(/_/g, ' ')}
           {isRequired && ' *'}
         </Text>
 
-        {config.type === 'select' ? (
-          <View style={styles.selectContainer}>
-            {'options' in config && config.options.map((option: string) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.selectOption,
-                  value === option && styles.selectedOption
-                ]}
-                onPress={() => handleFieldChange(fieldName, option)}
-              >
-                <Text style={[
-                  styles.selectOptionText,
-                  value === option && styles.selectedOptionText
-                ]}>
-                  {option}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {/* Preset options for quick filling (if available) */}
+        {category.options && Array.isArray(category.options) && category.options.length > 0 && (
+          <View style={styles.presetOptionsContainer}>
+            <Text style={styles.presetOptionsLabel}>Quick options:</Text>
+            <View style={styles.presetOptionsRow}>
+              {category.options.map((option: any) => {
+                const optionLabel = option.label || option;
+                
+                return (
+                  <TouchableOpacity
+                    key={optionLabel}
+                    style={styles.presetOptionButton}
+                    onPress={() => handleFieldChange(category.name, optionLabel)}
+                  >
+                    <Text style={styles.presetOptionText}>{optionLabel}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-        ) : (
-          <TextInput
-            style={[
-              styles.fieldInput,
-              error && styles.errorInput
-            ]}
-            value={String(value || '')}
-            onChangeText={(text) => handleFieldChange(fieldName, text)}
-            placeholder={`Enter ${config.label.toLowerCase()}`}
-            placeholderTextColor="#999"
-            keyboardType={config.type === 'number' ? 'numeric' : 'default'}
-            multiline={fieldName === 'notes'}
-            numberOfLines={fieldName === 'notes' ? 3 : 1}
-          />
         )}
+
+        {/* Always render as text input for flexibility */}
+        <TextInput
+          style={[
+            styles.fieldInput,
+            error && styles.errorInput
+          ]}
+          value={String(value || '')}
+          onChangeText={(text) => handleFieldChange(category.name, text)}
+          placeholder={`Enter ${category.name.toLowerCase()}`}
+          placeholderTextColor="#999"
+          keyboardType={category.type === 'number' ? 'numeric' : 'default'}
+          multiline={category.type === 'text' && category.name.toLowerCase().includes('notes')}
+          numberOfLines={category.type === 'text' && category.name.toLowerCase().includes('notes') ? 3 : 1}
+        />
 
         {error && (
           <Text style={styles.errorText}>{error}</Text>
@@ -198,6 +238,29 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
       </View>
     );
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading form fields...</Text>
+      </View>
+    );
+  }
+
+  if (categories.length === 0) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorTitle}>No Categories Found</Text>
+        <Text style={styles.errorText}>
+          No form fields are configured. Please contact an administrator.
+        </Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchCategories}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -209,11 +272,13 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
       </View>
 
       <View style={styles.formContainer}>
-        {/* Required Fields Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Required Information</Text>
-          {requiredFields.map(fieldName => renderField(fieldName))}
-        </View>
+        {/* High Priority Categories */}
+        {categories.filter(cat => cat.priority === 'high').length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Required Information</Text>
+            {categories.filter(cat => cat.priority === 'high').map(category => renderField(category))}
+          </View>
+        )}
 
         {/* Location Information */}
         {selectedLocation && (
@@ -227,14 +292,21 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           </View>
         )}
 
-        {/* Optional Fields Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Additional Information</Text>
-          {Object.keys(fieldConfig)
-            .filter(fieldName => !requiredFields.includes(fieldName))
-            .map(fieldName => renderField(fieldName))
-          }
-        </View>
+        {/* Medium Priority Categories */}
+        {categories.filter(cat => cat.priority === 'medium').length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Additional Information</Text>
+            {categories.filter(cat => cat.priority === 'medium').map(category => renderField(category))}
+          </View>
+        )}
+
+        {/* Low Priority Categories */}
+        {categories.filter(cat => cat.priority === 'low').length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Optional Information</Text>
+            {categories.filter(cat => cat.priority === 'low').map(category => renderField(category))}
+          </View>
+        )}
       </View>
 
       {/* Action Buttons */}
@@ -379,5 +451,66 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1976d2',
     fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#fff',
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#dc3545',
+    marginBottom: 10,
+  },
+
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  presetOptionsContainer: {
+    marginBottom: 10,
+    paddingHorizontal: 10,
+  },
+  presetOptionsLabel: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 5,
+  },
+  presetOptionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  presetOptionButton: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  presetOptionText: {
+    fontSize: 12,
+    color: '#333',
   },
 }); 
