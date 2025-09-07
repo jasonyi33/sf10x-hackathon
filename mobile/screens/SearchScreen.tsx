@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,11 +17,15 @@ import { supabase } from '../services/supabase';
 // NOTE: This component requires @react-navigation/stack to be installed
 // When Tasks 1, 2, 3 are completed, install: npm install @react-navigation/stack react-native-gesture-handler
 
-export default function SearchScreen({ navigation }: { navigation: any }) {
+export default function SearchScreen({ navigation, route }: { navigation: any, route: any }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [allIndividuals, setAllIndividuals] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const listRef = useRef<FlatList<SearchResult>>(null);
+  const [scrollTargetId, setScrollTargetId] = useState<string | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const clearHighlightTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadAllIndividuals = async () => {
     try{
@@ -46,6 +50,50 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
   useEffect(() => {
     loadAllIndividuals();
   }, []);
+
+  // Reload when a refreshKey param changes (e.g., after delete/undo)
+  useEffect(() => {
+    if (route?.params?.refreshKey) {
+      loadAllIndividuals();
+    }
+  }, [route?.params?.refreshKey]);
+
+  // If a restoredId is provided, attempt to scroll to it after data loads
+  useEffect(() => {
+    if (route?.params?.restoredId) {
+      setScrollTargetId(route.params.restoredId);
+      setHighlightedId(route.params.restoredId);
+      if (clearHighlightTimeout.current) {
+        clearTimeout(clearHighlightTimeout.current);
+      }
+      clearHighlightTimeout.current = setTimeout(() => {
+        setHighlightedId(null);
+      }, 2500);
+    }
+  }, [route?.params?.restoredId]);
+
+  // Perform the scroll when we have results and a target id
+  useEffect(() => {
+    if (!scrollTargetId || searchResults.length === 0) return;
+    const index = searchResults.findIndex(item => item.id === scrollTargetId);
+    if (index >= 0) {
+      setTimeout(() => {
+        try {
+          listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.2 });
+        } catch (e) {
+          // ignore scroll errors
+        }
+      }, 150);
+    }
+    setScrollTargetId(null);
+  }, [scrollTargetId, searchResults]);
+
+  // Reload individuals whenever screen gains focus (ensures deletions reflect)
+  useFocusEffect(
+    React.useCallback(() => {
+      loadAllIndividuals();
+    }, [])
+  );
 
   // Refresh search results when screen comes into focus
   useFocusEffect(
@@ -103,7 +151,7 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
   };
 
   const renderSearchResult = ({ item }: { item: SearchResult }) => (
-    <SearchResultItem result={item} onPress={handleResultPress} />
+    <SearchResultItem result={item} onPress={handleResultPress} highlight={highlightedId === item.id} />
   );
 
 
@@ -141,6 +189,7 @@ export default function SearchScreen({ navigation }: { navigation: any }) {
             renderSectionHeader('All Individuals')
           )}
           <FlatList
+            ref={listRef}
             data={searchResults}
             renderItem={renderSearchResult}
             keyExtractor={(item) => item.id}

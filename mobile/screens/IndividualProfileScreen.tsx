@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
 import { IndividualProfile, IndividualProfileScreenProps } from '../types';
 import { api } from '../services/api';
@@ -16,6 +17,8 @@ import FieldDisplay from '../components/FieldDisplay';
 import InteractionHistoryItem from '../components/InteractionHistoryItem';
 import DangerScore from '../components/DangerScore';
 import InteractionDetailModal from '../components/InteractionDetailModal';
+import { Ionicons } from '@expo/vector-icons';
+import Toast from 'react-native-toast-message';
 
 export default function IndividualProfileScreen({ navigation, route }: any) {
   // State variables to store data
@@ -24,9 +27,25 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedInteraction, setSelectedInteraction] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const lastDeletedRef = useRef<IndividualProfile | null>(null);
 
   // Get the individual ID from the route parameters
   const { individualId } = route.params;
+
+  // Set header actions (Delete button)
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          accessibilityLabel="Delete profile"
+          onPress={() => confirmDelete()}
+          style={{ paddingHorizontal: 12 }}
+        >
+          <Ionicons name="trash" size={22} color="#EF4444" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, individualId, profile]);
 
   // Load profile data when component mounts
   useEffect(() => {
@@ -42,15 +61,86 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
       if (profileData) {
         setProfile(profileData);
       } else {
-        Alert.alert('Error', 'Individual not found');
+        Toast.show({ type: 'error', text1: 'Individual not found' });
         navigation.goBack();
       }
     } catch (error) {
       console.error('Error loading profile:', error);
-      Alert.alert('Error', 'Failed to load profile. Please try again.');
+      Toast.show({ type: 'error', text1: 'Failed to load profile', text2: 'Please try again.' });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Confirm and delete the individual profile
+  const confirmDelete = () => {
+    if (!profile) return;
+    Alert.alert(
+      'Delete Profile',
+      `Are you sure you want to delete ${profile.name}? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsLoading(true);
+              const success = await api.deleteIndividual(profile.id);
+              if (success) {
+                // Save snapshot for potential undo
+                lastDeletedRef.current = profile;
+                Toast.show({
+                  type: 'success',
+                  text1: 'Profile deleted',
+                  text2: 'Tap to undo',
+                  visibilityTime: 4000,
+                  onPress: async () => {
+                    try {
+                      const deleted = lastDeletedRef.current;
+                      if (!deleted) return;
+                      const result = await api.saveIndividual({
+                        id: deleted.id,
+                        name: deleted.name,
+                        danger_score: deleted.danger_score,
+                        danger_override: deleted.danger_override,
+                        data: deleted.data,
+                      });
+                      if (result?.success) {
+                        Toast.show({ type: 'success', text1: 'Restored', text2: `${deleted.name} was restored` });
+                        navigation.navigate('SearchMain', { refreshKey: Date.now(), restoredId: deleted.id });
+                        lastDeletedRef.current = null;
+                      } else {
+                        Toast.show({ type: 'error', text1: 'Restore failed', text2: result?.message || 'Please try again.' });
+                      }
+                    } catch (err) {
+                      Toast.show({ type: 'error', text1: 'Restore failed', text2: 'Please try again.' });
+                    }
+                  },
+                });
+                // Navigate back to Search screen; it will refresh on focus
+                navigation.navigate('SearchMain', { refreshKey: Date.now() });
+              } else {
+                Toast.show({
+                  type: 'error',
+                  text1: 'Delete failed',
+                  text2: 'Please try again.',
+                });
+              }
+            } catch (e) {
+              console.error('Delete error:', e);
+              Toast.show({
+                type: 'error',
+                text1: 'Delete failed',
+                text2: 'Please try again.',
+              });
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Function to refresh the profile data
@@ -88,13 +178,13 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
       if (!success) {
         // Revert the change if the API call failed
         setProfile(profile);
-        Alert.alert('Error', 'Failed to update urgency override');
+        Toast.show({ type: 'error', text1: 'Update failed', text2: 'Could not update urgency override.' });
       }
     } catch (error) {
       // Revert the change if there was an error
       setProfile(profile);
       console.error('Error updating urgency override:', error);
-      Alert.alert('Error', 'Failed to update urgency override');
+      Toast.show({ type: 'error', text1: 'Update failed', text2: 'Could not update urgency override.' });
     }
   };
 

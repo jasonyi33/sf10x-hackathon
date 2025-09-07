@@ -795,6 +795,30 @@ export const api = {
     }
   },
 
+  // Delete individual
+  deleteIndividual: async (individualId: string): Promise<boolean> => {
+    try {
+      console.log('🗑️ Deleting individual from database...');
+      console.log('Individual ID:', individualId);
+
+      const { error } = await supabase
+        .from('individuals')
+        .delete()
+        .eq('id', individualId);
+
+      if (error) {
+        console.error('❌ Delete individual error:', error);
+        return false;
+      }
+
+      console.log('✅ Successfully deleted individual');
+      return true;
+    } catch (error) {
+      console.error('❌ Delete individual exception:', error);
+      return false;
+    }
+  },
+
   // Get categories
   getCategories: async (): Promise<any[]> => {
     try {
