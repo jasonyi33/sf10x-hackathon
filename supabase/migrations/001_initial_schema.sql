@@ -3,8 +3,8 @@ CREATE TABLE individuals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     data JSONB NOT NULL DEFAULT '{}',
-    danger_score INTEGER DEFAULT 0,
-    danger_override INTEGER,
+    urgency_score INTEGER DEFAULT 0,
+    urgency_override INTEGER,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );

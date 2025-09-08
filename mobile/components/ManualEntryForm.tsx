@@ -1,5 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { api } from '../services/api';
+import { normalizeHeightToStandardString, parseHeightToInches } from '../utils/height';
+
+interface Category {
+  id: string;
+  name: string;
+  type: string;
+  is_required: boolean;
+  options?: any;
+  priority: string;
+  danger_weight: number;
+  auto_trigger: boolean;
+}
 
 interface ManualEntryFormProps {
   onSave: (data: Record<string, any>) => void;
@@ -25,39 +38,76 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Required fields from PRD
-  const requiredFields = ['name', 'height', 'weight', 'skin_color'];
+  // Fetch categories from API on component mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
-  // Field configurations
-  const fieldConfig = {
-    name: { type: 'text', label: 'Name', required: true },
-    height: { type: 'number', label: 'Height (inches)', required: true, max: 300 },
-    weight: { type: 'number', label: 'Weight (pounds)', required: true, max: 300 },
-    skin_color: { 
-      type: 'select', 
-      label: 'Skin Color', 
-      required: true, 
-      options: ['Light', 'Medium', 'Dark'] 
-    },
-    gender: { 
-      type: 'select', 
-      label: 'Gender', 
-      required: false, 
-      options: ['Male', 'Female', 'Other', 'Unknown'] 
-    },
-    substance_abuse_history: { 
-      type: 'select', 
-      label: 'Substance Abuse History', 
-      required: false, 
-      options: ['None', 'Mild', 'Moderate', 'Severe', 'In Recovery'] 
-    },
-    age: { type: 'number', label: 'Age', required: false, max: 120 },
-    location: { type: 'text', label: 'Location', required: false },
-    notes: { type: 'text', label: 'Notes', required: false },
+  const fetchCategories = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.getCategories();
+      
+      // Sort categories with essential categories first in specific order
+      const sortedCategories = (response || []).sort((a, b) => {
+        // Define essential categories order: Name, Height, Weight, Age
+        const essentialOrder = ['name', 'height', 'weight', 'age'];
+        const aIndex = essentialOrder.indexOf(a.name.toLowerCase());
+        const bIndex = essentialOrder.indexOf(b.name.toLowerCase());
+        
+        // If both are essential categories, sort by their defined order
+        if (aIndex !== -1 && bIndex !== -1) {
+          return aIndex - bIndex;
+        }
+        
+        // Essential categories always come first
+        if (aIndex !== -1) return -1;
+        if (bIndex !== -1) return 1;
+        
+        // For non-essential categories, sort by priority then alphabetically
+        const priorityOrder: Record<string, number> = { high: 3, medium: 2, low: 1 };
+        const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+        if (priorityDiff !== 0) return priorityDiff;
+        
+        // Finally sort alphabetically by name
+        return a.name.localeCompare(b.name);
+      });
+      
+      setCategories(sortedCategories);
+      
+      // Initialize form data with empty values for all categories
+      const initialData: Record<string, any> = {};
+      sortedCategories?.forEach((cat: Category) => {
+        initialData[cat.name] = '';
+      });
+      setFormData(initialData);
+      
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+      Alert.alert('Error', 'Failed to load form fields. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleFieldChange = (fieldName: string, value: string) => {
+  // Parse height strings like 5'10, 5 ft 10 in, 70, 70in, 1.78m (optional) into inches
+  // height utils moved to ../utils/height
+
+  // Helper to format a category name for display
+  const prettyLabel = (name: string) => {
+    return name
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Helper to normalize category names for comparison
+  const normalizeKey = (name: string) => name.trim().toLowerCase().replace(/\s+|_/g, '');
+
+  const handleFieldChange = (fieldName: string, value: string | string[]) => {
     setFormData(prev => ({
       ...prev,
       [fieldName]: value,
@@ -72,28 +122,43 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     }
   };
 
-  const validateField = (fieldName: string, value: any): string => {
-    const config = fieldConfig[fieldName as keyof typeof fieldConfig];
+  const validateField = (category: Category, value: any): string => {
+    const label = prettyLabel(category.name);
     
-    // Check required fields
-    if (config.required && (!value || value === '')) {
-      return `${config.label} is required`;
+    // Required check based on category config
+    if (category.is_required && (value === undefined || value === null || value === '')) {
+      return `${label} is required`;
     }
 
-    // Check number fields
-    if (config.type === 'number' && value) {
-      const numValue = parseInt(value);
-      if (isNaN(numValue) || numValue < 0) {
-        return `${config.label} must be a positive number`;
+    // Number validation (with special handling for height)
+    if (category.type === 'number' && value !== undefined && value !== null && value !== '') {
+      const key = category.name.trim().toLowerCase();
+      let numValue: number;
+      if (key === 'height') {
+        const parsed = parseHeightToInches(value);
+        if (parsed === null) {
+          return `${label} must be in inches or x'y format`;
+        }
+        numValue = parsed;
+      } else {
+        numValue = Number(value);
       }
-      if ('max' in config && config.max && numValue > config.max) {
-        return `${config.label} must be ${config.max} or less`;
+      if (Number.isNaN(numValue) || numValue < 0) {
+        return `${label} must be a positive number`;
+      }
+      if ((key === 'height' || key === 'weight') && numValue > 300) {
+        return `${label} must be 300 or less`;
+      }
+      if (key === 'age' && numValue > 120) {
+        return `${label} must be 120 or less`;
       }
     }
 
-    // Check select fields
-    if (config.type === 'select' && value && 'options' in config && !config.options.includes(value)) {
-      return `Please select a valid ${config.label.toLowerCase()}`;
+    // Select validation
+    if (category.type === 'select' && Array.isArray(category.options) && value) {
+      if (!category.options.includes(value)) {
+        return `Please select a valid ${label.toLowerCase()}`;
+      }
     }
 
     return '';
@@ -104,10 +169,10 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     let isValid = true;
 
     // Validate all fields
-    Object.keys(fieldConfig).forEach(fieldName => {
-      const error = validateField(fieldName, formData[fieldName]);
+    categories.forEach(category => {
+      const error = validateField(category, formData[category.name]);
       if (error) {
-        newErrors[fieldName] = error;
+        newErrors[category.name] = error;
         isValid = false;
       }
     });
@@ -124,6 +189,15 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         return acc;
       }, {} as Record<string, any>);
 
+      // Normalize height to a consistent feet'inches string (e.g., 5'10)
+      const heightKey = Object.keys(cleanData).find(k => k.trim().toLowerCase() === 'height');
+      if (heightKey && cleanData[heightKey] !== undefined && cleanData[heightKey] !== null && cleanData[heightKey] !== '') {
+        const normalized = normalizeHeightToStandardString(cleanData[heightKey]);
+        if (normalized !== null) {
+          cleanData[heightKey] = normalized;
+        }
+      }
+
       // Add location data if available
       if (selectedLocation) {
         cleanData.location = {
@@ -139,58 +213,64 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     }
   };
 
-  const renderField = (fieldName: string) => {
-    const config = fieldConfig[fieldName as keyof typeof fieldConfig];
-    const value = formData[fieldName];
-    const error = errors[fieldName];
-    const isRequired = config.required;
+  const renderField = (category: Category) => {
+    const value = formData[category.name];
+    const error = errors[category.name];
+    const isRequired = category.is_required;
 
     return (
-      <View key={fieldName} style={styles.fieldContainer}>
+      <View key={category.id} style={styles.fieldContainer}>
         <Text style={[
           styles.fieldLabel,
           isRequired && styles.requiredLabel,
           error && styles.errorLabel
         ]}>
-          {config.label}
+          {prettyLabel(category.name)}
           {isRequired && ' *'}
         </Text>
 
-        {config.type === 'select' ? (
-          <View style={styles.selectContainer}>
-            {'options' in config && config.options.map((option: string) => (
-              <TouchableOpacity
-                key={option}
-                style={[
-                  styles.selectOption,
-                  value === option && styles.selectedOption
-                ]}
-                onPress={() => handleFieldChange(fieldName, option)}
-              >
-                <Text style={[
-                  styles.selectOptionText,
-                  value === option && styles.selectedOptionText
-                ]}>
-                  {option}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {/* Preset options for quick filling (if available) */}
+        {category.options && Array.isArray(category.options) && category.options.length > 0 && (
+          <View style={styles.presetOptionsContainer}>
+            <Text style={styles.presetOptionsLabel}>Quick options:</Text>
+            <View style={styles.presetOptionsRow}>
+              {category.options.map((option: any) => {
+                const optionLabel = option.label || option;
+                
+                return (
+                  <TouchableOpacity
+                    key={optionLabel}
+                    style={styles.presetOptionButton}
+                    onPress={() => handleFieldChange(category.name, optionLabel)}
+                  >
+                    <Text style={styles.presetOptionText}>{optionLabel}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-        ) : (
-          <TextInput
-            style={[
-              styles.fieldInput,
-              error && styles.errorInput
-            ]}
-            value={String(value || '')}
-            onChangeText={(text) => handleFieldChange(fieldName, text)}
-            placeholder={`Enter ${config.label.toLowerCase()}`}
-            placeholderTextColor="#999"
-            keyboardType={config.type === 'number' ? 'numeric' : 'default'}
-            multiline={fieldName === 'notes'}
-            numberOfLines={fieldName === 'notes' ? 3 : 1}
-          />
         )}
+
+        {/* Always render as text input for flexibility */}
+        <TextInput
+          style={[
+            styles.fieldInput,
+            error && styles.errorInput
+          ]}
+          value={String(value || '')}
+          onChangeText={(text) => handleFieldChange(category.name, text)}
+          placeholder={
+            category.name.trim().toLowerCase() === 'height' 
+              ? "Enter height (e.g., 5'10 or 70)" 
+              : category.name.toLowerCase().includes('additional information')
+                ? "Enter any other relevant information not covered by other categories..."
+                : `Enter ${category.name.toLowerCase()}`
+          }
+          placeholderTextColor="#999"
+          keyboardType={category.type === 'number' && category.name.trim().toLowerCase() !== 'height' ? 'numeric' : 'default'}
+          multiline={category.type === 'text' && (category.name.toLowerCase().includes('notes') || category.name.toLowerCase().includes('additional information'))}
+          numberOfLines={category.type === 'text' && (category.name.toLowerCase().includes('notes') || category.name.toLowerCase().includes('additional information')) ? 4 : 1}
+        />
 
         {error && (
           <Text style={styles.errorText}>{error}</Text>
@@ -198,6 +278,29 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
       </View>
     );
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading form fields...</Text>
+      </View>
+    );
+  }
+
+  if (categories.length === 0) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorTitle}>No Categories Found</Text>
+        <Text style={styles.errorText}>
+          No form fields are configured. Please contact an administrator.
+        </Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchCategories}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -209,11 +312,25 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
       </View>
 
       <View style={styles.formContainer}>
-        {/* Required Fields Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Required Information</Text>
-          {requiredFields.map(fieldName => renderField(fieldName))}
-        </View>
+        {/* Essential Information - Name, Height, Weight, Age */}
+        {(() => {
+          const essentialNames = ['name', 'height', 'weight', 'age'];
+          const essentialCategories = categories.filter(cat => 
+            essentialNames.includes(cat.name.toLowerCase())
+          ).sort((a, b) => {
+            const aIndex = essentialNames.indexOf(a.name.toLowerCase());
+            const bIndex = essentialNames.indexOf(b.name.toLowerCase());
+            return aIndex - bIndex;
+          });
+          
+          if (essentialCategories.length === 0) return null;
+          return (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Essential Information</Text>
+              {essentialCategories.map(category => renderField(category))}
+            </View>
+          );
+        })()}
 
         {/* Location Information */}
         {selectedLocation && (
@@ -227,14 +344,21 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           </View>
         )}
 
-        {/* Optional Fields Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Additional Information</Text>
-          {Object.keys(fieldConfig)
-            .filter(fieldName => !requiredFields.includes(fieldName))
-            .map(fieldName => renderField(fieldName))
-          }
-        </View>
+        {/* Other Information - All non-essential categories */}
+        {(() => {
+          const essentialNames = ['name', 'height', 'weight', 'age'];
+          const otherCategories = categories.filter(cat => 
+            !essentialNames.includes(cat.name.toLowerCase())
+          );
+          
+          if (otherCategories.length === 0) return null;
+          return (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Other Information</Text>
+              {otherCategories.map(category => renderField(category))}
+            </View>
+          );
+        })()}
       </View>
 
       {/* Action Buttons */}
@@ -379,5 +503,66 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1976d2',
     fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#fff',
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#dc3545',
+    marginBottom: 10,
+  },
+
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  presetOptionsContainer: {
+    marginBottom: 10,
+    paddingHorizontal: 10,
+  },
+  presetOptionsLabel: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 5,
+  },
+  presetOptionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  presetOptionButton: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  presetOptionText: {
+    fontSize: 12,
+    color: '#333',
   },
 }); 

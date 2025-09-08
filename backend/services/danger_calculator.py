@@ -1,19 +1,19 @@
 """
-Danger score calculation service
+Urgency score calculation service
 """
 from typing import Dict, List, Any
 
 
 def calculate_danger_score(individual_data: dict, categories: list) -> int:
     """
-    Calculate danger score based on weighted category values
+    Calculate urgency score based on weighted category values
     
     Args:
         individual_data: Dictionary of field values for the individual
-        categories: List of category definitions with danger weights
+        categories: List of category definitions with urgency weights
         
     Returns:
-        Integer danger score 0-100
+        Integer urgency score 0-100
         
     Formula:
         - Auto-trigger: If value exists AND auto_trigger=true → return 100

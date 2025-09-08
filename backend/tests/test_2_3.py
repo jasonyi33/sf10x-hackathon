@@ -10,26 +10,26 @@ print("Starting Task 2.3 test...")
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from services.danger_calculator import calculate_danger_score, get_display_danger_score
+from services.urgency_calculator import calculate_urgency_score, get_display_urgency_score
 
 # Test categories
 TEST_CATEGORIES = [
     {
         "name": "height",
         "type": "number",
-        "danger_weight": 50,
+        "urgency_weight": 50,
         "auto_trigger": False
     },
     {
         "name": "weight", 
         "type": "number",
-        "danger_weight": 0,  # No weight, should be ignored
+        "urgency_weight": 0,  # No weight, should be ignored
         "auto_trigger": False
     },
     {
         "name": "weapon_possession",
         "type": "single_select",
-        "danger_weight": 0,
+        "urgency_weight": 0,
         "auto_trigger": True,  # Auto-trigger if any value
         "options": [
             {"label": "None", "value": 0},
@@ -40,7 +40,7 @@ TEST_CATEGORIES = [
     {
         "name": "homeless_risk",
         "type": "single_select", 
-        "danger_weight": 70,
+        "urgency_weight": 70,
         "auto_trigger": False,
         "options": [
             {"label": "Low", "value": 0.2},
@@ -51,13 +51,13 @@ TEST_CATEGORIES = [
     {
         "name": "notes",
         "type": "text",
-        "danger_weight": 100,  # Should be ignored (text type)
+        "urgency_weight": 100,  # Should be ignored (text type)
         "auto_trigger": False
     },
     {
         "name": "conditions",
         "type": "multi_select",
-        "danger_weight": 50,  # Should be ignored (multi-select)
+        "urgency_weight": 50,  # Should be ignored (multi-select)
         "auto_trigger": False
     }
 ]
@@ -114,8 +114,8 @@ TEST_CASES = [
         "name": "Test from task doc",
         "data": {"height": 90, "homeless_risk": "High"},
         "categories": [
-            {"name": "height", "type": "number", "danger_weight": 30, "auto_trigger": False},
-            {"name": "homeless_risk", "type": "single_select", "danger_weight": 70, 
+            {"name": "height", "type": "number", "urgency_weight": 30, "auto_trigger": False},
+            {"name": "homeless_risk", "type": "single_select", "urgency_weight": 70, 
              "options": [{"label": "High", "value": 0.9}], "auto_trigger": False}
         ],
         # (90/300*30) + (0.9*70) = 9 + 63 = 72
@@ -125,7 +125,7 @@ TEST_CASES = [
     }
 ]
 
-print("Testing Task 2.3: Danger Score Calculator")
+print("Testing Task 2.3: Urgency Score Calculator")
 print("=" * 50)
 
 # Test calculate_danger_score
@@ -134,7 +134,7 @@ for test in TEST_CASES:
     print(f"Data: {test['data']}")
     
     categories = test.get('categories', TEST_CATEGORIES)
-    result = calculate_danger_score(test['data'], categories)
+    result = calculate_urgency_score(test['data'], categories)
     
     if 'expected' in test:
         if result == test['expected']:
@@ -147,36 +147,36 @@ for test in TEST_CASES:
         else:
             print(f"❌ Score: {result} (should not be {test['expected_not']})")
 
-# Test get_display_danger_score
+# Test get_display_urgency_score
 print("\n" + "-" * 50)
-print("Testing get_display_danger_score")
+print("Testing get_display_urgency_score")
 
 test_individuals = [
     {
         "name": "No override",
-        "individual": {"danger_score": 75, "danger_override": None},
+        "individual": {"urgency_score": 75, "urgency_override": None},
         "expected": 75
     },
     {
         "name": "With override", 
-        "individual": {"danger_score": 75, "danger_override": 40},
+        "individual": {"urgency_score": 75, "urgency_override": 40},
         "expected": 40
     },
     {
         "name": "Override to 0",
-        "individual": {"danger_score": 90, "danger_override": 0},
+        "individual": {"urgency_score": 90, "urgency_override": 0},
         "expected": 0
     },
     {
-        "name": "Missing danger_score",
-        "individual": {"danger_override": None},
+        "name": "Missing urgency_score",
+        "individual": {"urgency_override": None},
         "expected": 0
     }
 ]
 
 for test in test_individuals:
     print(f"\nTest: {test['name']}")
-    result = get_display_danger_score(test['individual'])
+    result = get_display_urgency_score(test['individual'])
     if result == test['expected']:
         print(f"✅ Display score: {result}")
     else:

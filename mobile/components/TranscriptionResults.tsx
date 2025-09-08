@@ -1,8 +1,20 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { TranscriptionResult, api } from '../services/api';
+import { normalizeHeightToStandardString } from '../utils/height';
 import { MergeUI } from './MergeUI';
+
+interface Category {
+  id: string;
+  name: string;
+  type: string;
+  is_required: boolean;
+  options?: any;
+  priority: string;
+  danger_weight: number;
+  auto_trigger: boolean;
+}
 
 interface TranscriptionResultsProps {
   result: TranscriptionResult;
@@ -23,6 +35,60 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
     confidence: number;
     name: string;
   } | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch categories from API on component mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.getCategories();
+      
+      // Sort categories with essential categories first in specific order
+      const sortedCategories = (response || []).sort((a, b) => {
+        // Define essential categories order: Name, Height, Weight, Age
+        const essentialOrder = ['name', 'height', 'weight', 'age'];
+        const aIndex = essentialOrder.indexOf(a.name.toLowerCase());
+        const bIndex = essentialOrder.indexOf(b.name.toLowerCase());
+        
+        // If both are essential categories, sort by their defined order
+        if (aIndex !== -1 && bIndex !== -1) {
+          return aIndex - bIndex;
+        }
+        
+        // Essential categories always come first
+        if (aIndex !== -1) return -1;
+        if (bIndex !== -1) return 1;
+        
+        // For non-essential categories, sort by priority then alphabetically
+        const priorityOrder: Record<string, number> = { high: 3, medium: 2, low: 1 };
+        const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+        if (priorityDiff !== 0) return priorityDiff;
+        
+        // Finally sort alphabetically by name
+        return a.name.localeCompare(b.name);
+      });
+      
+      setCategories(sortedCategories);
+    } catch (error: any) {
+      console.error('Failed to fetch categories:', error);
+      Alert.alert('Error', 'Failed to load form fields. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Helper to format a category name for display
+  const formatCategoryName = (name: string) => {
+    return name
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
 
   const handleFieldChange = (fieldName: string, value: any) => {
     setCategorizedData(prev => ({
@@ -36,8 +102,9 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
   const handleSave = async () => {
     if (isSaving) return;
     
-    // Validate required fields
-    const missingFields = result.missing_required.filter(field => 
+    // Validate required fields using categories
+    const requiredFields = categories.filter(cat => cat.is_required).map(cat => cat.name);
+    const missingFields = requiredFields.filter(field => 
       !categorizedData[field] || categorizedData[field] === ''
     );
 
@@ -80,8 +147,8 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
                     text2: 'Data merged successfully!'
                   });
                   onSave(mergedData);
-                } catch (error) {
-                  Alert.alert('Error', error.message);
+                } catch (error: any) {
+                  Alert.alert('Error', error.message || 'An error occurred');
                   setIsSaving(false);
                 }
               }
@@ -97,10 +164,12 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
         return;
       } else {
         // No meaningful match (< 60% or no matches), save as new
-        const saveData = {
-          ...categorizedData,
-          // Add any additional context data here if needed
-        };
+        const saveData: Record<string, any> = { ...categorizedData };
+        const heightKey = Object.keys(saveData).find(k => k.trim().toLowerCase() === 'height');
+        if (heightKey && saveData[heightKey]) {
+          const normalized = normalizeHeightToStandardString(saveData[heightKey]);
+          if (normalized) saveData[heightKey] = normalized;
+        }
         await api.saveIndividual(saveData);
         Toast.show({
           type: 'success',
@@ -109,8 +178,8 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
         });
         onSave(saveData);
       }
-    } catch (error) {
-      Alert.alert('Error', error.message);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'An error occurred');
     } finally {
       setIsSaving(false);
     }
@@ -127,11 +196,11 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
       setShowMergeUI(false);
       setSelectedMatch(null);
       onSave(mergedData);
-    } catch (error) {
+    } catch (error: any) {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: error.message
+        text2: error.message || 'An error occurred'
       });
     }
   };
@@ -147,11 +216,11 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
       setShowMergeUI(false);
       setSelectedMatch(null);
       onSave(data);
-    } catch (error) {
+    } catch (error: any) {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: error.message
+        text2: error.message || 'An error occurred'
       });
     }
   };
@@ -162,7 +231,7 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
   };
 
   const isFieldRequired = (fieldName: string) => {
-    return result.missing_required.includes(fieldName);
+    return categories.some(cat => cat.name === fieldName && cat.is_required);
   };
 
   const isFieldMissing = (fieldName: string) => {
@@ -170,6 +239,29 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
   };
 
   const renderField = (fieldName: string, value: any) => {
+    const category = categories.find(cat => cat.name === fieldName);
+    if (!category) {
+      // For backward compatibility, render unknown fields as text inputs
+      return (
+        <View key={fieldName} style={styles.fieldContainer}>
+          <Text style={styles.fieldLabel}>
+            {formatCategoryName(fieldName)}
+          </Text>
+          <TextInput
+            style={styles.fieldInput}
+            value={String(value || '')}
+            onChangeText={(text) => handleFieldChange(fieldName, text)}
+            placeholder={
+              fieldName.toLowerCase().includes('additional information')
+                ? "Enter any other relevant information not covered by other categories..."
+                : `Enter ${formatCategoryName(fieldName).toLowerCase()}`
+            }
+            placeholderTextColor="#999"
+          />
+        </View>
+      );
+    }
+    
     const isRequired = isFieldRequired(fieldName);
     const isMissing = isFieldMissing(fieldName);
 
@@ -180,9 +272,33 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
           isRequired && styles.requiredLabel,
           isMissing && styles.missingLabel
         ]}>
-          {fieldName.charAt(0).toUpperCase() + fieldName.slice(1).replace(/_/g, ' ')}
+          {formatCategoryName(fieldName)}
           {isRequired && ' *'}
         </Text>
+
+        {/* Preset options for quick filling (if available) */}
+        {category.options && Array.isArray(category.options) && category.options.length > 0 && (
+          <View style={styles.presetOptionsContainer}>
+            <Text style={styles.presetOptionsLabel}>Quick options:</Text>
+            <View style={styles.presetOptionsRow}>
+              {category.options.map((option: any) => {
+                const optionLabel = option.label || option;
+                
+                return (
+                  <TouchableOpacity
+                    key={optionLabel}
+                    style={styles.presetOptionButton}
+                    onPress={() => handleFieldChange(fieldName, optionLabel)}
+                  >
+                    <Text style={styles.presetOptionText}>{optionLabel}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* Always render as text input for flexibility */}
         <TextInput
           style={[
             styles.fieldInput,
@@ -190,9 +306,19 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
           ]}
           value={String(value || '')}
           onChangeText={(text) => handleFieldChange(fieldName, text)}
-          placeholder={`Enter ${fieldName.replace(/_/g, ' ')}`}
+          placeholder={
+            fieldName.trim().toLowerCase() === 'height' 
+              ? "Enter height (e.g., 5'10 or 70)" 
+              : fieldName.toLowerCase().includes('additional information')
+                ? "Enter any other relevant information not covered by other categories..."
+                : `Enter ${formatCategoryName(fieldName).toLowerCase()}`
+          }
           placeholderTextColor="#999"
+          keyboardType={category.type === 'number' && fieldName.trim().toLowerCase() !== 'height' ? 'numeric' : 'default'}
+          multiline={category.type === 'text' && (fieldName.toLowerCase().includes('notes') || fieldName.toLowerCase().includes('additional information'))}
+          numberOfLines={category.type === 'text' && (fieldName.toLowerCase().includes('notes') || fieldName.toLowerCase().includes('additional information')) ? 4 : 1}
         />
+
         {isMissing && (
           <Text style={styles.errorText}>This field is required</Text>
         )}
@@ -213,6 +339,15 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
     );
   }
 
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading form fields...</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container}>
       {/* Transcription Text */}
@@ -230,15 +365,45 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
           Review and edit the information extracted from your recording
         </Text>
         
-        {Object.entries(categorizedData).map(([fieldName, value]) => 
-          renderField(fieldName, value)
-        )}
+        {/* Essential Information - Name, Height, Weight, Age */}
+        {(() => {
+          const essentialNames = ['name', 'height', 'weight', 'age'];
+          const essentialCategories = categories.filter(cat => 
+            essentialNames.includes(cat.name.toLowerCase())
+          ).sort((a, b) => {
+            const aIndex = essentialNames.indexOf(a.name.toLowerCase());
+            const bIndex = essentialNames.indexOf(b.name.toLowerCase());
+            return aIndex - bIndex;
+          });
+          
+          if (essentialCategories.length === 0) return null;
+          return (
+            <View style={styles.subsection}>
+              <Text style={styles.subsectionTitle}>Essential Information</Text>
+              {essentialCategories
+                .map(category => renderField(category.name, categorizedData[category.name] || ''))
+                .filter(Boolean)}
+            </View>
+          );
+        })()}
 
-        {/* Add missing required fields */}
-        {result.missing_required
-          .filter(field => !categorizedData[field])
-          .map(fieldName => renderField(fieldName, ''))
-        }
+        {/* Other Information - All non-essential categories */}
+        {(() => {
+          const essentialNames = ['name', 'height', 'weight', 'age'];
+          const otherCategories = categories.filter(cat => 
+            !essentialNames.includes(cat.name.toLowerCase())
+          );
+          
+          if (otherCategories.length === 0) return null;
+          return (
+            <View style={styles.subsection}>
+              <Text style={styles.subsectionTitle}>Other Information</Text>
+              {otherCategories
+                .map(category => renderField(category.name, categorizedData[category.name] || ''))
+                .filter(Boolean)}
+            </View>
+          );
+        })()}
       </View>
 
       {/* Potential Matches */}
@@ -306,6 +471,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 8,
+  },
+  subsection: {
+    marginBottom: 20,
+  },
+  subsectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 12,
+    marginTop: 8,
   },
   sectionSubtitle: {
     fontSize: 14,
@@ -427,5 +602,70 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  selectContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
+  },
+  selectOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  selectedOption: {
+    backgroundColor: '#e0e0e0',
+    borderColor: '#007AFF',
+    borderWidth: 1,
+  },
+  selectOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  selectedOptionText: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
+    fontSize: 16,
+  },
+  presetOptionsContainer: {
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 6,
+  },
+  presetOptionsLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginBottom: 8,
+  },
+  presetOptionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  presetOptionButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: '#e0e0e0',
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  presetOptionText: {
+    fontSize: 14,
+    color: '#333',
   },
 }); 

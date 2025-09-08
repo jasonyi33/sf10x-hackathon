@@ -136,6 +136,11 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
     updated_at: '2024-01-15T10:30:00Z',
     total_interactions: 3,
     last_interaction_date: '2024-01-15T10:30:00Z',
+    last_location: {
+      latitude: 37.7749,
+      longitude: -122.4194,
+      address: 'Market Street & 5th Avenue, San Francisco, CA'
+    },
     interactions: [
       {
         id: 'int1',
@@ -187,6 +192,11 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
     updated_at: '2024-01-12T14:20:00Z',
     total_interactions: 2,
     last_interaction_date: '2024-01-12T14:20:00Z',
+    last_location: {
+      latitude: 37.7849,
+      longitude: -122.4094,
+      address: 'Golden Gate Park, San Francisco, CA'
+    },
     interactions: [
       {
         id: 'int4',
@@ -219,8 +229,8 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440001": {
       id: "550e8400-e29b-41d4-a716-446655440001",
       name: "Sarah Smith",
-      danger_score: 15,
-      danger_override: null,
+      urgency_score: 15,
+      urgency_override: null,
       data: { age: 32, height: 65, weight: 140, skin_color: "Light", gender: "Female", substance_abuse_history: ["None"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Low" },
       created_at: "2024-01-10T09:00:00Z",
       updated_at: "2024-01-15T14:30:00Z",
@@ -231,8 +241,8 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440002": {
       id: "550e8400-e29b-41d4-a716-446655440002",
       name: "Michael Chen",
-      danger_score: 25,
-      danger_override: null,
+      urgency_score: 25,
+      urgency_override: null,
       data: { age: 28, height: 68, weight: 155, skin_color: "Medium", gender: "Male", substance_abuse_history: ["None"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Medium" },
       created_at: "2024-01-11T10:15:00Z",
       updated_at: "2024-01-16T11:45:00Z",
@@ -555,10 +565,10 @@ export const api = {
       console.log('Data to save:', data);
       
       // Extract categorized data (age, height, weight, etc.) from the data
-      const { Name, name, id, danger_score, danger_override, data: existingData, ...categorizedData } = data;
+      const { Name, name, id, danger_score, danger_override, data: existingData, location, ...categorizedData } = data;
       
       // Convert categorized data field names to lowercase for profile display
-      const processedData = {};
+      const processedData: Record<string, any> = {};
       Object.entries(categorizedData).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== '') {
           processedData[key.toLowerCase()] = value;
@@ -566,6 +576,7 @@ export const api = {
       });
       
       console.log('📊 Processed categorized data:', processedData);
+      console.log('📍 Location data:', location);
       
       // Use direct Supabase insert for real database
       const { data: result, error } = await supabase
@@ -576,6 +587,7 @@ export const api = {
           data: existingData || processedData || {},
           danger_score: danger_score || 0,
           danger_override: danger_override || null,
+          last_location: location || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -614,13 +626,25 @@ export const api = {
     try {
       console.log('🔍 Searching individuals in database...');
       console.log('Query:', query);
+      console.log('Query trimmed:', query.trim());
+      console.log('Query length:', query.length);
       
       // Use direct Supabase query for real database
-      const { data: individuals, error } = await supabase
+      let supabaseQuery = supabase
         .from('individuals')
         .select('*')
-        .or(`name.ilike.%${query}%,data->>'Name'.ilike.%${query}%`)
         .order('created_at', { ascending: false });
+
+      // Only apply search filter if query is not empty
+      if (query.trim()) {
+        console.log('🔍 Applying search filter for query:', query);
+        supabaseQuery = supabaseQuery.or(`name.ilike.%${query}%,data->>'Name'.ilike.%${query}%`);
+      } else {
+        console.log('🔍 No search query, fetching all individuals');
+      }
+
+      console.log('🔍 Executing Supabase query...');
+      const { data: individuals, error } = await supabaseQuery;
 
       if (error) {
         console.error('❌ Search error:', error);
@@ -628,12 +652,13 @@ export const api = {
       }
 
       console.log('✅ Found individuals:', individuals);
+      console.log('✅ Number of individuals found:', individuals?.length || 0);
       
       // Convert to SearchResult format
       const searchResults: SearchResult[] = individuals.map(individual => {
         // Calculate display score (override or calculated)
-        const displayScore = individual.danger_override !== null && individual.danger_override !== undefined 
-          ? individual.danger_override 
+                const displayScore = individual.danger_override !== null && individual.danger_override !== undefined
+          ? individual.danger_override
           : individual.danger_score;
         
         return {
@@ -648,10 +673,66 @@ export const api = {
       });
 
       console.log('📋 Search results:', searchResults);
+      console.log('📋 Final results count:', searchResults.length);
       return searchResults;
     } catch (error) {
       console.error('❌ Search individuals error:', error);
       return [];
+    }
+  },
+
+  // Semantic search using embeddings
+  semanticSearchIndividuals: async (query: string): Promise<SearchResult[]> => {
+    try {
+      console.log('🧠 Performing semantic search with embeddings...');
+      console.log('Query:', query);
+      
+      // Call the embedding search endpoint
+              const result = await apiRequest('/api/embeddings/search', {
+          method: 'POST',
+          body: JSON.stringify({ 
+            query: query,
+            top_k: 20,
+            similarity_threshold: 0.15  // Lower threshold for better semantic matching
+          }),
+        });
+      
+      console.log('✅ Semantic search results:', result);
+      
+      if (!result.results || !Array.isArray(result.results)) {
+        console.log('⚠️ No semantic search results, falling back to regular search');
+        return api.searchIndividuals(query);
+      }
+      
+      // Convert hybrid search results to SearchResult format
+      const searchResults: SearchResult[] = result.results.map((item: any) => {
+        // Calculate display score (override or calculated)
+        const displayScore = item.danger_override !== null && item.danger_override !== undefined
+          ? item.danger_override
+          : item.danger_score;
+        
+        return {
+          id: item.id,
+          name: item.name,
+          danger_score: displayScore,
+          last_seen: new Date().toISOString(), // We don't have this in embedding results
+          last_seen_days: 0, // We don't have this in embedding results
+          last_interaction_date: new Date().toISOString(), // We don't have this in embedding results
+          abbreviated_address: "Market St & 5th", // Mock address for now
+          similarity_score: item.similarity_score, // Add similarity score for display
+          search_type: item.search_type // Add search type (exact/semantic)
+        };
+      });
+      
+      console.log('📋 Hybrid search results converted:', searchResults);
+      console.log(`📊 Found ${result.normal_results || 0} exact matches and ${result.semantic_results || 0} semantic matches`);
+      return searchResults;
+      
+    } catch (error) {
+      console.error('❌ Semantic search error:', error);
+      console.log('🔄 Falling back to regular search...');
+      // Fall back to regular search if embedding search fails
+      return api.searchIndividuals(query);
     }
   },
 
@@ -684,7 +765,9 @@ export const api = {
         data: individual.data || {},
         created_at: individual.created_at,
         updated_at: individual.updated_at,
-        interactions: [] // TODO: Add interactions when that table is set up
+        last_location: individual.last_location || null,
+        interactions: [], // TODO: Add interactions when that table is set up
+        total_interactions: 0 // TODO: Add interactions when that table is set up
       };
 
       return profile;
@@ -694,10 +777,10 @@ export const api = {
     }
   },
 
-  // Update danger override
+  // Update urgency override
   updateDangerOverride: async (individualId: string, overrideValue: number | null): Promise<boolean> => {
     try {
-      console.log('⚠️ Updating danger override in database...');
+      console.log('⚠️ Updating urgency override in database...');
       console.log('Individual ID:', individualId);
       console.log('Override value:', overrideValue);
       
@@ -717,10 +800,56 @@ export const api = {
         return false;
       }
 
-      console.log('✅ Successfully updated danger override:', data);
+      console.log('✅ Successfully updated urgency override:', data);
       return true;
     } catch (error) {
-      console.error('❌ Update danger override error:', error);
+      console.error('❌ Update urgency override error:', error);
+      return false;
+    }
+  },
+
+  // Delete individual
+  deleteIndividual: async (individualId: string): Promise<boolean> => {
+    try {
+      console.log('🗑️ Deleting individual from database...');
+      console.log('Individual ID:', individualId);
+
+      // First attempt: delete the individual directly
+      let { error } = await supabase
+        .from('individuals')
+        .delete()
+        .eq('id', individualId);
+
+      // If there is a foreign key constraint (23503), delete dependent interactions then retry
+      if (error && (error as any).code === '23503') {
+        console.warn('⚠️ FK constraint, deleting dependent interactions first...');
+        const { error: interactionsError } = await supabase
+          .from('interactions')
+          .delete()
+          .eq('individual_id', individualId);
+
+        if (interactionsError) {
+          console.error('❌ Failed to delete dependent interactions:', interactionsError);
+          return false;
+        }
+
+        // Retry deleting the individual
+        const retry = await supabase
+          .from('individuals')
+          .delete()
+          .eq('id', individualId);
+        error = retry.error as any;
+      }
+
+      if (error) {
+        console.error('❌ Delete individual error:', error);
+        return false;
+      }
+
+      console.log('✅ Successfully deleted individual');
+      return true;
+    } catch (error) {
+      console.error('❌ Delete individual exception:', error);
       return false;
     }
   },
@@ -734,7 +863,14 @@ export const api = {
           { id: '1', name: 'Name', type: 'text', is_required: true, priority: 'high' },
           { id: '2', name: 'Height', type: 'number', is_required: true, priority: 'medium' },
           { id: '3', name: 'Weight', type: 'number', is_required: true, priority: 'medium' },
-          { id: '4', name: 'Skin Color', type: 'single-select', is_required: true, priority: 'high' },
+          { id: '4', name: 'Age', type: 'number', is_required: false, priority: 'medium' },
+          { id: '5', name: 'Skin Color', type: 'single-select', is_required: true, priority: 'high' },
+          { id: '6', name: 'Gender', type: 'single-select', is_required: false, priority: 'medium' },
+          { id: '7', name: 'Medical Conditions', type: 'multi-select', is_required: false, priority: 'high' },
+          { id: '8', name: 'Substance Abuse History', type: 'single-select', is_required: false, priority: 'high' },
+          { id: '9', name: 'Housing Priority', type: 'single-select', is_required: false, priority: 'medium' },
+          { id: '10', name: 'Veteran Status', type: 'single-select', is_required: false, priority: 'medium' },
+          { id: '11', name: 'Additional Information', type: 'text', is_required: false, priority: 'low' },
         ];
       }
 
@@ -742,7 +878,21 @@ export const api = {
       return result.categories || [];
     } catch (error) {
       console.error('Error fetching categories:', error);
-      return [];
+      console.log('Falling back to mock categories due to API error');
+      // Fall back to comprehensive mock data if real API fails
+      return [
+        { id: '1', name: 'Name', type: 'text', is_required: true, priority: 'high' },
+        { id: '2', name: 'Height', type: 'number', is_required: true, priority: 'medium' },
+        { id: '3', name: 'Weight', type: 'number', is_required: true, priority: 'medium' },
+        { id: '4', name: 'Age', type: 'number', is_required: false, priority: 'medium' },
+        { id: '5', name: 'Skin Color', type: 'single-select', is_required: true, priority: 'high' },
+        { id: '6', name: 'Gender', type: 'single-select', is_required: false, priority: 'medium' },
+        { id: '7', name: 'Medical Conditions', type: 'multi-select', is_required: false, priority: 'high' },
+        { id: '8', name: 'Substance Abuse History', type: 'single-select', is_required: false, priority: 'high' },
+        { id: '9', name: 'Housing Priority', type: 'single-select', is_required: false, priority: 'medium' },
+        { id: '10', name: 'Veteran Status', type: 'single-select', is_required: false, priority: 'medium' },
+        { id: '11', name: 'Additional Information', type: 'text', is_required: false, priority: 'low' },
+      ];
     }
   },
 
@@ -852,5 +1002,49 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  // Get all individuals (NEW METHOD)
+  getAllIndividuals: async (): Promise<SearchResult[]> => {
+    try {
+      console.log('📋 Fetching all individuals from database...');
+      
+      // Use direct Supabase query for real database
+      const { data: individuals, error } = await supabase
+        .from('individuals')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Get all individuals error:', error);
+        return [];
+      }
+
+      console.log('✅ Found individuals:', individuals);
+      
+      // Convert to SearchResult format
+      const searchResults: SearchResult[] = individuals.map(individual => {
+        // Calculate display score (override or calculated)
+        const displayScore = individual.danger_override !== null && individual.danger_override !== undefined
+          ? individual.danger_override
+          : individual.danger_score;
+        
+        return {
+          id: individual.id,
+          name: individual.name,
+          danger_score: displayScore,
+          last_seen: individual.updated_at,
+          last_seen_days: calculateDaysAgo(individual.updated_at),
+          last_interaction_date: individual.updated_at,
+          abbreviated_address: "Market St & 5th" // Mock address for now
+        };
+      });
+
+      console.log('📋 All individuals results:', searchResults);
+      return searchResults;
+    } catch (error) {
+      console.error('❌ Get all individuals error:', error);
+      return [];
+    }
   },
 }; 

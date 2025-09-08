@@ -221,10 +221,14 @@ class IndividualService:
             has_transcription=bool(interaction.get("transcription"))
         )
         
+
+        
         return SaveIndividualResponse(
             individual=individual_resp,
             interaction=interaction_resp
         )
+    
+
     
     async def search_individuals(
         self,

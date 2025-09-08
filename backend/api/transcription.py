@@ -38,7 +38,7 @@ async def transcribe_audio_endpoint(
     Transcribe audio and extract categorized data
     
     Process:
-    1. Fetch all categories
+    1. Fetch all categories from database
     2. Transcribe audio using Whisper
     3. Categorize transcription using GPT-4o
     4. Validate required fields
@@ -50,19 +50,30 @@ async def transcribe_audio_endpoint(
         openai_service = OpenAIService()
         supabase: Client = create_client(
             os.getenv("SUPABASE_URL"),
-            os.getenv("SUPABASE_ANON_KEY")  # Use anon key for now
+            os.getenv("SUPABASE_SERVICE_KEY")  # Use service key for full access
         )
         
-        # 1. Fetch all categories (simplified for testing)
-        categories = [
-            {"name": "Name", "type": "text", "is_required": True},
-            {"name": "Age", "type": "number", "is_required": False},
-            {"name": "Height", "type": "number", "is_required": False},
-            {"name": "Weight", "type": "number", "is_required": False},
-            {"name": "Gender", "type": "text", "is_required": False},
-            {"name": "Medical Conditions", "type": "text", "is_required": False},
-            {"name": "Location", "type": "text", "is_required": False}
-        ]
+        # 1. Fetch all categories from database
+        categories_response = supabase.table("categories").select("*").order("created_at").execute()
+        
+        if not categories_response.data:
+            raise HTTPException(
+                status_code=500, 
+                detail="No categories found in database. Please ensure categories are properly configured."
+            )
+        
+        # Format categories for GPT-4o
+        categories = []
+        for cat in categories_response.data:
+            category_data = {
+                "name": cat["name"],
+                "type": cat["type"],
+                "is_required": cat["is_required"],
+                "options": cat.get("options", None)
+            }
+            categories.append(category_data)
+        
+        print(f"Fetched {len(categories)} categories from database: {[cat['name'] for cat in categories]}")
         
         # 2. Transcribe audio
         if request.audio_data:
