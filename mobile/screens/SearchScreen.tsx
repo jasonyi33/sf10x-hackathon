@@ -22,6 +22,7 @@ export default function SearchScreen({ navigation, route }: { navigation: any, r
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [allIndividuals, setAllIndividuals] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingSemanticResults, setIsLoadingSemanticResults] = useState(false);
   const listRef = useRef<FlatList<SearchResult>>(null);
   const [scrollTargetId, setScrollTargetId] = useState<string | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -121,28 +122,62 @@ export default function SearchScreen({ navigation, route }: { navigation: any, r
   const performSearch = async () => {
     try {
       setIsLoading(true);
-      console.log('🔍 Performing search for:', searchQuery);
+      console.log('🔍 Performing hybrid search for:', searchQuery);
       
-      // Try semantic search first, fall back to regular search if it fails
-      let results;
+      // Phase 1: Get instant text-based results
+      console.log('⚡ Getting instant text matches...');
+      const textResults = await api.searchIndividuals(searchQuery);
+      console.log('✅ Text search results:', textResults);
+      
+      // Show instant text results immediately
+      setSearchResults(textResults);
+      setIsLoading(false); // Stop main loading indicator
+      
+      // Phase 2: Get semantic results in background (if text search had results or not)
+      setIsLoadingSemanticResults(true);
       try {
-        console.log('🧠 Attempting semantic search...');
-        results = await api.semanticSearchIndividuals(searchQuery);
-        console.log('✅ Semantic search successful:', results);
+        console.log('🧠 Getting semantic matches in background...');
+        const semanticResults = await api.semanticSearchIndividuals(searchQuery);
+        console.log('✅ Semantic search results:', semanticResults);
+        
+        // Merge results, avoiding duplicates
+        const mergedResults = mergeSearchResults(textResults, semanticResults);
+        console.log('✅ Merged results:', mergedResults);
+        setSearchResults(mergedResults);
+        
       } catch (semanticError) {
-        console.log('⚠️ Semantic search failed, using regular search:', semanticError);
-        results = await api.searchIndividuals(searchQuery);
-        console.log('✅ Regular search successful:', results);
+        console.log('⚠️ Semantic search failed, keeping text results:', semanticError);
+        // Keep the text results that are already showing
       }
       
-      console.log('✅ Final search results:', results);
-      setSearchResults(results);
     } catch (error) {
-      console.error('Error searching individuals:', error);
+      console.error('Error performing search:', error);
       Alert.alert('Error', 'Failed to search individuals. Please try again.');
     } finally {
       setIsLoading(false);
+      setIsLoadingSemanticResults(false);
     }
+  };
+
+  // Helper function to merge search results and remove duplicates
+  const mergeSearchResults = (textResults: SearchResult[], semanticResults: SearchResult[]): SearchResult[] => {
+    const textIds = new Set(textResults.map(result => result.id));
+    
+    // Add semantic results that aren't already in text results
+    const uniqueSemanticResults = semanticResults.filter(result => !textIds.has(result.id));
+    
+    // Combine: text results first (marked as exact), then semantic results
+    const textResultsMarked = textResults.map(result => ({ 
+      ...result, 
+      search_type: 'exact' as const 
+    }));
+    
+    const semanticResultsMarked = uniqueSemanticResults.map(result => ({ 
+      ...result, 
+      search_type: 'semantic' as const 
+    }));
+    
+    return [...textResultsMarked, ...semanticResultsMarked];
   };
 
   const handleResultPress = (result: SearchResult) => {
@@ -158,7 +193,15 @@ export default function SearchScreen({ navigation, route }: { navigation: any, r
 
   const renderSectionHeader = (title: string) => (
     <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.sectionHeaderContent}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {isLoadingSemanticResults && (
+          <View style={styles.semanticLoadingIndicator}>
+            <ActivityIndicator size="small" color="#6366F1" />
+            <Text style={styles.semanticLoadingText}>Finding more...</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 
@@ -210,42 +253,74 @@ export default function SearchScreen({ navigation, route }: { navigation: any, r
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
   },
   searchContainer: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 20,
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchInput: {
-    height: 44,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    height: 46,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 18,
     fontSize: 16,
-    color: '#111827',
+    color: '#1F2937',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   resultsContainer: {
     flex: 1,
+    paddingTop: 12,
   },
   sectionHeader: {
-    padding: 16,
-    paddingBottom: 8,
-    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'transparent',
+  },
+  sectionHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: '#64748B',
+    letterSpacing: -0.2,
+  },
+  semanticLoadingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  semanticLoadingText: {
+    fontSize: 12,
+    color: '#6366F1',
+    fontWeight: '500',
+    marginLeft: 6,
   },
   loader: {
-    padding: 20,
+    padding: 24,
   },
   noResults: {
-    padding: 20,
+    padding: 32,
     textAlign: 'center',
-    color: '#6B7280',
-    fontSize: 16,
+    color: '#64748B',
+    fontSize: 15,
+    fontWeight: '500',
   },
 }); 

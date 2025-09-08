@@ -103,7 +103,7 @@ export default function DangerScore({
     <View style={styles.container}>
       {/* Large Urgency Score Display */}
       <View style={[styles.scoreContainer, { backgroundColor: scoreColor }]}>
-        <Text style={styles.scoreLabel}>Danger Score</Text>
+        <Text style={styles.scoreLabel}>Urgency Score</Text>
         <Text style={styles.scoreValue}>{displayScore}</Text>
         
         {/* Manual Override Indicator */}

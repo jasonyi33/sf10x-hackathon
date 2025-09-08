@@ -29,25 +29,29 @@ export default function SearchResultItem({ result, onPress, highlight }: SearchR
     ? anim.interpolate({ inputRange: [0, 1], outputRange: ['#FEF3C7', '#FFFFFF'] })
     : '#FFFFFF';
 
+  // Get urgency score for compact display
+  const displayScore = getDisplayDangerScore(result);
+  const scoreColor = getDangerScoreColor(displayScore);
+
   return (
     <Animated.View style={[styles.highlightWrapper, { backgroundColor }]}>
       <TouchableOpacity style={styles.container} onPress={() => onPress(result)}>
         <View style={styles.content}>
-          <Text style={styles.name}>{result.name}</Text>
+          <View style={styles.header}>
+            <Text style={styles.name}>{result.name}</Text>
+            <View style={[styles.urgencyBadge, { backgroundColor: scoreColor }]}>
+              <Text style={styles.urgencyText}>{displayScore}</Text>
+            </View>
+          </View>
           <View style={styles.details}>
-            <DangerScore
-              individual={result}
-              onOverrideChange={() => {}} // No override in search results
-              showSlider={false}
-            />
-            <View style={styles.rightDetails}>
-              {result.similarity_score && (
+            <View style={styles.metaInfo}>
+              {(result.similarity_score || result.search_type === 'exact') && (
                 <Text style={styles.similarityScore}>
-                  {result.search_type === 'exact' ? '🔍 Exact Match' : `🧠 Match: ${Math.round(result.similarity_score * 100)}%`}
+                  {result.search_type === 'exact' ? '🔍 Text Match' : `🧠 ${Math.round(result.similarity_score * 100)}%`}
                 </Text>
               )}
               <Text style={styles.lastSeen}>
-                Last seen: {daysAgo} {daysAgo === 1 ? 'day' : 'days'} ago
+                {daysAgo} {daysAgo === 1 ? 'day' : 'days'} ago
               </Text>
             </View>
           </View>
@@ -60,36 +64,71 @@ export default function SearchResultItem({ result, onPress, highlight }: SearchR
 const styles = StyleSheet.create({
   highlightWrapper: {
     backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginVertical: 3,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
   },
   container: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 10,
   },
   content: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
   name: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
+    color: '#1F2937',
+    flex: 1,
+    marginRight: 12,
+  },
+  urgencyBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    minWidth: 32,
+    alignItems: 'center',
+    opacity: 0.85,
+  },
+  urgencyText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   details: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  lastSeen: {
-    fontSize: 14,
-    color: '#6B7280',
+  metaInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  rightDetails: {
-    alignItems: 'flex-end',
+  lastSeen: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '500',
   },
   similarityScore: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 4,
+    fontSize: 12,
+    color: '#6366F1',
+    fontWeight: '600',
   },
 }); 
