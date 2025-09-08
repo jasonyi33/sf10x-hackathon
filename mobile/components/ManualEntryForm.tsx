@@ -50,11 +50,37 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     try {
       setIsLoading(true);
       const response = await api.getCategories();
-      setCategories(response || []);
+      
+      // Sort categories with essential categories first in specific order
+      const sortedCategories = (response || []).sort((a, b) => {
+        // Define essential categories order: Name, Height, Weight, Age
+        const essentialOrder = ['name', 'height', 'weight', 'age'];
+        const aIndex = essentialOrder.indexOf(a.name.toLowerCase());
+        const bIndex = essentialOrder.indexOf(b.name.toLowerCase());
+        
+        // If both are essential categories, sort by their defined order
+        if (aIndex !== -1 && bIndex !== -1) {
+          return aIndex - bIndex;
+        }
+        
+        // Essential categories always come first
+        if (aIndex !== -1) return -1;
+        if (bIndex !== -1) return 1;
+        
+        // For non-essential categories, sort by priority then alphabetically
+        const priorityOrder: Record<string, number> = { high: 3, medium: 2, low: 1 };
+        const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+        if (priorityDiff !== 0) return priorityDiff;
+        
+        // Finally sort alphabetically by name
+        return a.name.localeCompare(b.name);
+      });
+      
+      setCategories(sortedCategories);
       
       // Initialize form data with empty values for all categories
       const initialData: Record<string, any> = {};
-      response?.forEach((cat: Category) => {
+      sortedCategories?.forEach((cat: Category) => {
         initialData[cat.name] = '';
       });
       setFormData(initialData);
@@ -72,7 +98,10 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
   // Helper to format a category name for display
   const prettyLabel = (name: string) => {
-    return name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' ');
+    return name
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
   };
 
   // Helper to normalize category names for comparison
@@ -196,7 +225,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           isRequired && styles.requiredLabel,
           error && styles.errorLabel
         ]}>
-          {category.name.charAt(0).toUpperCase() + category.name.slice(1).replace(/_/g, ' ')}
+          {prettyLabel(category.name)}
           {isRequired && ' *'}
         </Text>
 
@@ -230,11 +259,17 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           ]}
           value={String(value || '')}
           onChangeText={(text) => handleFieldChange(category.name, text)}
-          placeholder={category.name.trim().toLowerCase() === 'height' ? "Enter height (e.g., 5'10 or 70)" : `Enter ${category.name.toLowerCase()}`}
+          placeholder={
+            category.name.trim().toLowerCase() === 'height' 
+              ? "Enter height (e.g., 5'10 or 70)" 
+              : category.name.toLowerCase().includes('additional information')
+                ? "Enter any other relevant information not covered by other categories..."
+                : `Enter ${category.name.toLowerCase()}`
+          }
           placeholderTextColor="#999"
           keyboardType={category.type === 'number' && category.name.trim().toLowerCase() !== 'height' ? 'numeric' : 'default'}
-          multiline={category.type === 'text' && category.name.toLowerCase().includes('notes')}
-          numberOfLines={category.type === 'text' && category.name.toLowerCase().includes('notes') ? 3 : 1}
+          multiline={category.type === 'text' && (category.name.toLowerCase().includes('notes') || category.name.toLowerCase().includes('additional information'))}
+          numberOfLines={category.type === 'text' && (category.name.toLowerCase().includes('notes') || category.name.toLowerCase().includes('additional information')) ? 4 : 1}
         />
 
         {error && (
@@ -277,32 +312,25 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
       </View>
 
       <View style={styles.formContainer}>
-        {/* Always show key fields first: Name, Height, Age, Weight (in that order) */}
+        {/* Essential Information - Name, Height, Weight, Age */}
         {(() => {
-          const keyOrder = ['name', 'height', 'age', 'weight'];
-          const keySet = new Set(keyOrder);
-          const keyCategories = keyOrder
-            .map(key => categories.find(cat => normalizeKey(cat.name) === key))
-            .filter(Boolean) as Category[];
-          if (keyCategories.length === 0) return null;
+          const essentialNames = ['name', 'height', 'weight', 'age'];
+          const essentialCategories = categories.filter(cat => 
+            essentialNames.includes(cat.name.toLowerCase())
+          ).sort((a, b) => {
+            const aIndex = essentialNames.indexOf(a.name.toLowerCase());
+            const bIndex = essentialNames.indexOf(b.name.toLowerCase());
+            return aIndex - bIndex;
+          });
+          
+          if (essentialCategories.length === 0) return null;
           return (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Key Information</Text>
-              {keyCategories.map(category => renderField(category))}
+              <Text style={styles.sectionTitle}>Essential Information</Text>
+              {essentialCategories.map(category => renderField(category))}
             </View>
           );
         })()}
-
-        {/* High Priority Categories */}
-        {categories.filter(cat => cat.priority === 'high').filter(cat => !['name','height','age','weight'].includes(normalizeKey(cat.name))).length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Required Information</Text>
-            {categories
-              .filter(cat => cat.priority === 'high')
-              .filter(cat => !['name','height','age','weight'].includes(normalizeKey(cat.name)))
-              .map(category => renderField(category))}
-          </View>
-        )}
 
         {/* Location Information */}
         {selectedLocation && (
@@ -316,27 +344,21 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           </View>
         )}
 
-        {/* Medium Priority Categories */}
-        {categories.filter(cat => cat.priority === 'medium').filter(cat => !['name','height','age','weight'].includes(normalizeKey(cat.name))).length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Additional Information</Text>
-            {categories
-              .filter(cat => cat.priority === 'medium')
-              .filter(cat => !['name','height','age','weight'].includes(normalizeKey(cat.name)))
-              .map(category => renderField(category))}
-          </View>
-        )}
-
-        {/* Low Priority Categories */}
-        {categories.filter(cat => cat.priority === 'low').filter(cat => !['name','height','age','weight'].includes(normalizeKey(cat.name))).length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Optional Information</Text>
-            {categories
-              .filter(cat => cat.priority === 'low')
-              .filter(cat => !['name','height','age','weight'].includes(normalizeKey(cat.name)))
-              .map(category => renderField(category))}
-          </View>
-        )}
+        {/* Other Information - All non-essential categories */}
+        {(() => {
+          const essentialNames = ['name', 'height', 'weight', 'age'];
+          const otherCategories = categories.filter(cat => 
+            !essentialNames.includes(cat.name.toLowerCase())
+          );
+          
+          if (otherCategories.length === 0) return null;
+          return (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Other Information</Text>
+              {otherCategories.map(category => renderField(category))}
+            </View>
+          );
+        })()}
       </View>
 
       {/* Action Buttons */}

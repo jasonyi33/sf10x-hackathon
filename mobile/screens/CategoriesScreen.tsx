@@ -16,85 +16,87 @@ interface Category {
   id: string;
   name: string;
   type: 'text' | 'number' | 'single-select' | 'multi-select' | 'date' | 'location';
-  required: boolean;
+  is_required: boolean;
   priority: 'high' | 'medium' | 'low';
   danger_weight?: number; // 0-100, only for number/single-select
   auto_trigger?: boolean; // only for number/single-select
   options?: string[] | Array<{label: string, value: number}>;
-  active: boolean;
+  active?: boolean; // For local UI state, not from API
 }
 
 export default function CategoriesScreen() {
-  const [categories, setCategories] = useState<Category[]>([
-    {
-      id: '1',
-      name: 'Name',
-      type: 'text',
-      required: true,
-      priority: 'high',
-      active: true,
-    },
-    {
-      id: '2',
-      name: 'Gender',
-      type: 'single-select',
-      required: false,
-      priority: 'medium',
-      danger_weight: 0,
-      auto_trigger: false,
-      options: [
-        {label: 'Male', value: 0},
-        {label: 'Female', value: 0},
-        {label: 'Other', value: 0},
-        {label: 'Unknown', value: 0}
-      ],
-      active: true,
-    },
-    {
-      id: '3',
-      name: 'Height',
-      type: 'number',
-      required: true,
-      priority: 'medium',
-      danger_weight: 0,
-      auto_trigger: false,
-      active: true,
-    },
-    {
-      id: '4',
-      name: 'Weight',
-      type: 'number',
-      required: true,
-      priority: 'medium',
-      danger_weight: 0,
-      auto_trigger: false,
-      active: true,
-    },
-    {
-      id: '5',
-      name: 'Skin Color',
-      type: 'single-select',
-      required: true,
-      priority: 'high',
-      danger_weight: 0,
-      auto_trigger: false,
-      options: [
-        {label: 'Light', value: 0},
-        {label: 'Medium', value: 0},
-        {label: 'Dark', value: 0}
-      ],
-      active: true,
-    },
-    {
-      id: '6',
-      name: 'Substance Abuse History',
-      type: 'multi-select',
-      required: false,
-      priority: 'low',
-      options: ['None', 'Mild', 'Moderate', 'Severe', 'In Recovery'],
-      active: true,
-    },
-  ]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch categories from API on component mount
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.getCategories();
+      
+      // Add active state for UI (defaulting to true for all categories)
+      const categoriesWithActiveState = (response || []).map((cat: any) => ({
+        ...cat,
+        active: true // Default all categories to active for UI
+      }));
+      
+      // Sort categories with essential categories first in specific order
+      const sortedCategories = categoriesWithActiveState.sort((a, b) => {
+        // Define essential categories order: Name, Height, Weight, Age
+        const essentialOrder = ['name', 'height', 'weight', 'age'];
+        const aIndex = essentialOrder.indexOf(a.name.toLowerCase());
+        const bIndex = essentialOrder.indexOf(b.name.toLowerCase());
+        
+        // If both are essential categories, sort by their defined order
+        if (aIndex !== -1 && bIndex !== -1) {
+          return aIndex - bIndex;
+        }
+        
+        // Essential categories always come first
+        if (aIndex !== -1) return -1;
+        if (bIndex !== -1) return 1;
+        
+        // For non-essential categories, sort by priority then alphabetically
+        const priorityOrder: Record<string, number> = { high: 3, medium: 2, low: 1 };
+        const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+        if (priorityDiff !== 0) return priorityDiff;
+        
+        // Finally sort alphabetically by name
+        return a.name.localeCompare(b.name);
+      });
+      
+      setCategories(sortedCategories);
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+      Alert.alert('Error', 'Failed to load categories. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Helper function to format category names for display
+  const formatCategoryName = (name: string): string => {
+    return name
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Helper function to check if a category is essential (cannot be toggled off)
+  const isEssentialCategory = (categoryName: string): boolean => {
+    const essentialCategories = ['name', 'height', 'weight', 'age'];
+    return essentialCategories.includes(categoryName.toLowerCase());
+  };
+
+  // Helper function to check if a category can be edited
+  const isEditableCategory = (categoryName: string): boolean => {
+    const nonEditableCategories = ['name', 'height', 'weight', 'age', 'additional information'];
+    return !nonEditableCategories.includes(categoryName.toLowerCase());
+  };
 
   const [isExporting, setIsExporting] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -103,6 +105,11 @@ export default function CategoriesScreen() {
   const [newCategoryDangerWeight, setNewCategoryDangerWeight] = useState(0);
   const [newCategoryAutoTrigger, setNewCategoryAutoTrigger] = useState(false);
   const [newCategoryOptions, setNewCategoryOptions] = useState<string[]>([]);
+  
+  // Edit category state
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState('');
+  const [editCategoryPriority, setEditCategoryPriority] = useState<'high' | 'medium' | 'low'>('medium');
 
   const handleExportCSV = async () => {
     try {
@@ -183,11 +190,20 @@ export default function CategoriesScreen() {
 
   const toggleCategoryActive = (categoryId: string) => {
     setCategories(prev => 
-      prev.map(cat => 
-        cat.id === categoryId 
-          ? { ...cat, active: !cat.active }
-          : cat
-      )
+      prev.map(cat => {
+        if (cat.id === categoryId) {
+          // Prevent toggling off essential categories
+          if (isEssentialCategory(cat.name) && cat.active) {
+            Alert.alert(
+              'Cannot Disable Essential Category',
+              `${formatCategoryName(cat.name)} is an essential category and cannot be disabled.`
+            );
+            return cat; // Return unchanged
+          }
+          return { ...cat, active: !cat.active };
+        }
+        return cat;
+      })
     );
   };
 
@@ -217,7 +233,7 @@ export default function CategoriesScreen() {
       id: Date.now().toString(),
       name: newCategoryName.trim(),
       type: newCategoryType,
-      required: false,
+      is_required: false,
       priority: newCategoryPriority,
               danger_weight: (newCategoryType === 'number' || newCategoryType === 'single-select') ? newCategoryDangerWeight : undefined,
       auto_trigger: (newCategoryType === 'number' || newCategoryType === 'single-select') ? newCategoryAutoTrigger : undefined,
@@ -241,6 +257,56 @@ export default function CategoriesScreen() {
     const low = active.filter(cat => cat.priority === 'low').length;
     return { high, medium, low };
   };
+
+  const startEditCategory = (category: Category) => {
+    setEditingCategoryId(category.id);
+    setEditCategoryName(category.name);
+    setEditCategoryPriority(category.priority);
+  };
+
+  const cancelEditCategory = () => {
+    setEditingCategoryId(null);
+    setEditCategoryName('');
+    setEditCategoryPriority('medium');
+  };
+
+  const saveEditCategory = () => {
+    if (!editCategoryName.trim()) {
+      Alert.alert('Error', 'Category name cannot be empty');
+      return;
+    }
+
+    // Check for duplicate names (excluding the current category being edited)
+    const duplicateExists = categories.some(cat => 
+      cat.id !== editingCategoryId && 
+      cat.name.toLowerCase() === editCategoryName.trim().toLowerCase()
+    );
+
+    if (duplicateExists) {
+      Alert.alert('Error', 'A category with this name already exists');
+      return;
+    }
+
+    setCategories(prev => 
+      prev.map(cat => 
+        cat.id === editingCategoryId 
+          ? { ...cat, name: editCategoryName.trim(), priority: editCategoryPriority }
+          : cat
+      )
+    );
+
+    Alert.alert('Success', 'Category updated successfully');
+    cancelEditCategory();
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading categories...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -288,25 +354,97 @@ export default function CategoriesScreen() {
         
         {categories.map(category => (
           <View key={category.id} style={styles.categoryItem}>
-            <View style={styles.categoryInfo}>
-              <Text style={styles.categoryName}>{category.name}</Text>
-              <Text style={styles.categoryType}>{category.type}</Text>
-              <Text style={styles.categoryPriority}>Priority: {category.priority}</Text>
-              {category.required && (
-                <Text style={styles.requiredBadge}>Required</Text>
-              )}
-              {(category.type === 'number' || category.type === 'single-select') && category.danger_weight !== undefined && (
-                <Text style={styles.dangerWeightBadge}>Danger: {category.danger_weight}</Text>
-              )}
-            </View>
-            <TouchableOpacity
-              style={[styles.toggleButton, category.active && styles.toggleButtonActive]}
-              onPress={() => toggleCategoryActive(category.id)}
-            >
-              <Text style={[styles.toggleText, category.active && styles.toggleTextActive]}>
-                {category.active ? 'ON' : 'OFF'}
-              </Text>
-            </TouchableOpacity>
+            {editingCategoryId === category.id ? (
+              // Edit mode
+              <View style={styles.editCategoryContainer}>
+                <View style={styles.editInputRow}>
+                  <Text style={styles.editLabel}>Name:</Text>
+                  <TextInput
+                    style={styles.editInput}
+                    value={editCategoryName}
+                    onChangeText={setEditCategoryName}
+                    placeholder="Category name"
+                  />
+                </View>
+                <View style={styles.editInputRow}>
+                  <Text style={styles.editLabel}>Priority:</Text>
+                  <View style={styles.prioritySelector}>
+                    {['high', 'medium', 'low'].map((priority) => (
+                      <TouchableOpacity
+                        key={priority}
+                        style={[
+                          styles.priorityOption,
+                          editCategoryPriority === priority && styles.priorityOptionSelected
+                        ]}
+                        onPress={() => setEditCategoryPriority(priority as 'high' | 'medium' | 'low')}
+                      >
+                        <Text style={[
+                          styles.priorityOptionText,
+                          editCategoryPriority === priority && styles.priorityOptionTextSelected
+                        ]}>
+                          {priority}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.editButtonRow}>
+                  <TouchableOpacity
+                    style={styles.cancelEditButton}
+                    onPress={cancelEditCategory}
+                  >
+                    <Text style={styles.cancelEditButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.saveEditButton}
+                    onPress={saveEditCategory}
+                  >
+                    <Text style={styles.saveEditButtonText}>Save</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              // View mode
+              <>
+                <View style={styles.categoryInfo}>
+                  <Text style={styles.categoryName}>{formatCategoryName(category.name)}</Text>
+                  <Text style={styles.categoryType}>{formatCategoryName(category.type)}</Text>
+                  <Text style={styles.categoryPriority}>Priority: {category.priority}</Text>
+                  {category.is_required && (
+                    <Text style={styles.requiredBadge}>Required</Text>
+                  )}
+                  {(category.type === 'number' || category.type === 'single-select') && category.danger_weight !== undefined && (
+                    <Text style={styles.dangerWeightBadge}>Weight: {category.danger_weight}</Text>
+                  )}
+                </View>
+                <View style={styles.categoryActions}>
+                  {isEditableCategory(category.name) && (
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => startEditCategory(category)}
+                    >
+                      <Text style={styles.editButtonText}>Edit</Text>
+                    </TouchableOpacity>
+                  )}
+                  {isEssentialCategory(category.name) ? (
+                    <View style={[styles.toggleButton, styles.essentialToggleButton]}>
+                      <Text style={[styles.toggleText, styles.essentialToggleText]}>
+                        ESSENTIAL
+                      </Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.toggleButton, category.active && styles.toggleButtonActive]}
+                      onPress={() => toggleCategoryActive(category.id)}
+                    >
+                      <Text style={[styles.toggleText, category.active && styles.toggleTextActive]}>
+                        {category.active ? 'ON' : 'OFF'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </>
+            )}
           </View>
         ))}
       </View>
@@ -497,12 +635,18 @@ const styles = StyleSheet.create({
   toggleButtonActive: {
     backgroundColor: '#007AFF',
   },
+  essentialToggleButton: {
+    backgroundColor: '#10B981',
+  },
   toggleText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#6B7280',
   },
   toggleTextActive: {
+    color: '#fff',
+  },
+  essentialToggleText: {
     color: '#fff',
   },
   inputRow: {
@@ -589,5 +733,117 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     lineHeight: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
+    fontSize: 16,
+  },
+  categoryActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  editButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  editButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  editCategoryContainer: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  editInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  editLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    width: 60,
+  },
+  editInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+    fontSize: 14,
+  },
+  prioritySelector: {
+    flexDirection: 'row',
+    flex: 1,
+    gap: 8,
+  },
+  priorityOption: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  priorityOptionSelected: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  priorityOptionText: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  priorityOptionTextSelected: {
+    color: '#fff',
+  },
+  editButtonRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  cancelEditButton: {
+    flex: 1,
+    backgroundColor: '#6B7280',
+    paddingVertical: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  cancelEditButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  saveEditButton: {
+    flex: 1,
+    backgroundColor: '#10B981',
+    paddingVertical: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  saveEditButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 }); 

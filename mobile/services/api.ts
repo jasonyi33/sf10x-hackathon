@@ -850,7 +850,9 @@ export const api = {
           { id: '1', name: 'Name', type: 'text', is_required: true, priority: 'high' },
           { id: '2', name: 'Height', type: 'number', is_required: true, priority: 'medium' },
           { id: '3', name: 'Weight', type: 'number', is_required: true, priority: 'medium' },
-          { id: '4', name: 'Skin Color', type: 'single-select', is_required: true, priority: 'high' },
+          { id: '4', name: 'Age', type: 'number', is_required: false, priority: 'medium' },
+          { id: '5', name: 'Skin Color', type: 'single-select', is_required: true, priority: 'high' },
+          { id: '6', name: 'Additional Information', type: 'text', is_required: false, priority: 'low' },
         ];
       }
 
@@ -858,7 +860,16 @@ export const api = {
       return result.categories || [];
     } catch (error) {
       console.error('Error fetching categories:', error);
-      return [];
+      console.log('Falling back to mock categories due to API error');
+      // Fall back to mock data if real API fails
+      return [
+        { id: '1', name: 'Name', type: 'text', is_required: true, priority: 'high' },
+        { id: '2', name: 'Height', type: 'number', is_required: true, priority: 'medium' },
+        { id: '3', name: 'Weight', type: 'number', is_required: true, priority: 'medium' },
+        { id: '4', name: 'Age', type: 'number', is_required: false, priority: 'medium' },
+        { id: '5', name: 'Skin Color', type: 'single-select', is_required: true, priority: 'high' },
+        { id: '6', name: 'Additional Information', type: 'text', is_required: false, priority: 'low' },
+      ];
     }
   },
 

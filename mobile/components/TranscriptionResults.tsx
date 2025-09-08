@@ -47,13 +47,47 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
     try {
       setIsLoading(true);
       const response = await api.getCategories();
-      setCategories(response || []);
+      
+      // Sort categories with essential categories first in specific order
+      const sortedCategories = (response || []).sort((a, b) => {
+        // Define essential categories order: Name, Height, Weight, Age
+        const essentialOrder = ['name', 'height', 'weight', 'age'];
+        const aIndex = essentialOrder.indexOf(a.name.toLowerCase());
+        const bIndex = essentialOrder.indexOf(b.name.toLowerCase());
+        
+        // If both are essential categories, sort by their defined order
+        if (aIndex !== -1 && bIndex !== -1) {
+          return aIndex - bIndex;
+        }
+        
+        // Essential categories always come first
+        if (aIndex !== -1) return -1;
+        if (bIndex !== -1) return 1;
+        
+        // For non-essential categories, sort by priority then alphabetically
+        const priorityOrder: Record<string, number> = { high: 3, medium: 2, low: 1 };
+        const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+        if (priorityDiff !== 0) return priorityDiff;
+        
+        // Finally sort alphabetically by name
+        return a.name.localeCompare(b.name);
+      });
+      
+      setCategories(sortedCategories);
     } catch (error: any) {
       console.error('Failed to fetch categories:', error);
       Alert.alert('Error', 'Failed to load form fields. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Helper to format a category name for display
+  const formatCategoryName = (name: string) => {
+    return name
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
   };
 
   const handleFieldChange = (fieldName: string, value: any) => {
@@ -211,13 +245,17 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
       return (
         <View key={fieldName} style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>
-            {fieldName.charAt(0).toUpperCase() + fieldName.slice(1).replace(/_/g, ' ')}
+            {formatCategoryName(fieldName)}
           </Text>
           <TextInput
             style={styles.fieldInput}
             value={String(value || '')}
             onChangeText={(text) => handleFieldChange(fieldName, text)}
-            placeholder={`Enter ${fieldName.replace(/_/g, ' ')}`}
+            placeholder={
+              fieldName.toLowerCase().includes('additional information')
+                ? "Enter any other relevant information not covered by other categories..."
+                : `Enter ${formatCategoryName(fieldName).toLowerCase()}`
+            }
             placeholderTextColor="#999"
           />
         </View>
@@ -234,7 +272,7 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
           isRequired && styles.requiredLabel,
           isMissing && styles.missingLabel
         ]}>
-          {fieldName.charAt(0).toUpperCase() + fieldName.slice(1).replace(/_/g, ' ')}
+          {formatCategoryName(fieldName)}
           {isRequired && ' *'}
         </Text>
 
@@ -268,11 +306,17 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
           ]}
           value={String(value || '')}
           onChangeText={(text) => handleFieldChange(fieldName, text)}
-          placeholder={fieldName.trim().toLowerCase() === 'height' ? "Enter height (e.g., 5'10 or 70)" : `Enter ${fieldName.replace(/_/g, ' ')}`}
+          placeholder={
+            fieldName.trim().toLowerCase() === 'height' 
+              ? "Enter height (e.g., 5'10 or 70)" 
+              : fieldName.toLowerCase().includes('additional information')
+                ? "Enter any other relevant information not covered by other categories..."
+                : `Enter ${formatCategoryName(fieldName).toLowerCase()}`
+          }
           placeholderTextColor="#999"
           keyboardType={category.type === 'number' && fieldName.trim().toLowerCase() !== 'height' ? 'numeric' : 'default'}
-          multiline={category.type === 'text' && fieldName.toLowerCase().includes('notes')}
-          numberOfLines={category.type === 'text' && fieldName.toLowerCase().includes('notes') ? 3 : 1}
+          multiline={category.type === 'text' && (fieldName.toLowerCase().includes('notes') || fieldName.toLowerCase().includes('additional information'))}
+          numberOfLines={category.type === 'text' && (fieldName.toLowerCase().includes('notes') || fieldName.toLowerCase().includes('additional information')) ? 4 : 1}
         />
 
         {isMissing && (
@@ -321,39 +365,45 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
           Review and edit the information extracted from your recording
         </Text>
         
-        {/* Render ALL categories from database, organized by priority */}
-        {/* High Priority (Required) Categories */}
-        {categories.filter(cat => cat.priority === 'high').length > 0 && (
-          <View style={styles.subsection}>
-            <Text style={styles.subsectionTitle}>Required Information</Text>
-            {categories
-              .filter(cat => cat.priority === 'high')
-              .map(category => renderField(category.name, categorizedData[category.name] || ''))
-              .filter(Boolean)}
-          </View>
-        )}
+        {/* Essential Information - Name, Height, Weight, Age */}
+        {(() => {
+          const essentialNames = ['name', 'height', 'weight', 'age'];
+          const essentialCategories = categories.filter(cat => 
+            essentialNames.includes(cat.name.toLowerCase())
+          ).sort((a, b) => {
+            const aIndex = essentialNames.indexOf(a.name.toLowerCase());
+            const bIndex = essentialNames.indexOf(b.name.toLowerCase());
+            return aIndex - bIndex;
+          });
+          
+          if (essentialCategories.length === 0) return null;
+          return (
+            <View style={styles.subsection}>
+              <Text style={styles.subsectionTitle}>Essential Information</Text>
+              {essentialCategories
+                .map(category => renderField(category.name, categorizedData[category.name] || ''))
+                .filter(Boolean)}
+            </View>
+          );
+        })()}
 
-        {/* Medium Priority Categories */}
-        {categories.filter(cat => cat.priority === 'medium').length > 0 && (
-          <View style={styles.subsection}>
-            <Text style={styles.subsectionTitle}>Additional Information</Text>
-            {categories
-              .filter(cat => cat.priority === 'medium')
-              .map(category => renderField(category.name, categorizedData[category.name] || ''))
-              .filter(Boolean)}
-          </View>
-        )}
-
-        {/* Low Priority Categories */}
-        {categories.filter(cat => cat.priority === 'low').length > 0 && (
-          <View style={styles.subsection}>
-            <Text style={styles.subsectionTitle}>Optional Information</Text>
-            {categories
-              .filter(cat => cat.priority === 'low')
-              .map(category => renderField(category.name, categorizedData[category.name] || ''))
-              .filter(Boolean)}
-          </View>
-        )}
+        {/* Other Information - All non-essential categories */}
+        {(() => {
+          const essentialNames = ['name', 'height', 'weight', 'age'];
+          const otherCategories = categories.filter(cat => 
+            !essentialNames.includes(cat.name.toLowerCase())
+          );
+          
+          if (otherCategories.length === 0) return null;
+          return (
+            <View style={styles.subsection}>
+              <Text style={styles.subsectionTitle}>Other Information</Text>
+              {otherCategories
+                .map(category => renderField(category.name, categorizedData[category.name] || ''))
+                .filter(Boolean)}
+            </View>
+          );
+        })()}
       </View>
 
       {/* Potential Matches */}
