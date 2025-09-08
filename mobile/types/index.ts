@@ -7,6 +7,11 @@ export interface Individual {
   created_at: string;
   updated_at: string;
   last_interaction_date?: string;
+  last_location?: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
 }
 
 export interface SearchResult {
@@ -50,6 +55,11 @@ export interface IndividualProfile {
   interactions: Interaction[];
   total_interactions: number;
   last_interaction_date?: string;
+  last_location?: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
 }
 
 export interface IndividualProfileScreenProps {

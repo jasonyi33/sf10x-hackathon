@@ -136,6 +136,11 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
     updated_at: '2024-01-15T10:30:00Z',
     total_interactions: 3,
     last_interaction_date: '2024-01-15T10:30:00Z',
+    last_location: {
+      latitude: 37.7749,
+      longitude: -122.4194,
+      address: 'Market Street & 5th Avenue, San Francisco, CA'
+    },
     interactions: [
       {
         id: 'int1',
@@ -187,6 +192,11 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
     updated_at: '2024-01-12T14:20:00Z',
     total_interactions: 2,
     last_interaction_date: '2024-01-12T14:20:00Z',
+    last_location: {
+      latitude: 37.7849,
+      longitude: -122.4094,
+      address: 'Golden Gate Park, San Francisco, CA'
+    },
     interactions: [
       {
         id: 'int4',
@@ -555,7 +565,7 @@ export const api = {
       console.log('Data to save:', data);
       
       // Extract categorized data (age, height, weight, etc.) from the data
-      const { Name, name, id, danger_score, danger_override, data: existingData, ...categorizedData } = data;
+      const { Name, name, id, danger_score, danger_override, data: existingData, location, ...categorizedData } = data;
       
       // Convert categorized data field names to lowercase for profile display
       const processedData: Record<string, any> = {};
@@ -566,6 +576,7 @@ export const api = {
       });
       
       console.log('📊 Processed categorized data:', processedData);
+      console.log('📍 Location data:', location);
       
       // Use direct Supabase insert for real database
       const { data: result, error } = await supabase
@@ -576,6 +587,7 @@ export const api = {
           data: existingData || processedData || {},
           danger_score: danger_score || 0,
           danger_override: danger_override || null,
+          last_location: location || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -753,6 +765,7 @@ export const api = {
         data: individual.data || {},
         created_at: individual.created_at,
         updated_at: individual.updated_at,
+        last_location: individual.last_location || null,
         interactions: [], // TODO: Add interactions when that table is set up
         total_interactions: 0 // TODO: Add interactions when that table is set up
       };
@@ -852,7 +865,12 @@ export const api = {
           { id: '3', name: 'Weight', type: 'number', is_required: true, priority: 'medium' },
           { id: '4', name: 'Age', type: 'number', is_required: false, priority: 'medium' },
           { id: '5', name: 'Skin Color', type: 'single-select', is_required: true, priority: 'high' },
-          { id: '6', name: 'Additional Information', type: 'text', is_required: false, priority: 'low' },
+          { id: '6', name: 'Gender', type: 'single-select', is_required: false, priority: 'medium' },
+          { id: '7', name: 'Medical Conditions', type: 'multi-select', is_required: false, priority: 'high' },
+          { id: '8', name: 'Substance Abuse History', type: 'single-select', is_required: false, priority: 'high' },
+          { id: '9', name: 'Housing Priority', type: 'single-select', is_required: false, priority: 'medium' },
+          { id: '10', name: 'Veteran Status', type: 'single-select', is_required: false, priority: 'medium' },
+          { id: '11', name: 'Additional Information', type: 'text', is_required: false, priority: 'low' },
         ];
       }
 
@@ -861,14 +879,19 @@ export const api = {
     } catch (error) {
       console.error('Error fetching categories:', error);
       console.log('Falling back to mock categories due to API error');
-      // Fall back to mock data if real API fails
+      // Fall back to comprehensive mock data if real API fails
       return [
         { id: '1', name: 'Name', type: 'text', is_required: true, priority: 'high' },
         { id: '2', name: 'Height', type: 'number', is_required: true, priority: 'medium' },
         { id: '3', name: 'Weight', type: 'number', is_required: true, priority: 'medium' },
         { id: '4', name: 'Age', type: 'number', is_required: false, priority: 'medium' },
         { id: '5', name: 'Skin Color', type: 'single-select', is_required: true, priority: 'high' },
-        { id: '6', name: 'Additional Information', type: 'text', is_required: false, priority: 'low' },
+        { id: '6', name: 'Gender', type: 'single-select', is_required: false, priority: 'medium' },
+        { id: '7', name: 'Medical Conditions', type: 'multi-select', is_required: false, priority: 'high' },
+        { id: '8', name: 'Substance Abuse History', type: 'single-select', is_required: false, priority: 'high' },
+        { id: '9', name: 'Housing Priority', type: 'single-select', is_required: false, priority: 'medium' },
+        { id: '10', name: 'Veteran Status', type: 'single-select', is_required: false, priority: 'medium' },
+        { id: '11', name: 'Additional Information', type: 'text', is_required: false, priority: 'low' },
       ];
     }
   },

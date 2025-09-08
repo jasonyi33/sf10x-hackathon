@@ -39,6 +39,7 @@ export default function SearchResultItem({ result, onPress, highlight }: SearchR
               individual={result}
               onOverrideChange={() => {}} // No override in search results
               showSlider={false}
+              compact={true}
             />
             <View style={styles.rightDetails}>
               {result.similarity_score && (
@@ -60,20 +61,32 @@ export default function SearchResultItem({ result, onPress, highlight }: SearchR
 const styles = StyleSheet.create({
   highlightWrapper: {
     backgroundColor: '#FFFFFF',
+    marginHorizontal: 12,
+    marginVertical: 4,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   container: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
   },
   content: {
     flex: 1,
   },
   name: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
+    color: '#1F2937',
+    marginBottom: 6,
+    letterSpacing: -0.2,
   },
   details: {
     flexDirection: 'row',
@@ -81,15 +94,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   lastSeen: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
+    fontWeight: '500',
   },
   rightDetails: {
     alignItems: 'flex-end',
   },
   similarityScore: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 4,
+    fontSize: 12,
+    color: '#8B5CF6',
+    marginBottom: 2,
+    fontWeight: '600',
   },
 }); 

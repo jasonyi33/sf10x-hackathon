@@ -206,7 +206,7 @@ export const RecordScreen: React.FC = () => {
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
         <Text style={styles.title}>Voice Recording</Text>
-        <Text style={styles.subtitle}>Record observations about homeless individuals</Text>
+        {/* <Text style={styles.subtitle}>Record observations about homeless individuals</Text> */}
       </View>
 
       {/* Location Information */}

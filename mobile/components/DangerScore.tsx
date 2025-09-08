@@ -17,12 +17,14 @@ interface DangerScoreProps {
   };
   onOverrideChange: (value: number | null) => void;
   showSlider?: boolean; // Optional prop to show/hide slider
+  compact?: boolean; // New prop for compact display in search results
 }
 
 export default function DangerScore({ 
   individual, 
   onOverrideChange, 
-  showSlider = false 
+  showSlider = false,
+  compact = false
 }: DangerScoreProps) {
   // State for the slider value
   const [sliderValue, setSliderValue] = useState<number>(0);
@@ -99,11 +101,24 @@ export default function DangerScore({
     );
   };
 
+  if (compact) {
+    return (
+      <View style={styles.compactContainer}>
+        <View style={[styles.compactScore, { backgroundColor: scoreColor }]}>
+          <Text style={styles.compactValue}>{displayScore}</Text>
+        </View>
+        {individual.danger_override !== null && (
+          <View style={styles.compactOverrideIndicator} />
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Large Urgency Score Display */}
       <View style={[styles.scoreContainer, { backgroundColor: scoreColor }]}>
-        <Text style={styles.scoreLabel}>Danger Score</Text>
+        <Text style={styles.scoreLabel}>Urgency Score</Text>
         <Text style={styles.scoreValue}>{displayScore}</Text>
         
         {/* Manual Override Indicator */}
@@ -231,5 +246,30 @@ const styles = StyleSheet.create({
   rangeLabel: {
     fontSize: 12,
     color: '#6B7280',
+  },
+  // Compact styles for search results
+  compactContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  compactScore: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    minWidth: 36,
+    alignItems: 'center',
+    opacity: 0.9,
+  },
+  compactValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  compactOverrideIndicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#F59E0B',
+    marginLeft: 6,
   },
 });

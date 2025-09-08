@@ -17,6 +17,7 @@ import FieldDisplay from '../components/FieldDisplay';
 import InteractionHistoryItem from '../components/InteractionHistoryItem';
 import DangerScore from '../components/DangerScore';
 import InteractionDetailModal from '../components/InteractionDetailModal';
+import IndividualLocationMap from '../components/IndividualLocationMap';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 
@@ -267,6 +268,11 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
               renderField(key, value, key === 'name' || key === 'height' || key === 'weight' || key === 'skin_color')
             )}
           </View>
+        </View>
+
+        {/* Location Section */}
+        <View style={styles.section}>
+          <IndividualLocationMap profile={profile} />
         </View>
 
         {/* Interaction History Section */}
