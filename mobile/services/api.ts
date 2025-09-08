@@ -801,10 +801,32 @@ export const api = {
       console.log('🗑️ Deleting individual from database...');
       console.log('Individual ID:', individualId);
 
-      const { error } = await supabase
+      // First attempt: delete the individual directly
+      let { error } = await supabase
         .from('individuals')
         .delete()
         .eq('id', individualId);
+
+      // If there is a foreign key constraint (23503), delete dependent interactions then retry
+      if (error && (error as any).code === '23503') {
+        console.warn('⚠️ FK constraint, deleting dependent interactions first...');
+        const { error: interactionsError } = await supabase
+          .from('interactions')
+          .delete()
+          .eq('individual_id', individualId);
+
+        if (interactionsError) {
+          console.error('❌ Failed to delete dependent interactions:', interactionsError);
+          return false;
+        }
+
+        // Retry deleting the individual
+        const retry = await supabase
+          .from('individuals')
+          .delete()
+          .eq('id', individualId);
+        error = retry.error as any;
+      }
 
       if (error) {
         console.error('❌ Delete individual error:', error);

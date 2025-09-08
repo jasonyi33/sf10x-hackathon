@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { TranscriptionResult, api } from '../services/api';
+import { normalizeHeightToStandardString } from '../utils/height';
 import { MergeUI } from './MergeUI';
 
 interface Category {
@@ -129,10 +130,12 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
         return;
       } else {
         // No meaningful match (< 60% or no matches), save as new
-        const saveData = {
-          ...categorizedData,
-          // Add any additional context data here if needed
-        };
+        const saveData: Record<string, any> = { ...categorizedData };
+        const heightKey = Object.keys(saveData).find(k => k.trim().toLowerCase() === 'height');
+        if (heightKey && saveData[heightKey]) {
+          const normalized = normalizeHeightToStandardString(saveData[heightKey]);
+          if (normalized) saveData[heightKey] = normalized;
+        }
         await api.saveIndividual(saveData);
         Toast.show({
           type: 'success',
@@ -265,9 +268,9 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
           ]}
           value={String(value || '')}
           onChangeText={(text) => handleFieldChange(fieldName, text)}
-          placeholder={`Enter ${fieldName.replace(/_/g, ' ')}`}
+          placeholder={fieldName.trim().toLowerCase() === 'height' ? "Enter height (e.g., 5'10 or 70)" : `Enter ${fieldName.replace(/_/g, ' ')}`}
           placeholderTextColor="#999"
-          keyboardType={category.type === 'number' ? 'numeric' : 'default'}
+          keyboardType={category.type === 'number' && fieldName.trim().toLowerCase() !== 'height' ? 'numeric' : 'default'}
           multiline={category.type === 'text' && fieldName.toLowerCase().includes('notes')}
           numberOfLines={category.type === 'text' && fieldName.toLowerCase().includes('notes') ? 3 : 1}
         />

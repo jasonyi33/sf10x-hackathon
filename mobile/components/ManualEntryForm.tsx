@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { api } from '../services/api';
+import { normalizeHeightToStandardString, parseHeightToInches } from '../utils/height';
 
 interface Category {
   id: string;
@@ -66,36 +67,16 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     }
   };
 
-  // Get required fields from categories
-  const requiredFields = categories.filter(cat => cat.is_required).map(cat => cat.name);
+  // Parse height strings like 5'10, 5 ft 10 in, 70, 70in, 1.78m (optional) into inches
+  // height utils moved to ../utils/height
 
-  // Field configurations
-  const fieldConfig = {
-    name: { type: 'text', label: 'Name', required: true },
-    height: { type: 'number', label: 'Height (inches)', required: true, max: 300 },
-    weight: { type: 'number', label: 'Weight (pounds)', required: true, max: 300 },
-    skin_color: { 
-      type: 'select', 
-      label: 'Skin Color', 
-      required: true, 
-      options: ['Light', 'Medium', 'Dark'] 
-    },
-    gender: { 
-      type: 'select', 
-      label: 'Gender', 
-      required: false, 
-      options: ['Male', 'Female', 'Other', 'Unknown'] 
-    },
-    substance_abuse_history: { 
-      type: 'select', 
-      label: 'Substance Abuse History', 
-      required: false, 
-      options: ['None', 'Mild', 'Moderate', 'Severe', 'In Recovery'] 
-    },
-    age: { type: 'number', label: 'Age', required: false, max: 120 },
-    location: { type: 'text', label: 'Location', required: false },
-    notes: { type: 'text', label: 'Notes', required: false },
+  // Helper to format a category name for display
+  const prettyLabel = (name: string) => {
+    return name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' ');
   };
+
+  // Helper to normalize category names for comparison
+  const normalizeKey = (name: string) => name.trim().toLowerCase().replace(/\s+|_/g, '');
 
   const handleFieldChange = (fieldName: string, value: string | string[]) => {
     setFormData(prev => ({
@@ -112,28 +93,43 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     }
   };
 
-  const validateField = (fieldName: string, value: any): string => {
-    const config = fieldConfig[fieldName as keyof typeof fieldConfig];
+  const validateField = (category: Category, value: any): string => {
+    const label = prettyLabel(category.name);
     
-    // Check required fields
-    if (config.required && (!value || value === '')) {
-      return `${config.label} is required`;
+    // Required check based on category config
+    if (category.is_required && (value === undefined || value === null || value === '')) {
+      return `${label} is required`;
     }
 
-    // Check number fields
-    if (config.type === 'number' && value) {
-      const numValue = parseInt(value);
-      if (isNaN(numValue) || numValue < 0) {
-        return `${config.label} must be a positive number`;
+    // Number validation (with special handling for height)
+    if (category.type === 'number' && value !== undefined && value !== null && value !== '') {
+      const key = category.name.trim().toLowerCase();
+      let numValue: number;
+      if (key === 'height') {
+        const parsed = parseHeightToInches(value);
+        if (parsed === null) {
+          return `${label} must be in inches or x'y format`;
+        }
+        numValue = parsed;
+      } else {
+        numValue = Number(value);
       }
-      if ('max' in config && config.max && numValue > config.max) {
-        return `${config.label} must be ${config.max} or less`;
+      if (Number.isNaN(numValue) || numValue < 0) {
+        return `${label} must be a positive number`;
+      }
+      if ((key === 'height' || key === 'weight') && numValue > 300) {
+        return `${label} must be 300 or less`;
+      }
+      if (key === 'age' && numValue > 120) {
+        return `${label} must be 120 or less`;
       }
     }
 
-    // Check select fields
-    if (config.type === 'select' && value && 'options' in config && !config.options.includes(value)) {
-      return `Please select a valid ${config.label.toLowerCase()}`;
+    // Select validation
+    if (category.type === 'select' && Array.isArray(category.options) && value) {
+      if (!category.options.includes(value)) {
+        return `Please select a valid ${label.toLowerCase()}`;
+      }
     }
 
     return '';
@@ -145,7 +141,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
     // Validate all fields
     categories.forEach(category => {
-      const error = validateField(category.name, formData[category.name]);
+      const error = validateField(category, formData[category.name]);
       if (error) {
         newErrors[category.name] = error;
         isValid = false;
@@ -163,6 +159,15 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         acc[key] = formData[key] === '' ? null : formData[key];
         return acc;
       }, {} as Record<string, any>);
+
+      // Normalize height to a consistent feet'inches string (e.g., 5'10)
+      const heightKey = Object.keys(cleanData).find(k => k.trim().toLowerCase() === 'height');
+      if (heightKey && cleanData[heightKey] !== undefined && cleanData[heightKey] !== null && cleanData[heightKey] !== '') {
+        const normalized = normalizeHeightToStandardString(cleanData[heightKey]);
+        if (normalized !== null) {
+          cleanData[heightKey] = normalized;
+        }
+      }
 
       // Add location data if available
       if (selectedLocation) {
@@ -225,9 +230,9 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           ]}
           value={String(value || '')}
           onChangeText={(text) => handleFieldChange(category.name, text)}
-          placeholder={`Enter ${category.name.toLowerCase()}`}
+          placeholder={category.name.trim().toLowerCase() === 'height' ? "Enter height (e.g., 5'10 or 70)" : `Enter ${category.name.toLowerCase()}`}
           placeholderTextColor="#999"
-          keyboardType={category.type === 'number' ? 'numeric' : 'default'}
+          keyboardType={category.type === 'number' && category.name.trim().toLowerCase() !== 'height' ? 'numeric' : 'default'}
           multiline={category.type === 'text' && category.name.toLowerCase().includes('notes')}
           numberOfLines={category.type === 'text' && category.name.toLowerCase().includes('notes') ? 3 : 1}
         />
@@ -272,11 +277,30 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
       </View>
 
       <View style={styles.formContainer}>
+        {/* Always show key fields first: Name, Height, Age, Weight (in that order) */}
+        {(() => {
+          const keyOrder = ['name', 'height', 'age', 'weight'];
+          const keySet = new Set(keyOrder);
+          const keyCategories = keyOrder
+            .map(key => categories.find(cat => normalizeKey(cat.name) === key))
+            .filter(Boolean) as Category[];
+          if (keyCategories.length === 0) return null;
+          return (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Key Information</Text>
+              {keyCategories.map(category => renderField(category))}
+            </View>
+          );
+        })()}
+
         {/* High Priority Categories */}
-        {categories.filter(cat => cat.priority === 'high').length > 0 && (
+        {categories.filter(cat => cat.priority === 'high').filter(cat => !['name','height','age','weight'].includes(normalizeKey(cat.name))).length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Required Information</Text>
-            {categories.filter(cat => cat.priority === 'high').map(category => renderField(category))}
+            {categories
+              .filter(cat => cat.priority === 'high')
+              .filter(cat => !['name','height','age','weight'].includes(normalizeKey(cat.name)))
+              .map(category => renderField(category))}
           </View>
         )}
 
@@ -293,18 +317,24 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         )}
 
         {/* Medium Priority Categories */}
-        {categories.filter(cat => cat.priority === 'medium').length > 0 && (
+        {categories.filter(cat => cat.priority === 'medium').filter(cat => !['name','height','age','weight'].includes(normalizeKey(cat.name))).length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Additional Information</Text>
-            {categories.filter(cat => cat.priority === 'medium').map(category => renderField(category))}
+            {categories
+              .filter(cat => cat.priority === 'medium')
+              .filter(cat => !['name','height','age','weight'].includes(normalizeKey(cat.name)))
+              .map(category => renderField(category))}
           </View>
         )}
 
         {/* Low Priority Categories */}
-        {categories.filter(cat => cat.priority === 'low').length > 0 && (
+        {categories.filter(cat => cat.priority === 'low').filter(cat => !['name','height','age','weight'].includes(normalizeKey(cat.name))).length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Optional Information</Text>
-            {categories.filter(cat => cat.priority === 'low').map(category => renderField(category))}
+            {categories
+              .filter(cat => cat.priority === 'low')
+              .filter(cat => !['name','height','age','weight'].includes(normalizeKey(cat.name)))
+              .map(category => renderField(category))}
           </View>
         )}
       </View>
