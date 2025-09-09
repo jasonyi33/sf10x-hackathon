@@ -124,12 +124,8 @@ export const RecordScreen: React.FC = () => {
 
   const handleSaveManualEntry = async (data: Record<string, any>) => {
     try {
-      const saveData = {
-        ...data,
-        location: selectedLocation?.location,
-      };
-      
-      await api.saveIndividual(saveData);
+      // Data is already saved in ManualEntryForm component
+      // Just handle the UI state here
       ErrorHandler.showSuccess('Data saved successfully');
       
       // Reset state
@@ -266,6 +262,7 @@ export const RecordScreen: React.FC = () => {
           result={transcriptionResult}
           onSave={handleSaveTranscription}
           onCancel={handleCancelTranscription}
+          location={selectedLocation?.location || null}
         />
       )}
 

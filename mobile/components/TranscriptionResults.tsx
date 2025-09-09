@@ -20,12 +20,18 @@ interface TranscriptionResultsProps {
   result: TranscriptionResult;
   onSave: (data: Record<string, any>) => void;
   onCancel: () => void;
+  location?: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  } | null;
 }
 
 export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
   result,
   onSave,
   onCancel,
+  location,
 }) => {
   const [categorizedData, setCategorizedData] = useState<Record<string, any>>(result.categorized_data);
   const [isEditing, setIsEditing] = useState(false);
@@ -138,7 +144,8 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
                 try {
                   const mergedData = { 
                     ...categorizedData, 
-                    existing_individual_id: highConfidenceMatch.id 
+                    existing_individual_id: highConfidenceMatch.id,
+                    ...(location && { location })
                   };
                   await api.saveIndividual(mergedData);
                   Toast.show({
@@ -164,7 +171,10 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
         return;
       } else {
         // No meaningful match (< 60% or no matches), save as new
-        const saveData: Record<string, any> = { ...categorizedData };
+        const saveData: Record<string, any> = { 
+          ...categorizedData,
+          ...(location && { location })
+        };
         const heightKey = Object.keys(saveData).find(k => k.trim().toLowerCase() === 'height');
         if (heightKey && saveData[heightKey]) {
           const normalized = normalizeHeightToStandardString(saveData[heightKey]);
@@ -187,7 +197,11 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
 
   const handleMerge = async (mergedData: Record<string, any>) => {
     try {
-      await api.saveIndividual(mergedData);
+      const saveData = {
+        ...mergedData,
+        ...(location && { location })
+      };
+      await api.saveIndividual(saveData);
       Toast.show({
         type: 'success',
         text1: 'Success',
@@ -207,7 +221,11 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
 
   const handleCreateNew = async (data: Record<string, any>) => {
     try {
-      await api.saveIndividual(data);
+      const saveData = {
+        ...data,
+        ...(location && { location })
+      };
+      await api.saveIndividual(saveData);
       Toast.show({
         type: 'success',
         text1: 'Success',

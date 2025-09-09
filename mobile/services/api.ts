@@ -574,37 +574,87 @@ export const api = {
       const mergeWithId = data.existing_individual_id || data.merge_with_id;
       
       // Extract categorized data (age, height, weight, etc.) from the data
-      const { Name, name, id, danger_score, danger_override, data: existingData, existing_individual_id, merge_with_id, ...categorizedData } = data;
+      // Don't extract Name/name from categorizedData - keep them in the data
+      const { id, danger_score, danger_override, data: existingData, existing_individual_id, merge_with_id, ...categorizedData } = data;
       
       // Convert categorized data field names to lowercase for profile display
       const processedData: Record<string, any> = {};
+      console.log('📊 Raw categorized data entries:', Object.entries(categorizedData));
+      
+      const essentialFields = ['name', 'height', 'weight', 'age'];
+      
       Object.entries(categorizedData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined && value !== '') {
-          processedData[key.toLowerCase()] = value;
+        console.log(`📊 Processing field "${key}": "${value}" (type: ${typeof value})`);
+        const lowercaseKey = key.toLowerCase();
+        
+        // Always include essential fields, even if empty
+        if (essentialFields.includes(lowercaseKey)) {
+          processedData[lowercaseKey] = value || '';
+          console.log(`✅ Added essential field "${lowercaseKey}" = "${value || ''}"`);
+        } else if (value !== null && value !== undefined && value !== '') {
+          // Only include optional fields if they have a value
+          processedData[lowercaseKey] = value;
+          console.log(`✅ Added optional field "${lowercaseKey}" = "${value}"`);
+        } else {
+          console.log(`❌ Filtered out optional field "${key}" = "${value}" (empty/null/undefined)`);
         }
       });
       
       console.log('📊 Processed categorized data:', processedData);
+      console.log('🔀 Merge with ID:', mergeWithId);
+      console.log('🌍 API URL:', getApiUrl('/api/individuals'));
+      
+      // Validate required fields before sending to backend (based on backend API response)
+      // According to backend: height and weight are required, name and skin_color are not
+      const requiredFields = ['height', 'weight'];
+      const missingFields = requiredFields.filter(field => 
+        !processedData[field] || processedData[field] === '' || processedData[field] === null
+      );
+      
+      // Additional validation: name should not be empty even if not technically required
+      if (!processedData['name'] || processedData['name'] === '' || processedData['name'] === null) {
+        missingFields.push('name');
+      }
+      
+      if (missingFields.length > 0) {
+        const errorMessage = `Missing required fields: ${missingFields.join(', ')}. Please ensure all required fields are filled.`;
+        console.error('❌ Validation failed:', errorMessage);
+        throw new Error(errorMessage);
+      }
+      
+      // Check authentication token
+      const authToken = await getAuthToken();
+      console.log('🔐 Auth token available:', authToken ? 'Yes' : 'No');
+      console.log('🔐 Auth token length:', authToken ? authToken.length : 0);
       
       if (mergeWithId) {
         console.log('🔄 Merging with existing individual:', mergeWithId);
         
+        const requestBody = {
+          data: processedData,
+          merge_with_id: mergeWithId
+        };
+        console.log('📤 Merge request body:', JSON.stringify(requestBody, null, 2));
+        
         // Use backend API for proper merge with danger score calculation
-        const response = await fetch(`${getConfig().BASE_URL}/api/individuals`, {
+        const response = await fetch(getApiUrl('/api/individuals'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${await getAuthToken()}`
           },
-          body: JSON.stringify({
-            data: processedData,
-            merge_with_id: mergeWithId
-          })
+          body: JSON.stringify(requestBody)
         });
         
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || 'Failed to merge individual');
+          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.detail || errorData.message || errorMessage;
+          } catch (parseError) {
+            console.error('❌ Failed to parse error response:', parseError);
+          }
+          throw new Error(errorMessage);
         }
         
         const result = await response.json();
@@ -617,21 +667,30 @@ export const api = {
       } else {
         console.log('➕ Creating new individual');
         
+        const requestBody = {
+          data: processedData
+        };
+        console.log('📤 Create request body:', JSON.stringify(requestBody, null, 2));
+        
         // Use backend API for proper danger score calculation
-        const response = await fetch(`${getConfig().BASE_URL}/api/individuals`, {
+        const response = await fetch(getApiUrl('/api/individuals'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${await getAuthToken()}`
           },
-          body: JSON.stringify({
-            data: processedData
-          })
+          body: JSON.stringify(requestBody)
         });
         
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || 'Failed to save individual');
+          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.detail || errorData.message || errorMessage;
+          } catch (parseError) {
+            console.error('❌ Failed to parse error response:', parseError);
+          }
+          throw new Error(errorMessage);
         }
         
         const result = await response.json();
@@ -644,10 +703,22 @@ export const api = {
       }
     } catch (error) {
       console.error('❌ Save individual error:', error);
+      
+      // Extract meaningful error message
+      let errorMessage = 'Unknown error occurred';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error && typeof error === 'object') {
+        // Try to extract error details from object
+        errorMessage = error.detail || error.message || JSON.stringify(error);
+      }
+      
       return {
         id: 'error-' + Date.now(),
         success: false,
-        message: 'Save failed: ' + error
+        message: 'Save failed: ' + errorMessage
       };
     }
   },
@@ -788,6 +859,20 @@ export const api = {
       }
 
       console.log('✅ Found individual profile:', individual);
+      console.log('📍 Location data from database:', individual.last_location);
+      console.log('📍 Location data type:', typeof individual.last_location);
+      
+      // Parse location data if it's a string
+      let lastLocation = individual.last_location;
+      if (typeof lastLocation === 'string') {
+        try {
+          lastLocation = JSON.parse(lastLocation);
+          console.log('📍 Parsed location data:', lastLocation);
+        } catch (e) {
+          console.error('📍 Failed to parse location data:', e);
+          lastLocation = null;
+        }
+      }
       
       // Convert to IndividualProfile format
       const profile: IndividualProfile = {
@@ -798,6 +883,7 @@ export const api = {
         data: individual.data || {},
         created_at: individual.created_at,
         updated_at: individual.updated_at,
+        last_location: lastLocation, // Include parsed location data
         interactions: [], // TODO: Add interactions when that table is set up
         total_interactions: 0 // TODO: Add interactions when that table is set up
       };
@@ -889,8 +975,11 @@ export const api = {
   // Get categories
   getCategories: async (): Promise<any[]> => {
     try {
+      console.log('🔧 getCategories - USE_REAL_API:', API_CONFIG.USE_REAL_API);
+      console.log('🔧 getCategories - USE_MOCK_DATA:', API_CONFIG.DEMO.USE_MOCK_DATA);
+      
       if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
-        console.log('Using mock categories');
+        console.log('📋 Using mock categories');
         return [
           { id: '1', name: 'Name', type: 'text', is_required: true, priority: 'high' },
           { id: '2', name: 'Height', type: 'number', is_required: true, priority: 'medium' },
@@ -901,8 +990,18 @@ export const api = {
         ];
       }
 
+      console.log('📋 Fetching categories from real API...');
       const result = await apiRequest('/api/categories');
-      return result.categories || [];
+      console.log('📋 Real API categories response:', result);
+      console.log('📋 Categories count:', result?.categories?.length || 0);
+      
+      if (result?.categories && Array.isArray(result.categories)) {
+        console.log('📋 Category names:', result.categories.map((c: any) => c.name));
+        return result.categories;
+      } else {
+        console.warn('📋 No categories in API response, using fallback');
+        return [];
+      }
     } catch (error) {
       console.error('Error fetching categories:', error);
       console.log('Falling back to mock categories due to API error');

@@ -32,7 +32,7 @@ export const API_CONFIG = {
   // Demo configuration
   DEMO: {
     // Use mock data for demo (set to false to use real API)
-    USE_MOCK_DATA: false, // Set to false to use real transcription
+    USE_MOCK_DATA: false, // Using real API
     
     // Mock response delays (ms)
     MOCK_DELAY: 1000,

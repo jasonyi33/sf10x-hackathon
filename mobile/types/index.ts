@@ -7,6 +7,11 @@ export interface Individual {
   created_at: string;
   updated_at: string;
   last_interaction_date?: string;
+  last_location?: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
 }
 
 export interface SearchResult {
@@ -33,7 +38,11 @@ export interface Interaction {
   user_id: string;
   transcription?: string; // NULL for manual entries
   data: Record<string, any>; // Only changed fields
-  location?: { lat: number; lng: number };
+  location?: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
   created_at: string;
   worker_name?: string; // We'll add this for display
   abbreviated_address?: string; // We'll add this for display
@@ -50,6 +59,11 @@ export interface IndividualProfile {
   interactions: Interaction[];
   total_interactions: number;
   last_interaction_date?: string;
+  last_location?: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
 }
 
 export interface IndividualProfileScreenProps {

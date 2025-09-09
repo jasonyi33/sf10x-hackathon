@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { api } from '../services/api';
-import { normalizeHeightToStandardString, parseHeightToInches } from '../utils/height';
+import { parseHeightToInches } from '../utils/height';
 import { MergeUI } from './MergeUI';
 
 interface Category {
@@ -59,6 +59,8 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     try {
       setIsLoading(true);
       const response = await api.getCategories();
+      console.log('📋 Manual Entry - Fetched categories:', response);
+      console.log('📋 Manual Entry - Categories count:', response?.length || 0);
       
       // Sort categories with essential categories first in specific order
       const sortedCategories = (response || []).sort((a, b) => {
@@ -86,6 +88,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
       });
       
       setCategories(sortedCategories);
+      console.log('📋 Manual Entry - Sorted categories:', sortedCategories?.map(c => c.name) || []);
       
       // Initialize form data with empty values for all categories
       const initialData: Record<string, any> = {};
@@ -93,6 +96,7 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         initialData[cat.name] = '';
       });
       setFormData(initialData);
+      console.log('📋 Manual Entry - Initial form data keys:', Object.keys(initialData));
       
     } catch (error) {
       console.error('Failed to fetch categories:', error);
@@ -134,8 +138,21 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   const validateField = (category: Category, value: any): string => {
     const label = prettyLabel(category.name);
     
+    // Debug logging for name field specifically
+    if (category.name.toLowerCase() === 'name') {
+      console.log(`📋 Manual Entry - Validating Name field:`, {
+        categoryName: category.name,
+        isRequired: category.is_required,
+        value: value,
+        valueType: typeof value,
+        valueLength: value?.length,
+        isEmpty: (value === undefined || value === null || value === '')
+      });
+    }
+    
     // Required check based on category config
     if (category.is_required && (value === undefined || value === null || value === '')) {
+      console.log(`📋 Manual Entry - Field ${category.name} failed required validation`);
       return `${label} is required`;
     }
 
@@ -193,22 +210,46 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   const handleSave = async () => {
     if (isSaving) return;
     
-    if (validateForm()) {
+    console.log('📋 Manual Entry - Starting save process...');
+    console.log('📋 Manual Entry - Current form data:', formData);
+    
+    const validationResult = validateForm();
+    console.log('📋 Manual Entry - Validation result:', validationResult);
+    console.log('📋 Manual Entry - Current errors:', errors);
+    
+    if (validationResult) {
       setIsSaving(true);
       
       try {
-        // Convert empty strings to null for optional fields
+        console.log('📋 Manual Entry - Form data before cleaning:', formData);
+        console.log('📋 Manual Entry - Form data keys:', Object.keys(formData));
+        console.log('📋 Manual Entry - Name value in formData:', JSON.stringify(formData.Name));
+        console.log('📋 Manual Entry - Name type:', typeof formData.Name);
+        console.log('📋 Manual Entry - Name length:', formData.Name?.length);
+        
+        // Name field debug confirmed working - formData.Name contains the correct value
+        
+        // Convert empty strings to null for optional fields, but keep essential fields as empty strings
+        const essentialFields = ['Name', 'Height', 'Weight', 'Age'];
         const cleanData = Object.keys(formData).reduce((acc, key) => {
-          acc[key] = formData[key] === '' ? null : formData[key];
+          if (essentialFields.includes(key)) {
+            // Keep essential fields even if empty (don't convert to null)
+            acc[key] = formData[key] || '';
+          } else {
+            // Convert empty strings to null for optional fields
+            acc[key] = formData[key] === '' ? null : formData[key];
+          }
           return acc;
         }, {} as Record<string, any>);
+        
+        console.log('📋 Manual Entry - Clean data after processing:', cleanData);
 
-        // Normalize height to a consistent feet'inches string (e.g., 5'10)
+        // Convert height to inches (number) for backend validation
         const heightKey = Object.keys(cleanData).find(k => k.trim().toLowerCase() === 'height');
         if (heightKey && cleanData[heightKey] !== undefined && cleanData[heightKey] !== null && cleanData[heightKey] !== '') {
-          const normalized = normalizeHeightToStandardString(cleanData[heightKey]);
-          if (normalized !== null) {
-            cleanData[heightKey] = normalized;
+          const heightInInches = parseHeightToInches(cleanData[heightKey]);
+          if (heightInInches !== null) {
+            cleanData[heightKey] = heightInInches; // Send as number, not string
           }
         }
 
@@ -221,8 +262,15 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           };
         }
 
+        console.log('📋 Manual Entry - Final clean data being sent to API:', cleanData);
+        console.log('📋 Manual Entry - Data keys:', Object.keys(cleanData));
+        console.log('📋 Manual Entry - Name field value:', cleanData.Name || cleanData.name);
+        console.log('📋 Manual Entry - Location data:', cleanData.location);
+
         // Check for potential duplicates (simple name-based matching for manual entry)
+        console.log('📋 Manual Entry - Checking for duplicates...');
         const potentialMatches = await checkForDuplicates(cleanData);
+        console.log('📋 Manual Entry - Found potential matches:', potentialMatches);
         
         if (potentialMatches.length > 0) {
           const highConfidenceMatch = potentialMatches.find(match => match.confidence >= 95);
@@ -269,7 +317,9 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         }
         
         // No meaningful match, save as new
-        await api.saveIndividual(cleanData);
+        console.log('📋 Manual Entry - No duplicates detected, saving individual...');
+        const saveResult = await api.saveIndividual(cleanData);
+        console.log('📋 Manual Entry - Save result:', saveResult);
         Toast.show({
           type: 'success',
           text1: 'Success',
