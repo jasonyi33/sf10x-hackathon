@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { api } from '../services/api';
 
 interface PotentialMatch {
   id: string;
@@ -24,16 +25,56 @@ export const MergeUI: React.FC<MergeUIProps> = ({
   onCreateNew,
   onCancel,
 }) => {
+  const [fetchedExistingData, setFetchedExistingData] = useState<Record<string, any>>(existingData);
+  const [isLoadingExistingData, setIsLoadingExistingData] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Fetch existing individual data if not provided
+  useEffect(() => {
+    const fetchExistingData = async () => {
+      // Only fetch if no existing data provided and we have a potential match ID
+      if (Object.keys(existingData).length === 0 && potentialMatch.id) {
+        setIsLoadingExistingData(true);
+        setLoadError(null);
+        
+        try {
+          console.log('🔍 Fetching existing individual data for merge comparison:', potentialMatch.id);
+          const profile = await api.getIndividualProfile(potentialMatch.id);
+          
+          if (profile) {
+            console.log('✅ Fetched existing individual data:', profile.data);
+            setFetchedExistingData(profile.data || {});
+          } else {
+            console.warn('⚠️ Could not fetch existing individual data');
+            setLoadError('Could not load existing individual data');
+          }
+        } catch (error) {
+          console.error('❌ Error fetching existing individual data:', error);
+          setLoadError('Failed to load existing individual data');
+        } finally {
+          setIsLoadingExistingData(false);
+        }
+      } else {
+        // Use provided existing data
+        setFetchedExistingData(existingData);
+      }
+    };
+
+    fetchExistingData();
+  }, [potentialMatch.id, existingData]);
+
+  // Use fetched data instead of props
+  const currentExistingData = fetchedExistingData;
   // Initialize field selection - prefer new data for most fields
   const initialSelection = useMemo(() => {
     const selection: Record<string, 'new' | 'existing'> = {};
-    const allFields = new Set([...Object.keys(newData), ...Object.keys(existingData)]);
+    const allFields = new Set([...Object.keys(newData), ...Object.keys(currentExistingData)]);
     
     allFields.forEach(field => {
       // Prefer new data if it exists, otherwise use existing
       if (newData[field] !== undefined && newData[field] !== null && newData[field] !== '') {
         selection[field] = 'new';
-      } else if (existingData[field] !== undefined && existingData[field] !== null && existingData[field] !== '') {
+      } else if (currentExistingData[field] !== undefined && currentExistingData[field] !== null && currentExistingData[field] !== '') {
         selection[field] = 'existing';
       } else {
         selection[field] = 'new'; // Default to new
@@ -41,7 +82,7 @@ export const MergeUI: React.FC<MergeUIProps> = ({
     });
     
     return selection;
-  }, [newData, existingData]);
+  }, [newData, currentExistingData]);
 
   const [selectedFields, setSelectedFields] = useState<Record<string, 'new' | 'existing'>>(initialSelection);
 
@@ -61,7 +102,7 @@ export const MergeUI: React.FC<MergeUIProps> = ({
       if (source === 'new') {
         mergedData[field] = newData[field];
       } else if (source === 'existing') {
-        mergedData[field] = existingData[field];
+        mergedData[field] = currentExistingData[field];
       }
     });
 
@@ -76,7 +117,7 @@ export const MergeUI: React.FC<MergeUIProps> = ({
   };
 
   const getFieldValue = (fieldName: string, source: 'new' | 'existing') => {
-    const data = source === 'new' ? newData : existingData;
+    const data = source === 'new' ? newData : currentExistingData;
     const value = data[fieldName];
     
     if (value === undefined || value === null || value === '') {
@@ -97,7 +138,7 @@ export const MergeUI: React.FC<MergeUIProps> = ({
     const existingValue = getFieldValue(fieldName, 'existing');
     const selectedSource = selectedFields[fieldName];
     const hasNewData = newData[fieldName] !== undefined && newData[fieldName] !== null && newData[fieldName] !== '';
-    const hasExistingData = existingData[fieldName] !== undefined && existingData[fieldName] !== null && existingData[fieldName] !== '';
+    const hasExistingData = currentExistingData[fieldName] !== undefined && currentExistingData[fieldName] !== null && currentExistingData[fieldName] !== '';
 
     return (
       <View key={fieldName} style={styles.fieldRow}>
@@ -150,7 +191,34 @@ export const MergeUI: React.FC<MergeUIProps> = ({
     );
   };
 
-  const allFields = Array.from(new Set([...Object.keys(newData), ...Object.keys(existingData)]));
+  const allFields = Array.from(new Set([...Object.keys(newData), ...Object.keys(currentExistingData)]));
+
+  // Show loading state while fetching existing data
+  if (isLoadingExistingData) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Loading individual data for comparison...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Show error state if failed to load existing data
+  if (loadError) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Unable to Load Data</Text>
+          <Text style={styles.errorText}>{loadError}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={onCancel}>
+            <Text style={styles.retryButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -340,6 +408,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   mergeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#dc3545',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#6c757d',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',

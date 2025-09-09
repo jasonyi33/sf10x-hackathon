@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { api } from '../services/api';
 import { normalizeHeightToStandardString, parseHeightToInches } from '../utils/height';
+import { MergeUI } from './MergeUI';
 
 interface Category {
   id: string;
@@ -40,6 +42,13 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showMergeUI, setShowMergeUI] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<{
+    id: string;
+    confidence: number;
+    name: string;
+  } | null>(null);
 
   // Fetch categories from API on component mount
   useEffect(() => {
@@ -181,36 +190,194 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     return isValid;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isSaving) return;
+    
     if (validateForm()) {
-      // Convert empty strings to null for optional fields
-      const cleanData = Object.keys(formData).reduce((acc, key) => {
-        acc[key] = formData[key] === '' ? null : formData[key];
-        return acc;
-      }, {} as Record<string, any>);
+      setIsSaving(true);
+      
+      try {
+        // Convert empty strings to null for optional fields
+        const cleanData = Object.keys(formData).reduce((acc, key) => {
+          acc[key] = formData[key] === '' ? null : formData[key];
+          return acc;
+        }, {} as Record<string, any>);
 
-      // Normalize height to a consistent feet'inches string (e.g., 5'10)
-      const heightKey = Object.keys(cleanData).find(k => k.trim().toLowerCase() === 'height');
-      if (heightKey && cleanData[heightKey] !== undefined && cleanData[heightKey] !== null && cleanData[heightKey] !== '') {
-        const normalized = normalizeHeightToStandardString(cleanData[heightKey]);
-        if (normalized !== null) {
-          cleanData[heightKey] = normalized;
+        // Normalize height to a consistent feet'inches string (e.g., 5'10)
+        const heightKey = Object.keys(cleanData).find(k => k.trim().toLowerCase() === 'height');
+        if (heightKey && cleanData[heightKey] !== undefined && cleanData[heightKey] !== null && cleanData[heightKey] !== '') {
+          const normalized = normalizeHeightToStandardString(cleanData[heightKey]);
+          if (normalized !== null) {
+            cleanData[heightKey] = normalized;
+          }
         }
-      }
 
-      // Add location data if available
-      if (selectedLocation) {
-        cleanData.location = {
-          latitude: selectedLocation.latitude,
-          longitude: selectedLocation.longitude,
-          address: selectedLocation.address || 'Unknown Address',
-        };
-      }
+        // Add location data if available
+        if (selectedLocation) {
+          cleanData.location = {
+            latitude: selectedLocation.latitude,
+            longitude: selectedLocation.longitude,
+            address: selectedLocation.address || 'Unknown Address',
+          };
+        }
 
-      onSave(cleanData);
+        // Check for potential duplicates (simple name-based matching for manual entry)
+        const potentialMatches = await checkForDuplicates(cleanData);
+        
+        if (potentialMatches.length > 0) {
+          const highConfidenceMatch = potentialMatches.find(match => match.confidence >= 95);
+          const mediumConfidenceMatch = potentialMatches.find(match => match.confidence < 95);
+          
+          if (highConfidenceMatch) {
+            // Streamlined confirmation for >= 95% confidence
+            Alert.alert(
+              'High Confidence Match Found',
+              `We found a very similar individual: ${highConfidenceMatch.name} (${highConfidenceMatch.confidence}% match). Merge this data?`,
+              [
+                { text: 'Cancel', style: 'cancel', onPress: () => setIsSaving(false) },
+                { 
+                  text: 'Merge', 
+                  onPress: async () => {
+                    try {
+                      const mergedData = { 
+                        ...cleanData, 
+                        existing_individual_id: highConfidenceMatch.id 
+                      };
+                      await api.saveIndividual(mergedData);
+                      Toast.show({
+                        type: 'success',
+                        text1: 'Success',
+                        text2: 'Data merged successfully!'
+                      });
+                      onSave(mergedData);
+                    } catch (error: any) {
+                      Alert.alert('Error', error.message || 'An error occurred');
+                      setIsSaving(false);
+                    }
+                  }
+                }
+              ]
+            );
+            return;
+          } else if (mediumConfidenceMatch) {
+            // Full merge UI for 60-94% confidence
+            setSelectedMatch(mediumConfidenceMatch);
+            setShowMergeUI(true);
+            setIsSaving(false);
+            return;
+          }
+        }
+        
+        // No meaningful match, save as new
+        await api.saveIndividual(cleanData);
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Data saved successfully!'
+        });
+        onSave(cleanData);
+        
+      } catch (error: any) {
+        Alert.alert('Error', error.message || 'An error occurred');
+      } finally {
+        setIsSaving(false);
+      }
     } else {
       Alert.alert('Validation Error', 'Please fix the errors before saving.');
     }
+  };
+
+  // Simple duplicate detection for manual entry
+  const checkForDuplicates = async (data: Record<string, any>): Promise<Array<{id: string, confidence: number, name: string}>> => {
+    try {
+      const name = data.name || data.Name;
+      if (!name || name.trim().length < 2) {
+        return []; // Skip duplicate check for very short names
+      }
+      
+      // Search for similar individuals
+      const searchResults = await api.searchIndividuals(name.trim());
+      
+      // Convert to potential matches with confidence scores
+      const matches = searchResults.map(result => {
+        let confidence = 0;
+        
+        // Simple name similarity (case-insensitive)
+        const searchName = name.toLowerCase().trim();
+        const resultName = result.name.toLowerCase().trim();
+        
+        if (resultName === searchName) {
+          confidence = 95; // Exact match
+        } else if (resultName.includes(searchName) || searchName.includes(resultName)) {
+          confidence = 85; // Partial match
+        } else {
+          // Check for similar words
+          const searchWords = searchName.split(' ');
+          const resultWords = resultName.split(' ');
+          const matchingWords = searchWords.filter(word => 
+            resultWords.some(rWord => rWord.includes(word) || word.includes(rWord))
+          );
+          confidence = Math.round((matchingWords.length / searchWords.length) * 75);
+        }
+        
+        return {
+          id: result.id,
+          confidence,
+          name: result.name
+        };
+      }).filter(match => match.confidence >= 60); // Only return meaningful matches
+      
+      return matches;
+    } catch (error) {
+      console.error('Error checking for duplicates:', error);
+      return [];
+    }
+  };
+
+  const handleMerge = async (mergedData: Record<string, any>) => {
+    try {
+      await api.saveIndividual(mergedData);
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Data merged successfully!'
+      });
+      setShowMergeUI(false);
+      setSelectedMatch(null);
+      onSave(mergedData);
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message || 'An error occurred'
+      });
+    }
+  };
+
+  const handleCreateNew = async (data: Record<string, any>) => {
+    try {
+      await api.saveIndividual(data);
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'New individual created successfully!'
+      });
+      setShowMergeUI(false);
+      setSelectedMatch(null);
+      onSave(data);
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message || 'An error occurred'
+      });
+    }
+  };
+
+  const handleMergeCancel = () => {
+    setShowMergeUI(false);
+    setSelectedMatch(null);
+    setIsSaving(false);
   };
 
   const renderField = (category: Category) => {
@@ -302,6 +469,19 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     );
   }
 
+  // Show MergeUI if there's a medium confidence match
+  if (showMergeUI && selectedMatch) {
+    return (
+      <MergeUI
+        newData={formData}
+        potentialMatch={selectedMatch}
+        onMerge={handleMerge}
+        onCreateNew={handleCreateNew}
+        onCancel={handleMergeCancel}
+      />
+    );
+  }
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -366,8 +546,14 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>Save</Text>
+        <TouchableOpacity 
+          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]} 
+          onPress={handleSave}
+          disabled={isSaving}
+        >
+          <Text style={styles.saveButtonText}>
+            {isSaving ? 'Saving...' : 'Save'}
+          </Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -486,6 +672,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#94A3B8',
   },
   saveButtonText: {
     color: 'white',

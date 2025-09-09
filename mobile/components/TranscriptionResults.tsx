@@ -120,9 +120,9 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
     setIsSaving(true);
 
     try {
-      // Check for potential matches with updated confidence thresholds
+      // Check for potential matches according to PRD specifications
       const highConfidenceMatch = result.potential_matches?.find(match => match.confidence >= 95);
-      const mediumConfidenceMatch = result.potential_matches?.find(match => match.confidence >= 60 && match.confidence < 95);
+      const mediumConfidenceMatch = result.potential_matches?.find(match => match.confidence < 95);
       const lowConfidenceMatch = result.potential_matches?.find(match => match.confidence < 60);
 
       if (highConfidenceMatch) {

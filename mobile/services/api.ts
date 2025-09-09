@@ -475,15 +475,31 @@ export interface TranscriptionResult {
 const mockTranscription = (audioUrl: string): TranscriptionResult => {
   console.log('Using mock transcription for:', audioUrl);
   
-  // Test different confidence levels based on audio URL
+  // Test different confidence levels based on audio URL or generate random for variety
   let confidence = 87; // Default for testing merge UI (60-94% range)
+  let matchName = "John Smith";
   
   if (audioUrl.includes('high-confidence')) {
     confidence = 97; // Test streamlined confirmation (≥95%)
+    matchName = "John Doe"; // Closer match
   } else if (audioUrl.includes('low-confidence')) {
     confidence = 45; // Test no merge UI (<60%)
+    matchName = "James Johnson"; // Less similar
   } else if (audioUrl.includes('no-match')) {
     confidence = 0; // Test no matches
+  } else {
+    // Generate varying confidence levels for more realistic testing
+    const randomFactor = Math.random();
+    if (randomFactor > 0.7) {
+      confidence = 95 + Math.floor(Math.random() * 5); // 95-99% (high confidence)
+      matchName = "John Doe";
+    } else if (randomFactor > 0.3) {
+      confidence = 60 + Math.floor(Math.random() * 35); // 60-94% (medium confidence) 
+      matchName = "John Smith";
+    } else {
+      confidence = 30 + Math.floor(Math.random() * 30); // 30-59% (low confidence)
+      matchName = "Johnny Williams";
+    }
   }
   
   return {
@@ -491,19 +507,19 @@ const mockTranscription = (audioUrl: string): TranscriptionResult => {
     categorized_data: {
       name: "John",
       age: 45,
-      height: 72,
+      height: "6'0\"",
       weight: 180,
       skin_color: "Light",
-      substance_abuse: "Moderate",
+      substance_abuse_history: "Moderate",
       medical_conditions: "Diabetes",
-      location: "Market Street"
+      additional_information: "Found near Market Street, needs medical attention"
     },
-    missing_required: ["height", "weight", "skin_color"],
+    missing_required: [],
     potential_matches: confidence > 0 ? [
       {
-        id: "123",
+        id: "mock-individual-123",
         confidence: confidence,
-        name: "John Smith"
+        name: matchName
       }
     ] : []
   };
@@ -554,8 +570,11 @@ export const api = {
       console.log('💾 Saving individual to database...');
       console.log('Data to save:', data);
       
+      // Check if this is a merge operation
+      const mergeWithId = data.existing_individual_id || data.merge_with_id;
+      
       // Extract categorized data (age, height, weight, etc.) from the data
-      const { Name, name, id, danger_score, danger_override, data: existingData, ...categorizedData } = data;
+      const { Name, name, id, danger_score, danger_override, data: existingData, existing_individual_id, merge_with_id, ...categorizedData } = data;
       
       // Convert categorized data field names to lowercase for profile display
       const processedData: Record<string, any> = {};
@@ -567,36 +586,62 @@ export const api = {
       
       console.log('📊 Processed categorized data:', processedData);
       
-      // Use direct Supabase insert for real database
-      const { data: result, error } = await supabase
-        .from('individuals')
-        .insert({
-          id: id || generateUUID(),
-          name: Name || name || 'Unknown Individual',
-          data: existingData || processedData || {},
-          danger_score: danger_score || 0,
-          danger_override: danger_override || null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('❌ Save error:', error);
+      if (mergeWithId) {
+        console.log('🔄 Merging with existing individual:', mergeWithId);
+        
+        // Use backend API for proper merge with danger score calculation
+        const response = await fetch(`${getConfig().BASE_URL}/api/individuals`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${await getAuthToken()}`
+          },
+          body: JSON.stringify({
+            data: processedData,
+            merge_with_id: mergeWithId
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || 'Failed to merge individual');
+        }
+        
+        const result = await response.json();
+        console.log('✅ Successfully merged individual:', result);
         return {
-          id: 'error-' + Date.now(),
-          success: false,
-          message: 'Failed to save: ' + error.message
+          id: result.individual.id,
+          success: true,
+          message: 'Data merged successfully'
+        };
+      } else {
+        console.log('➕ Creating new individual');
+        
+        // Use backend API for proper danger score calculation
+        const response = await fetch(`${getConfig().BASE_URL}/api/individuals`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${await getAuthToken()}`
+          },
+          body: JSON.stringify({
+            data: processedData
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || 'Failed to save individual');
+        }
+        
+        const result = await response.json();
+        console.log('✅ Successfully saved new individual:', result);
+        return {
+          id: result.individual.id,
+          success: true,
+          message: 'Data saved successfully'
         };
       }
-
-      console.log('✅ Successfully saved individual:', result);
-      return {
-        id: result.id,
-        success: true,
-        message: 'Data saved successfully to database'
-      };
     } catch (error) {
       console.error('❌ Save individual error:', error);
       return {
