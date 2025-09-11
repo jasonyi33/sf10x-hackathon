@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 // Import screens
 import { RecordScreen } from './screens/RecordScreen';
 import SearchScreen from './screens/SearchScreen';
+import VoiceAssistantScreen from './screens/VoiceAssistantScreen';
 import CategoriesScreen from './screens/CategoriesScreen';
 import UserProfileScreen from './screens/UserProfileScreen';
 import IndividualProfileScreen from './screens/IndividualProfileScreen';
@@ -60,6 +61,8 @@ function AppContent() {
               iconName = focused ? 'camera' : 'camera-outline';
             } else if (route.name === 'Search') {
               iconName = focused ? 'search' : 'search-outline';
+            } else if (route.name === 'VoiceAssistant') {
+              iconName = focused ? 'mic' : 'mic-outline';
             } else if (route.name === 'Categories') {
               iconName = focused ? 'settings' : 'settings-outline';
             } else if (route.name === 'Profile') {
@@ -84,6 +87,11 @@ function AppContent() {
           name="Search" 
           component={SearchStack}
           options={{ title: 'Search', headerShown: false }}
+        />
+        <Tab.Screen 
+          name="VoiceAssistant" 
+          component={VoiceAssistantScreen}
+          options={{ title: 'Assistant' }}
         />
         <Tab.Screen 
           name="Categories" 

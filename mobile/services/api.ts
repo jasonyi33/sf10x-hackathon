@@ -1125,6 +1125,102 @@ export const api = {
     });
   },
 
+  // Get OpenAI API key for voice assistant
+  getOpenAIApiKey: async (): Promise<string | null> => {
+    try {
+      console.log('🔑 Fetching OpenAI API key...');
+      
+      const response = await apiRequest('/api/voice-assistant/api-key', {
+        method: 'GET',
+      });
+      
+      console.log('✅ OpenAI API key retrieved');
+      return response.api_key || null;
+    } catch (error) {
+      console.error('❌ Failed to get OpenAI API key:', error);
+      return null;
+    }
+  },
+
+  // Get local resources for voice assistant
+  getLocalResources: async (lat?: number, lng?: number) => {
+    try {
+      console.log('🏠 Fetching local resources...');
+      
+      const params = new URLSearchParams();
+      if (lat !== undefined) params.append('lat', lat.toString());
+      if (lng !== undefined) params.append('lng', lng.toString());
+      
+      const response = await apiRequest(`/api/voice-assistant/resources?${params.toString()}`, {
+        method: 'GET',
+      });
+      
+      console.log('✅ Local resources retrieved');
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to get local resources:', error);
+      throw error;
+    }
+  },
+
+  // Get safety guidelines for voice assistant
+  getSafetyGuidelines: async (category?: string) => {
+    try {
+      console.log('🛡️ Fetching safety guidelines...');
+      
+      const params = new URLSearchParams();
+      if (category) params.append('category', category);
+      
+      const response = await apiRequest(`/api/voice-assistant/guidelines?${params.toString()}`, {
+        method: 'GET',
+      });
+      
+      console.log('✅ Safety guidelines retrieved');
+      return response;
+    } catch (error) {
+      console.error('❌ Failed to get safety guidelines:', error);
+      throw error;
+    }
+  },
+
+  // Transcribe audio for voice assistant
+  transcribeAudio: async (audioUri: string) => {
+    try {
+      console.log('🎤 Transcribing audio for voice assistant...');
+      
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('audio', {
+        uri: audioUri,
+        type: 'audio/m4a',
+        name: 'voice_input.m4a',
+      } as any);
+
+      const token = await getAuthToken();
+      const response = await fetch(getApiUrl('/api/voice-assistant/transcribe'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Transcription response error:', errorText);
+        throw new Error(`Transcription failed: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Audio transcribed successfully');
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to transcribe audio:', error);
+      throw error;
+    }
+  },
+
   // Get all individuals (NEW METHOD)
   getAllIndividuals: async (): Promise<SearchResult[]> => {
     try {
