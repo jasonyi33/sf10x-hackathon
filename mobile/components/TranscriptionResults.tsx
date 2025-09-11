@@ -177,8 +177,11 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
         };
         const heightKey = Object.keys(saveData).find(k => k.trim().toLowerCase() === 'height');
         if (heightKey && saveData[heightKey]) {
-          const normalized = normalizeHeightToStandardString(saveData[heightKey]);
-          if (normalized) saveData[heightKey] = normalized;
+          // Only normalize if it's a string - if it's already a number, keep it as is
+          if (typeof saveData[heightKey] === 'string') {
+            const normalized = normalizeHeightToStandardString(saveData[heightKey]);
+            if (normalized) saveData[heightKey] = normalized;
+          }
         }
         await api.saveIndividual(saveData);
         Toast.show({
