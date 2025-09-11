@@ -53,7 +53,8 @@ INSERT INTO categories (name, type, priority, danger_weight, auto_trigger, is_re
     ('Substance Abuse History', 'single_select', 'high', 25, TRUE, FALSE, TRUE,
         '[{"label": "None", "value": 0.1}, {"label": "Light", "value": 0.4}, {"label": "Moderate", "value": 0.7}, {"label": "Heavy", "value": 0.9}]'),
     ('Housing Priority', 'single_select', 'medium', 15, FALSE, FALSE, TRUE,
-        '[{"label": "Low", "value": 0.2}, {"label": "Medium", "value": 0.5}, {"label": "High", "value": 0.8}]')
+        '[{"label": "Low", "value": 0.2}, {"label": "Medium", "value": 0.5}, {"label": "High", "value": 0.8}]'),
+    ('Additional Information', 'text', 'low', 0, FALSE, FALSE, TRUE, NULL)
 ON CONFLICT (name) DO NOTHING;
 
 -- Step 5: Create indexes for better performance

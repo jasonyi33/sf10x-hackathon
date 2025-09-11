@@ -60,6 +60,7 @@ class IndividualResponse(BaseModel):
     data: Dict[str, Any]  # All categorized fields
     created_at: datetime
     updated_at: datetime
+    last_location: Optional[Dict[str, Any]]  # Last known location with address
 
 
 class InteractionSummary(BaseModel):

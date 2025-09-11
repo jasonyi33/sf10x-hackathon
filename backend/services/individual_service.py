@@ -146,14 +146,20 @@ class IndividualService:
             # Get changes only
             changes = self.get_changed_fields(existing_individual.get("data", {}), data)
             
-            # Update existing individual
+            # Update existing individual with location if provided
+            update_data = {
+                "name": name,
+                "danger_score": danger_score,
+                "data": data,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            # Add last_location if location data is provided
+            if location_dict:
+                update_data["last_location"] = location_dict
+            
             update_response = self.supabase.table("individuals") \
-                .update({
-                    "name": name,
-                    "danger_score": danger_score,
-                    "data": data,
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                }) \
+                .update(update_data) \
                 .eq("id", str(merge_with_id)) \
                 .execute()
             
@@ -175,13 +181,19 @@ class IndividualService:
             interaction = interaction_response.data[0]
             
         else:
-            # Create new individual
+            # Create new individual with location if provided
+            individual_data = {
+                "name": name,
+                "danger_score": danger_score,
+                "data": data
+            }
+            
+            # Add last_location if location data is provided
+            if location_dict:
+                individual_data["last_location"] = location_dict
+            
             individual_response = self.supabase.table("individuals") \
-                .insert({
-                    "name": name,
-                    "danger_score": danger_score,
-                    "data": data
-                }) \
+                .insert(individual_data) \
                 .execute()
             
             individual = individual_response.data[0]
@@ -210,7 +222,8 @@ class IndividualService:
             display_score=individual.get("danger_override") or individual["danger_score"],
             data=individual["data"],
             created_at=individual["created_at"],
-            updated_at=individual["updated_at"]
+            updated_at=individual["updated_at"],
+            last_location=individual.get("last_location")
         )
         
         interaction_resp = InteractionSummary(
@@ -414,7 +427,8 @@ class IndividualService:
             display_score=individual.get("danger_override") or individual["danger_score"],
             data=individual["data"],
             created_at=individual["created_at"],
-            updated_at=individual["updated_at"]
+            updated_at=individual["updated_at"],
+            last_location=individual.get("last_location")
         )
         
         interaction_summaries = [

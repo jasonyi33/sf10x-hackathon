@@ -180,6 +180,7 @@ Rules:
 - Return null for missing non-required information
 - Be conservative - only extract explicitly stated info
 - For skin color, map descriptions to Light/Medium/Dark
+- Please be attentive to medical conditions. Although the term medical conditions is not explicitly stated, it may be implied in the transcription and there may be multiple. Please be meticulous and extract all of them in a list.
 - For height, convert to total inches (e.g., "6 feet" = 72, "5'4\"" = 64)
 
 Transcription: {transcription}

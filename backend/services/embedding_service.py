@@ -80,8 +80,8 @@ class EmbeddingService:
                 text_parts.append(f"Veteran status: {data['veteran_status']}")
             if data.get('housing_status'):
                 text_parts.append(f"Housing status: {data['housing_status']}")
-            if data.get('violent_behavior'):
-                text_parts.append(f"Violent behavior: {data['violent_behavior']}")
+            if data.get('behavior'):
+                text_parts.append(f"Behavior: {data['behavior']}")
         
         # Danger score info
         if individual_data.get('danger_score'):

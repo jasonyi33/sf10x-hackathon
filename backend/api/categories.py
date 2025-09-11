@@ -79,7 +79,7 @@ async def export_csv(user_id: str = Depends(get_current_user)):
                 medical_conditions,
                 data.get("veteran_status", ""),
                 data.get("housing_priority", ""),
-                data.get("violent_behavior", "")
+                data.get("behavior", "")
             ])
         
         # Prepare response
