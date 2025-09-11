@@ -12,7 +12,6 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { RealtimeClient } from '@openai/realtime-api-beta';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import { api } from '../services/api';
@@ -42,8 +41,10 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [currentAudioData, setCurrentAudioData] = useState<string>('');
   
-  const clientRef = useRef<RealtimeClient | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
 
@@ -51,8 +52,8 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
   useEffect(() => {
     initializeVoiceAssistant();
     return () => {
-      if (clientRef.current) {
-        clientRef.current.disconnect();
+      if (wsRef.current) {
+        wsRef.current.close();
       }
     };
   }, []);
@@ -87,6 +88,151 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
     }
   };
 
+  // Handle WebSocket events from OpenAI Realtime API
+  const handleWebSocketEvent = (event: any) => {
+    console.log('🔍 Processing WebSocket event:', event.type);
+    
+    switch (event.type) {
+      case 'session.created':
+        console.log('✅ Session created successfully');
+        break;
+        
+      case 'session.updated':
+        console.log('✅ Session updated successfully');
+        break;
+        
+      case 'conversation.item.created':
+      case 'conversation.item.added':
+        if (event.item?.type === 'message' && event.item?.role === 'assistant') {
+          console.log('📝 Assistant message created/added');
+          // Add assistant message to UI
+          const assistantMessage: Message = {
+            id: event.item.id || Date.now().toString(),
+            role: 'assistant',
+            content: '',
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, assistantMessage]);
+        }
+        break;
+        
+      case 'conversation.item.updated':
+        if (event.item?.type === 'message' && event.item?.role === 'assistant') {
+          console.log('📝 Assistant message updated');
+          // Update the last assistant message
+          setMessages(prev => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage && lastMessage.role === 'assistant') {
+              lastMessage.content = event.item.content?.[0]?.text || '';
+            }
+            return newMessages;
+          });
+        }
+        break;
+        
+      case 'conversation.item.done':
+        if (event.item?.type === 'message' && event.item?.role === 'assistant') {
+          console.log('✅ Assistant message completed');
+          // Scroll to bottom when message is complete
+          setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        }
+        break;
+        
+      case 'response.output_audio_transcript.delta':
+        console.log('📝 Audio transcript delta:', event.delta);
+        // Update the last assistant message with the transcript
+        setMessages(prev => {
+          const newMessages = [...prev];
+          const lastMessage = newMessages[newMessages.length - 1];
+          if (lastMessage && lastMessage.role === 'assistant') {
+            lastMessage.content += event.delta || '';
+          }
+          return newMessages;
+        });
+        break;
+        
+      case 'response.output_audio_transcript.done':
+        console.log('✅ Audio transcript completed');
+        break;
+        
+      case 'response.output_audio.delta':
+        console.log('🎵 Audio delta received');
+        // Collect audio data
+        if (event.delta) {
+          setCurrentAudioData(prev => prev + event.delta);
+        }
+        break;
+        
+      case 'response.output_audio.done':
+        console.log('✅ Audio output completed');
+        // Play the collected audio data
+        if (currentAudioData && !isMuted) {
+          playAudioData(currentAudioData);
+        }
+        setCurrentAudioData(''); // Reset for next response
+        break;
+        
+      case 'response.done':
+        console.log('✅ Response completed');
+        break;
+        
+      case 'error':
+        console.error('❌ Server error:', event.error);
+        setError(event.error?.message || 'Server error occurred');
+        break;
+        
+      case 'echo':
+        console.log('🔍 Echo event received (testing mode)');
+        break;
+        
+      default:
+        console.log('🔍 Unhandled event type:', event.type);
+        console.log('🔍 Full event data:', JSON.stringify(event, null, 2));
+    }
+  };
+
+  const playAudioData = async (audioData: string) => {
+    try {
+      console.log('🎵 Playing audio data...');
+      console.log('🎵 Audio data length:', audioData.length);
+      
+      // Convert base64 audio data to a playable format
+      const audioUri = `data:audio/pcm;base64,${audioData}`;
+      
+      // Create and play the audio
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: audioUri },
+        { shouldPlay: true }
+      );
+      
+      console.log('🎵 Audio playback started');
+      
+      // Clean up when done
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          console.log('🎵 Audio playback completed');
+          sound.unloadAsync();
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error playing audio:', error);
+      console.log('🎵 Audio playback failed, text display is working fine');
+    }
+  };
+
+  const toggleMute = async () => {
+    setIsMuted(!isMuted);
+    if (!isMuted) {
+      // If we're muting, stop any current audio playback
+      console.log('🔇 Muted - Audio output disabled');
+    } else {
+      console.log('🔊 Unmuted - Audio output enabled');
+    }
+  };
+
   const initializeVoiceAssistant = async () => {
     try {
       setIsLoading(true);
@@ -102,215 +248,53 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
         throw new Error('OpenAI API key not available');
       }
 
-      // Initialize RealtimeClient for gpt-realtime model
-      const client = new RealtimeClient({ 
-        apiKey: apiKey,
-        dangerouslyAllowAPIKeyInBrowser: true // For React Native
-      });
+      // Connect to our backend WebSocket proxy
+      // This will handle the authentication with OpenAI
+      console.log('🔌 Connecting to backend WebSocket proxy...');
+      
+      // Get the backend URL from our API config
+      const backendUrl = 'http://192.168.1.3:8001'.replace('http', 'ws');
+      const wsUrl = `${backendUrl}/api/voice-assistant/realtime/ws`;
+      
+      console.log('🔌 WebSocket URL:', wsUrl);
+      console.log('🔌 Backend URL:', backendUrl);
+      
+      const ws = new WebSocket(wsUrl);
 
-      // Configure the assistant for homeless outreach guidance using gpt-realtime model
-      client.updateSession({
-        model: 'gpt-realtime', // Explicitly specify the gpt-realtime model
-        instructions: `You are a specialized AI assistant for homeless outreach workers using OpenAI's gpt-realtime model. You provide expert guidance on:
+      ws.onopen = () => {
+        console.log('✅ Connected to OpenAI Realtime API');
+        setIsConnected(true);
+        
+        // Session is already configured via ephemeral token, no need to send again
+        console.log('🔧 Session already configured via ephemeral token');
+      };
 
-1. **Crisis Intervention**: How to safely approach and de-escalate situations with homeless individuals
-2. **Care Protocols**: Best practices for providing assistance, medical care, and support
-3. **Resource Recommendations**: Information about shelters, food banks, medical services, and social programs
-4. **Medical Emergency Protocols**: Steps to take during medical emergencies
-5. **De-escalation Techniques**: Strategies for managing tense or potentially dangerous situations
-6. **Legal/Rights Information**: Understanding the rights of homeless individuals and legal considerations
-7. **Safety Guidelines**: How to protect yourself and others while providing outreach services
-
-Always prioritize safety, empathy, and practical guidance. Be concise but comprehensive in your responses. Use the available tools to get real-time information about local resources and patterns.`,
-        voice: 'alloy',
-        turn_detection: { type: 'server_vad' }, // Use server-side voice activity detection
-        input_audio_transcription: { model: 'whisper-1' },
-        // Additional gpt-realtime specific configurations
-        temperature: 0.7, // Balanced creativity and consistency
-        max_response_output_tokens: 4096, // Allow for comprehensive responses
-      });
-
-      // Add tools for accessing local resources and data
-      client.addTool(
-        {
-          name: 'get_local_resources',
-          description: 'Get local resources like shelters, medical facilities, and food services based on location',
-          parameters: {
-            type: 'object',
-            properties: {
-              lat: {
-                type: 'number',
-                description: 'Latitude coordinate',
-              },
-              lng: {
-                type: 'number', 
-                description: 'Longitude coordinate',
-              },
-            },
-            required: [],
-          },
-        },
-        async ({ lat, lng }: { lat?: number; lng?: number }) => {
-          try {
-            // Use provided coordinates or fall back to current location
-            let latitude = lat;
-            let longitude = lng;
-            
-            if (!latitude || !longitude) {
-              const location = currentLocation || await getCurrentLocation();
-              if (location) {
-                latitude = location.latitude;
-                longitude = location.longitude;
-              }
-            }
-            
-            console.log('🏠 Fetching local resources...', { latitude, longitude });
-            const response = await api.getLocalResources(latitude, longitude);
-            return response;
-          } catch (error) {
-            console.error('Failed to get local resources:', error);
-            return { error: 'Failed to get local resources' };
-          }
+      ws.onmessage = (event: any) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('📨 Received WebSocket message:', data);
+          
+          // Handle different event types
+          handleWebSocketEvent(data);
+        } catch (error) {
+          console.error('❌ Error parsing WebSocket message:', error);
         }
-      );
+      };
 
-      client.addTool(
-        {
-          name: 'get_safety_guidelines',
-          description: 'Get safety guidelines and protocols for homeless outreach work',
-          parameters: {
-            type: 'object',
-            properties: {
-              category: {
-                type: 'string',
-                description: 'Category of guidelines (crisis_intervention, medical_emergency, de_escalation, safety_protocols)',
-                enum: ['crisis_intervention', 'medical_emergency', 'de_escalation', 'safety_protocols'],
-              },
-            },
-            required: [],
-          },
-        },
-        async ({ category }: { category?: string }) => {
-          try {
-            const response = await api.getSafetyGuidelines(category);
-            return response;
-          } catch (error) {
-            console.error('Failed to get safety guidelines:', error);
-            return { error: 'Failed to get safety guidelines' };
-          }
-        }
-      );
-
-      client.addTool(
-        {
-          name: 'get_individual_info',
-          description: 'Get information about a specific individual in the database',
-          parameters: {
-            type: 'object',
-            properties: {
-              individual_id: {
-                type: 'string',
-                description: 'ID of the individual to get information about',
-              },
-            },
-            required: ['individual_id'],
-          },
-        },
-        async ({ individual_id }: { individual_id: string }) => {
-          try {
-            const response = await api.getIndividualProfile(individual_id);
-            return response;
-          } catch (error) {
-            console.error('Failed to get individual info:', error);
-            return { error: 'Failed to get individual information' };
-          }
-        }
-      );
-
-      // Set up event handlers
-      client.on('conversation.updated', ({ item, delta }: { item: any; delta: any }) => {
-        if (item.type === 'message' && item.role === 'assistant') {
-          if (delta?.transcript) {
-            // Update the last assistant message with new transcript content
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMessage = newMessages[newMessages.length - 1];
-              if (lastMessage && lastMessage.role === 'assistant') {
-                lastMessage.content += delta.transcript;
-              } else {
-                // Create new assistant message
-                newMessages.push({
-                  id: Date.now().toString(),
-                  role: 'assistant',
-                  content: delta.transcript,
-                  timestamp: new Date(),
-                });
-              }
-              return newMessages;
-            });
-          }
-        } else if (item.type === 'message' && item.role === 'user') {
-          if (delta?.transcript) {
-            // Update the last user message with new transcript content
-            setMessages(prev => {
-              const newMessages = [...prev];
-              const lastMessage = newMessages[newMessages.length - 1];
-              if (lastMessage && lastMessage.role === 'user') {
-                lastMessage.content += delta.transcript;
-              } else {
-                // Create new user message
-                newMessages.push({
-                  id: Date.now().toString(),
-                  role: 'user',
-                  content: delta.transcript,
-                  timestamp: new Date(),
-                });
-              }
-              return newMessages;
-            });
-          }
-        }
-      });
-
-      client.on('conversation.item.completed', ({ item }: { item: any }) => {
-        if (item.type === 'message') {
-          // Message completed, scroll to bottom
-          setTimeout(() => {
-            scrollViewRef.current?.scrollToEnd({ animated: true });
-          }, 100);
-        }
-      });
-
-      client.on('conversation.interrupted', () => {
-        setIsRecording(false);
-      });
-
-      client.on('error', (event: any) => {
-        console.error('Voice assistant error:', event);
-        setError('Connection error occurred');
+      ws.onerror = (err: any) => {
+        console.error('❌ WebSocket error:', err);
+        console.error('❌ Error details:', JSON.stringify(err, null, 2));
+        setError(`WebSocket connection error: ${err.message || 'Unknown error'}`);
         setIsConnected(false);
-        setIsRecording(false);
-      });
+      };
 
-      // Connect to the API
-      await client.connect();
-      
-      clientRef.current = client;
-      setIsConnected(true);
-      
-      console.log('🎤 Voice Assistant connected using gpt-realtime model');
-      
-      // Add welcome message only once
-      if (!hasShownWelcome) {
-        const welcomeMessage: Message = {
-          id: 'welcome',
-          role: 'assistant',
-          content: 'Hello! I\'m your homeless outreach assistant. I can help you with crisis intervention, care protocols, resource recommendations, and safety guidance. How can I assist you today?',
-          timestamp: new Date(),
-        };
-        setMessages([welcomeMessage]);
-        setHasShownWelcome(true);
-      }
+      ws.onclose = (event: any) => {
+        console.log('🔌 WebSocket connection closed');
+        console.log('🔌 Close event details:', JSON.stringify(event, null, 2));
+        setIsConnected(false);
+      };
+
+      wsRef.current = ws;
 
     } catch (err) {
       console.error('Failed to initialize voice assistant:', err);
@@ -320,8 +304,23 @@ Always prioritize safety, empathy, and practical guidance. Be concise but compre
     }
   };
 
+  // Add welcome message when connected
+  const addWelcomeMessage = () => {
+    if (!hasShownWelcome) {
+      const welcomeMessage: Message = {
+        id: 'welcome',
+        role: 'assistant',
+        content: 'Hello! I\'m your homeless outreach assistant. I can help you with crisis intervention, care protocols, resource recommendations, and safety guidance, among other things. How can I assist you today?',
+        timestamp: new Date(),
+      };
+      setMessages([welcomeMessage]);
+      setHasShownWelcome(true);
+      console.log('👋 Welcome message added');
+    }
+  };
+
   const startRecording = async () => {
-    if (!clientRef.current || !isConnected) {
+    if (!wsRef.current || !isConnected) {
       Alert.alert('Error', 'Voice assistant not connected');
       return;
     }
@@ -378,7 +377,7 @@ Always prioritize safety, empathy, and practical guidance. Be concise but compre
       recordingRef.current = null;
       setIsRecording(false);
 
-      if (uri && clientRef.current) {
+      if (uri && wsRef.current) {
         console.log('🎤 Stopped recording, processing audio:', uri);
         
         // Update the user message to show processing
@@ -409,10 +408,38 @@ Always prioritize safety, empathy, and practical guidance. Be concise but compre
             return newMessages;
           });
 
-          // Send the transcription to the voice assistant
-          clientRef.current.sendUserMessageContent([
-            { type: 'input_text', text: transcription }
-          ]);
+          // Send the transcription to the voice assistant via WebSocket
+          console.log('📤 Sending message to GPT Realtime via WebSocket');
+          console.log('📤 Message content:', transcription);
+          
+          // Send message via WebSocket
+          const messageEvent = {
+            type: "conversation.item.create",
+            item: {
+              type: "message",
+              role: "user",
+              content: [
+                {
+                  type: "input_text",
+                  text: transcription,
+                },
+              ],
+            },
+          };
+          
+          if (wsRef.current) {
+            wsRef.current.send(JSON.stringify(messageEvent));
+            console.log('✅ Message sent successfully via WebSocket');
+            
+            // Trigger assistant response
+            setTimeout(() => {
+              const responseEvent = {
+                type: "response.create",
+              };
+              wsRef.current?.send(JSON.stringify(responseEvent));
+              console.log('🎯 Triggered assistant response');
+            }, 100);
+          }
           
         } catch (transcriptionError) {
           console.error('Transcription failed:', transcriptionError);
@@ -427,9 +454,33 @@ Always prioritize safety, empathy, and practical guidance. Be concise but compre
             return newMessages;
           });
 
-          clientRef.current.sendUserMessageContent([
-            { type: 'input_text', text: 'I need help with homeless outreach guidance' }
-          ]);
+          // Send fallback message via WebSocket
+          const fallbackEvent = {
+            type: "conversation.item.create",
+            item: {
+              type: "message",
+              role: "user",
+              content: [
+                {
+                  type: "input_text",
+                  text: "I need help with homeless outreach guidance",
+                },
+              ],
+            },
+          };
+          
+          if (wsRef.current) {
+            wsRef.current.send(JSON.stringify(fallbackEvent));
+            
+            // Trigger assistant response
+            setTimeout(() => {
+              const responseEvent = {
+                type: "response.create",
+              };
+              wsRef.current?.send(JSON.stringify(responseEvent));
+              console.log('🎯 Triggered assistant response (fallback)');
+            }, 100);
+          }
         }
       }
     } catch (error) {
@@ -441,7 +492,7 @@ Always prioritize safety, empathy, and practical guidance. Be concise but compre
   };
 
   const sendTextMessage = async (text: string) => {
-    if (!clientRef.current || !isConnected) {
+    if (!wsRef.current || !isConnected) {
       Alert.alert('Error', 'Voice assistant not connected');
       return;
     }
@@ -455,19 +506,45 @@ Always prioritize safety, empathy, and practical guidance. Be concise but compre
     };
     setMessages(prev => [...prev, userMessage]);
 
-    // Send text message to assistant
-    clientRef.current.sendUserMessageContent([
-      { type: 'input_text', text: text }
-    ]);
+    // Send text message to assistant via WebSocket
+    console.log('📤 Sending text message to GPT Realtime via WebSocket');
+    console.log('📤 Message content:', text);
+    
+    // Send message via WebSocket
+    const messageEvent = {
+      type: "conversation.item.create",
+      item: {
+        type: "message",
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: text,
+          },
+        ],
+      },
+    };
+    
+    if (wsRef.current) {
+      wsRef.current.send(JSON.stringify(messageEvent));
+      console.log('✅ Text message sent successfully via WebSocket');
+      
+      // Trigger assistant response
+      setTimeout(() => {
+        const responseEvent = {
+          type: "response.create",
+        };
+        wsRef.current?.send(JSON.stringify(responseEvent));
+        console.log('🎯 Triggered assistant response');
+      }, 100);
+    }
   };
 
   const clearConversation = () => {
     setMessages([]);
     setHasShownWelcome(false); // Reset welcome message flag
-    if (clientRef.current) {
-      // Reset the conversation
-      clientRef.current.conversation.clear();
-    }
+    // Note: WebSocket doesn't have a conversation.clear() method
+    // The conversation state is managed by the server
   };
 
   const renderMessage = (message: Message) => (
@@ -511,6 +588,27 @@ Always prioritize safety, empathy, and practical guidance. Be concise but compre
       <View style={styles.header}>
         <Text style={styles.title}>Voice Assistant</Text>
         <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={styles.testButton}
+            onPress={() => {
+              if (wsRef.current && isConnected) {
+                console.log('🧪 Testing GPT Realtime speech output via WebSocket');
+                sendTextMessage('Hello, this is a test of the text to speech functionality.');
+              }
+            }}
+          >
+            <Ionicons name="play" size={16} color="#007AFF" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.muteButton}
+            onPress={toggleMute}
+          >
+            <Ionicons 
+              name={isMuted ? "volume-mute" : "volume-high"} 
+              size={20} 
+              color={isMuted ? "#FF3B30" : "#007AFF"} 
+            />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.clearButton}
             onPress={clearConversation}
@@ -633,6 +731,14 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  testButton: {
+    padding: 8,
+    marginRight: 4,
+  },
+  muteButton: {
+    padding: 8,
+    marginRight: 8,
   },
   clearButton: {
     padding: 8,

@@ -342,3 +342,5 @@ async def get_safety_guidelines(credentials: HTTPAuthorizationCredentials = Depe
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get guidelines: {str(e)}")
+
+# WebSocket endpoint moved to main.py to avoid conflicts
