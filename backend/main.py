@@ -7,6 +7,9 @@ import asyncio
 import ssl
 import httpx
 import websockets
+import base64
+import io
+import wave
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -47,6 +50,15 @@ async def test_websocket(websocket: WebSocket):
     await websocket.send_text("Hello from test WebSocket!")
     await websocket.close()
 
+"""
+NOTE on audio input:
+The Realtime WebSocket API expects raw PCM base64 for input_audio_buffer.append.
+We do NOT convert compressed formats (e.g., M4A) to PCM here.
+Clients must send 24kHz, mono, 16-bit PCM base64 for input audio, or use the
+Whisper transcription endpoint (/api/voice-assistant/transcribe) and then send
+text via conversation.item.create.
+"""
+
 @app.websocket("/api/voice-assistant/realtime/ws")
 async def websocket_realtime_proxy(websocket: WebSocket):
     """
@@ -74,6 +86,8 @@ async def websocket_realtime_proxy(websocket: WebSocket):
             "session": {
                 "type": "realtime",
                 "model": "gpt-realtime",
+                # Use audio-only; UI consumes transcript events for text
+                "output_modalities": ["audio"],
                 "instructions": """You are a specialized AI assistant for homeless outreach workers. You provide expert guidance on:
 
 1. **Crisis Intervention**: How to safely approach and de-escalate situations with homeless individuals
@@ -86,12 +100,13 @@ async def websocket_realtime_proxy(websocket: WebSocket):
 
 Always prioritize safety, empathy, and practical guidance. Be concise but comprehensive in your responses.""",
                 "audio": {
+                    "input": {
+                        "format": {"type": "audio/pcm", "rate": 24000},
+                        "turn_detection": {"type": "semantic_vad"}
+                    },
                     "output": {
+                        "format": {"type": "audio/pcm", "rate": 24000},
                         "voice": "alloy",
-                        "format": {
-                            "type": "audio/pcm",
-                            "rate": 24000,
-                        },
                     },
                 },
             },
@@ -154,7 +169,22 @@ Always prioritize safety, empathy, and practical guidance. Be concise but compre
                 try:
                     while True:
                         message = await websocket.receive_text()
+                        print(f"📤 Received from client: {message[:200]}...")
+                        
+                        # Parse the message to check if it's an audio event
+                        try:
+                            parsed_message = json.loads(message)
+                            if parsed_message.get("type") == "input_audio_buffer.append":
+                                audio_data = parsed_message.get("audio", "")
+                                print(f"🎵 Audio chunk received: {len(audio_data)} characters (expecting base64 PCM)")
+                                # No server-side conversion. Ensure client sends 24kHz mono 16-bit PCM base64.
+                            elif parsed_message.get("type") == "input_audio_buffer.commit":
+                                print("🎵 Audio buffer commit received")
+                        except json.JSONDecodeError:
+                            print("⚠️ Non-JSON message received")
+                        
                         print(f"📤 Forwarding to OpenAI: {message[:100]}...")
+                        print(f"📤 Full message length: {len(message)} characters")
                         await openai_ws.send(message)
                 except Exception as e:
                     print(f"❌ Error forwarding to OpenAI: {e}")
@@ -163,7 +193,19 @@ Always prioritize safety, empathy, and practical guidance. Be concise but compre
                 try:
                     while True:
                         message = await openai_ws.recv()
-                        print(f"📨 Received from OpenAI: {message[:100]}...")
+                        print(f"📨 Received from OpenAI: {message[:200]}...")
+                        
+                        # Parse the message to check for errors
+                        try:
+                            parsed_message = json.loads(message)
+                            if parsed_message.get("type") == "error":
+                                error_info = parsed_message.get("error", {})
+                                print(f"❌ OpenAI Error: {error_info.get('message', 'Unknown error')}")
+                                if error_info.get("code") == "input_audio_buffer_commit_empty":
+                                    print("🎵 Audio buffer was empty - this suggests the audio data wasn't received properly")
+                        except json.JSONDecodeError:
+                            pass
+                        
                         await websocket.send_text(message)
                 except Exception as e:
                     print(f"❌ Error forwarding to client: {e}")

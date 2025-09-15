@@ -18,7 +18,12 @@
     "@react-navigation/native": "^7.1.16",
     "@react-navigation/stack": "^7.4.4",
     "@supabase/supabase-js": "^2.53.0",
+    "audio-buffer-utils": "^5.1.2",
+    "audio-context-polyfill": "^1.0.0",
+    "audio-decode": "^2.2.3",
+    "audio-oscillator": "^3.1.1",
     "expo": "~53.0.20",
+    "expo-audio": "^1.0.11",
     "expo-av": "^15.1.7",
     "expo-location": "~18.1.6",
     "expo-status-bar": "~2.2.3",
@@ -28,7 +33,8 @@
     "react-native-maps": "1.20.1",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.13.1",
-    "react-native-toast-message": "^2.3.3"
+    "react-native-toast-message": "^2.3.3",
+    "web-audio-api": "^0.2.2"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

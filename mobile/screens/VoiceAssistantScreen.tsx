@@ -13,9 +13,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 import * as Location from 'expo-location';
 import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { AudioProcessor, RECORDING_CONFIG, configureAudioRecording } from '../utils/audioProcessor';
+import { API_CONFIG } from '../config/api';
 
 interface Message {
   id: string;
@@ -43,6 +46,8 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
   } | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [currentAudioData, setCurrentAudioData] = useState<string>('');
+  // Use a ref to avoid stale state when buffering streamed audio
+  const audioBufferRef = useRef<string>('');
   
   const wsRef = useRef<WebSocket | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -153,6 +158,23 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
           return newMessages;
         });
         break;
+
+      // Also handle explicit text stream events if the model emits them
+      case 'response.output_text.delta':
+        console.log('📝 Text delta:', event.delta);
+        setMessages(prev => {
+          const newMessages = [...prev];
+          const lastMessage = newMessages[newMessages.length - 1];
+          if (lastMessage && lastMessage.role === 'assistant') {
+            lastMessage.content += event.delta || '';
+          }
+          return newMessages;
+        });
+        break;
+
+      case 'response.output_text.done':
+        console.log('✅ Text output completed');
+        break;
         
       case 'response.output_audio_transcript.done':
         console.log('✅ Audio transcript completed');
@@ -162,17 +184,37 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
         console.log('🎵 Audio delta received');
         // Collect audio data
         if (event.delta) {
+          // Keep state updated for debugging/visibility
           setCurrentAudioData(prev => prev + event.delta);
+          // Append to ref buffer to avoid stale state in done handler
+          audioBufferRef.current += event.delta;
         }
         break;
         
       case 'response.output_audio.done':
         console.log('✅ Audio output completed');
         // Play the collected audio data
-        if (currentAudioData && !isMuted) {
-          playAudioData(currentAudioData);
+        {
+          const buffered = audioBufferRef.current || currentAudioData;
+          if (buffered && !isMuted) {
+            playAudioData(buffered);
+          }
+          // Reset buffers for next response
+          audioBufferRef.current = '';
+          setCurrentAudioData('');
         }
-        setCurrentAudioData(''); // Reset for next response
+        break;
+        
+      case 'input_audio_buffer.speech_started':
+        console.log('🎤 Speech started detected');
+        break;
+        
+      case 'input_audio_buffer.speech_stopped':
+        console.log('🎤 Speech stopped detected');
+        break;
+        
+      case 'input_audio_buffer.committed':
+        console.log('✅ Audio buffer committed');
         break;
         
       case 'response.done':
@@ -198,28 +240,41 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
     try {
       console.log('🎵 Playing audio data...');
       console.log('🎵 Audio data length:', audioData.length);
-      
-      // Convert base64 audio data to a playable format
-      const audioUri = `data:audio/pcm;base64,${audioData}`;
-      
-      // Create and play the audio
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: audioUri },
-        { shouldPlay: true }
-      );
-      
+
+      // Server outputs base64 PCM; convert to WAV and play from a temp file
+      const pcmBytes = AudioProcessor.base64ToArrayBuffer(audioData);
+      if (!AudioProcessor.validatePCMData(pcmBytes)) {
+        throw new Error('Invalid PCM data format');
+      }
+
+      const wavBuffer = AudioProcessor.createWavFile(pcmBytes);
+
+      // Convert WAV ArrayBuffer to base64 to persist as a file
+      const wavBytes = new Uint8Array(wavBuffer);
+      let binary = '';
+      const chunk = 0x8000;
+      for (let i = 0; i < wavBytes.length; i += chunk) {
+        const slice = wavBytes.subarray(i, i + chunk);
+        binary += String.fromCharCode.apply(null, Array.from(slice));
+      }
+      const base64Wav = btoa(binary);
+
+      const fileUri = `${FileSystem.cacheDirectory}gpt_audio_${Date.now()}.wav`;
+      await FileSystem.writeAsStringAsync(fileUri, base64Wav, { encoding: FileSystem.EncodingType.Base64 });
+
+      const { sound } = await Audio.Sound.createAsync({ uri: fileUri }, { shouldPlay: true });
       console.log('🎵 Audio playback started');
-      
-      // Clean up when done
+
       sound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
           console.log('🎵 Audio playback completed');
           sound.unloadAsync();
+          FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
         }
       });
     } catch (error) {
       console.error('❌ Error playing audio:', error);
-      console.log('🎵 Audio playback failed, text display is working fine');
+      console.log('🎵 Audio playback failed; transcript text is still shown');
     }
   };
 
@@ -253,7 +308,7 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
       console.log('🔌 Connecting to backend WebSocket proxy...');
       
       // Get the backend URL from our API config
-      const backendUrl = 'http://192.168.1.3:8001'.replace('http', 'ws');
+      const backendUrl = API_CONFIG.BASE_URL.replace('http', 'ws');
       const wsUrl = `${backendUrl}/api/voice-assistant/realtime/ws`;
       
       console.log('🔌 WebSocket URL:', wsUrl);
@@ -264,6 +319,7 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
       ws.onopen = () => {
         console.log('✅ Connected to OpenAI Realtime API');
         setIsConnected(true);
+        console.log('🔌 WebSocket connection state:', ws.readyState);
         
         // Session is already configured via ephemeral token, no need to send again
         console.log('🔧 Session already configured via ephemeral token');
@@ -286,12 +342,14 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
         console.error('❌ Error details:', JSON.stringify(err, null, 2));
         setError(`WebSocket connection error: ${err.message || 'Unknown error'}`);
         setIsConnected(false);
+        console.log('🔌 Connection state set to false due to error');
       };
 
       ws.onclose = (event: any) => {
         console.log('🔌 WebSocket connection closed');
         console.log('🔌 Close event details:', JSON.stringify(event, null, 2));
         setIsConnected(false);
+        console.log('🔌 Connection state set to false due to close');
       };
 
       wsRef.current = ws;
@@ -326,26 +384,23 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
     }
 
     try {
-      // Request audio permissions
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please grant microphone permission to use voice assistant');
-        return;
-      }
+      // Configure audio recording with optimized settings
+      await configureAudioRecording();
 
-      // Configure audio mode for recording
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
-      });
-
-      // Start recording
+      // Start recording with fallback configuration to avoid AAC error
       const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-
+      
+      // Use the most basic configuration to avoid encoder errors
+      try {
+        // Try with basic high quality preset first
+        await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      } catch (error) {
+        console.log('⚠️ High quality preset failed, trying low quality...');
+        // Fallback to low quality if high quality fails
+        await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.LOW_QUALITY);
+      }
       await recording.startAsync();
+      
       recordingRef.current = recording;
       setIsRecording(true);
 
@@ -358,7 +413,7 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      console.log('🎤 Started recording audio');
+      console.log('🎤 Started recording audio with optimized settings');
     } catch (error) {
       console.error('Failed to start recording:', error);
       Alert.alert('Recording Error', 'Failed to start recording. Please try again.');
@@ -390,61 +445,50 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
           return newMessages;
         });
 
-        // For now, we'll use the backend transcription service to process the audio
-        // This is a more reliable approach than trying to stream directly to RealtimeClient
         try {
+          // Use backend Whisper transcription, then send text to Realtime
+          console.log('🎤 Transcribing recorded audio via backend...');
           const transcriptionResponse = await api.transcribeAudio(uri);
-          const transcription = transcriptionResponse.transcription || 'I need help with homeless outreach guidance';
-          
+          const transcription = transcriptionResponse.transcription || '';
+
           console.log('🎤 Transcription result:', transcription);
-          
+
           // Update the user message with the actual transcription
           setMessages(prev => {
             const newMessages = [...prev];
             const lastMessage = newMessages[newMessages.length - 1];
             if (lastMessage && lastMessage.role === 'user' && lastMessage.content === '[Processing your speech...]') {
-              lastMessage.content = transcription;
+              lastMessage.content = transcription || '[Unrecognized speech]';
             }
             return newMessages;
           });
 
-          // Send the transcription to the voice assistant via WebSocket
-          console.log('📤 Sending message to GPT Realtime via WebSocket');
-          console.log('📤 Message content:', transcription);
-          
-          // Send message via WebSocket
+          // Send transcription as a user message to Realtime
           const messageEvent = {
-            type: "conversation.item.create",
+            type: 'conversation.item.create',
             item: {
-              type: "message",
-              role: "user",
+              type: 'message',
+              role: 'user',
               content: [
-                {
-                  type: "input_text",
-                  text: transcription,
-                },
+                { type: 'input_text', text: transcription || 'Please assist with homeless outreach guidance' },
               ],
             },
           };
-          
-          if (wsRef.current) {
-            wsRef.current.send(JSON.stringify(messageEvent));
-            console.log('✅ Message sent successfully via WebSocket');
-            
-            // Trigger assistant response
-            setTimeout(() => {
-              const responseEvent = {
-                type: "response.create",
-              };
-              wsRef.current?.send(JSON.stringify(responseEvent));
-              console.log('🎯 Triggered assistant response');
-            }, 100);
-          }
-          
-        } catch (transcriptionError) {
-          console.error('Transcription failed:', transcriptionError);
-          
-          // Fallback to a generic message if transcription fails
+
+          wsRef.current.send(JSON.stringify(messageEvent));
+          console.log('✅ Sent transcribed text to Realtime');
+
+          // Trigger assistant response (speech output is configured server-side)
+          setTimeout(() => {
+            const responseEvent = { type: 'response.create' };
+            wsRef.current?.send(JSON.stringify(responseEvent));
+            console.log('🎯 Triggered assistant response');
+          }, 100);
+
+        } catch (audioError) {
+          console.error('Transcription failed:', audioError);
+
+          // Fallback: send a generic message if speech not recognized
           setMessages(prev => {
             const newMessages = [...prev];
             const lastMessage = newMessages[newMessages.length - 1];
@@ -454,33 +498,16 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
             return newMessages;
           });
 
-          // Send fallback message via WebSocket
           const fallbackEvent = {
-            type: "conversation.item.create",
+            type: 'conversation.item.create',
             item: {
-              type: "message",
-              role: "user",
-              content: [
-                {
-                  type: "input_text",
-                  text: "I need help with homeless outreach guidance",
-                },
-              ],
+              type: 'message',
+              role: 'user',
+              content: [ { type: 'input_text', text: 'I need help with homeless outreach guidance' } ],
             },
           };
-          
-          if (wsRef.current) {
-            wsRef.current.send(JSON.stringify(fallbackEvent));
-            
-            // Trigger assistant response
-            setTimeout(() => {
-              const responseEvent = {
-                type: "response.create",
-              };
-              wsRef.current?.send(JSON.stringify(responseEvent));
-              console.log('🎯 Triggered assistant response (fallback)');
-            }, 100);
-          }
+          wsRef.current.send(JSON.stringify(fallbackEvent));
+          console.log('🎯 Sent fallback text message');
         }
       }
     } catch (error) {
@@ -677,7 +704,19 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
               isProcessingAudio && styles.recordButtonProcessing,
               (!isConnected || isProcessingAudio) && styles.recordButtonDisabled,
             ]}
-            onPress={isRecording ? stopRecording : startRecording}
+            onPress={() => {
+              console.log('🎤 Record button pressed:', {
+                isRecording,
+                isConnected,
+                isProcessingAudio,
+                disabled: !isConnected || isProcessingAudio
+              });
+              if (isRecording) {
+                stopRecording();
+              } else {
+                startRecording();
+              }
+            }}
             disabled={!isConnected || isProcessingAudio}
           >
             {isProcessingAudio ? (
@@ -692,6 +731,9 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
           </TouchableOpacity>
           <Text style={styles.recordButtonText}>
             {isProcessingAudio ? 'Processing...' : isRecording ? 'Tap to stop' : 'Tap to start'}
+          </Text>
+          <Text style={[styles.recordButtonText, { fontSize: 12, marginTop: 4 }]}>
+            {isConnected ? 'Connected' : 'Not Connected'}
           </Text>
         </View>
       </View>
