@@ -174,6 +174,111 @@ const AnimatedProcessingIndicator: React.FC = () => {
   );
 };
 
+// Animated Speaking Indicator Component
+const AnimatedSpeakingIndicator: React.FC = () => {
+  const wave1Anim = useRef(new Animated.Value(0.3)).current;
+  const wave2Anim = useRef(new Animated.Value(0.5)).current;
+  const wave3Anim = useRef(new Animated.Value(0.4)).current;
+  const wave4Anim = useRef(new Animated.Value(0.6)).current;
+  const wave5Anim = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    const createWaveAnimation = (animValue: Animated.Value, delay: number = 0) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.timing(animValue, {
+            toValue: 1,
+            duration: 600,
+            delay,
+            useNativeDriver: true,
+          }),
+          Animated.timing(animValue, {
+            toValue: 0.3,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+    };
+
+    const wave1Animation = createWaveAnimation(wave1Anim, 0);
+    const wave2Animation = createWaveAnimation(wave2Anim, 100);
+    const wave3Animation = createWaveAnimation(wave3Anim, 200);
+    const wave4Animation = createWaveAnimation(wave4Anim, 300);
+    const wave5Animation = createWaveAnimation(wave5Anim, 400);
+
+    wave1Animation.start();
+    wave2Animation.start();
+    wave3Animation.start();
+    wave4Animation.start();
+    wave5Animation.start();
+
+    return () => {
+      wave1Animation.stop();
+      wave2Animation.stop();
+      wave3Animation.stop();
+      wave4Animation.stop();
+      wave5Animation.stop();
+    };
+  }, []);
+
+  return (
+    <View style={styles.speakingIndicatorContainer}>
+      <View style={styles.speakingIconContainer}>
+        <Ionicons name="volume-high" size={20} color="#34C759" />
+        <View style={styles.soundWavesContainer}>
+          <Animated.View
+            style={[
+              styles.soundWave,
+              {
+                transform: [{ scaleY: wave1Anim }],
+                opacity: wave1Anim,
+              },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.soundWave,
+              {
+                transform: [{ scaleY: wave2Anim }],
+                opacity: wave2Anim,
+              },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.soundWave,
+              {
+                transform: [{ scaleY: wave3Anim }],
+                opacity: wave3Anim,
+              },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.soundWave,
+              {
+                transform: [{ scaleY: wave4Anim }],
+                opacity: wave4Anim,
+              },
+            ]}
+          />
+          <Animated.View
+            style={[
+              styles.soundWave,
+              {
+                transform: [{ scaleY: wave5Anim }],
+                opacity: wave5Anim,
+              },
+            ]}
+          />
+        </View>
+      </View>
+      <Text style={styles.speakingText}>Speaking...</Text>
+    </View>
+  );
+};
+
 export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -788,6 +893,7 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
     // Check if this is a special animated message
     const isRecordingMessage = message.content === '[Recording... Speak now]';
     const isProcessingMessage = message.content === '[Processing your speech...]';
+    const isSpeakingMessage = message.content === SPEAKING_PLACEHOLDER;
     
     return (
       <View
@@ -815,6 +921,8 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
           <AnimatedRecordingIndicator />
         ) : isProcessingMessage ? (
           <AnimatedProcessingIndicator />
+        ) : isSpeakingMessage ? (
+          <AnimatedSpeakingIndicator />
         ) : (
           <Text style={styles.messageContent}>{message.content}</Text>
         )}
@@ -1213,6 +1321,41 @@ const styles = StyleSheet.create({
   processingText: {
     fontSize: 14,
     color: '#007AFF',
+    fontWeight: '600',
+  },
+  // Animated Speaking Indicator Styles
+  speakingIndicatorContainer: {
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  speakingIconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  soundWavesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+    height: 20,
+  },
+  soundWave: {
+    width: 3,
+    height: 16,
+    backgroundColor: '#34C759',
+    marginHorizontal: 1,
+    borderRadius: 1.5,
+  },
+  speakingText: {
+    fontSize: 14,
+    color: '#34C759',
     fontWeight: '600',
   },
 });

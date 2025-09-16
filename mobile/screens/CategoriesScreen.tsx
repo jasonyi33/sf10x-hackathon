@@ -36,13 +36,18 @@ export default function CategoriesScreen() {
   const fetchCategories = async () => {
     try {
       setIsLoading(true);
+      console.log('📋 Fetching categories from API...');
       const response = await api.getCategories();
+      console.log('📋 Raw API response:', response);
+      console.log('📋 Categories count:', response?.length || 0);
       
       // Add active state for UI (defaulting to true for all categories)
       const categoriesWithActiveState = (response || []).map((cat: any) => ({
         ...cat,
         active: true // Default all categories to active for UI
       }));
+      
+      console.log('📋 Categories with active state:', categoriesWithActiveState.map(c => c.name));
       
       // Sort categories with essential categories first in specific order
       const sortedCategories = categoriesWithActiveState.sort((a, b) => {
@@ -69,9 +74,10 @@ export default function CategoriesScreen() {
         return a.name.localeCompare(b.name);
       });
       
+      console.log('📋 Final sorted categories:', sortedCategories.map(c => c.name));
       setCategories(sortedCategories);
     } catch (error) {
-      console.error('Failed to fetch categories:', error);
+      console.error('❌ Failed to fetch categories:', error);
       Alert.alert('Error', 'Failed to load categories. Please try again.');
     } finally {
       setIsLoading(false);
@@ -226,24 +232,63 @@ export default function CategoriesScreen() {
     return true;
   };
 
-  const addNewCategory = () => {
+  const addNewCategory = async () => {
     if (!validateNewCategory()) return;
 
-    const newCategory: Category = {
-      id: Date.now().toString(),
-      name: newCategoryName.trim(),
-      type: newCategoryType,
-      is_required: false,
-      priority: newCategoryPriority,
-              danger_weight: (newCategoryType === 'number' || newCategoryType === 'single-select') ? newCategoryDangerWeight : undefined,
-      auto_trigger: (newCategoryType === 'number' || newCategoryType === 'single-select') ? newCategoryAutoTrigger : undefined,
-      options: (newCategoryType === 'single-select' || newCategoryType === 'multi-select') ? newCategoryOptions : undefined,
-      active: true,
-    };
+    try {
+      // Prepare category data for API
+      const categoryData = {
+        name: newCategoryName.trim(),
+        type: newCategoryType,
+        is_required: false,
+        priority: newCategoryPriority,
+        // Temporarily comment out fields that might not exist in database
+        // danger_weight: (newCategoryType === 'number' || newCategoryType === 'single-select') ? newCategoryDangerWeight : 0,
+        // auto_trigger: (newCategoryType === 'number' || newCategoryType === 'single-select') ? newCategoryAutoTrigger : false,
+        options: (newCategoryType === 'single-select' || newCategoryType === 'multi-select') ? newCategoryOptions : null,
+      };
 
-    setCategories(prev => [...prev, newCategory]);
-    setNewCategoryName('');
-    setNewCategoryType('text');
+      console.log('📋 Creating new category:', categoryData);
+
+      // Save to database via API
+      const response = await api.createCategory(categoryData);
+      console.log('📋 Category created successfully:', response);
+
+      // Create local category object with the response data
+      const newCategory: Category = {
+        id: response.id || Date.now().toString(),
+        name: response.name || newCategoryName.trim(),
+        type: response.type || newCategoryType,
+        is_required: response.is_required || false,
+        priority: response.priority || newCategoryPriority,
+        danger_weight: response.danger_weight,
+        auto_trigger: response.auto_trigger,
+        options: response.options,
+        active: true,
+      };
+
+      // Update local state
+      setCategories(prev => [...prev, newCategory]);
+      
+      // Reset form
+      setNewCategoryName('');
+      setNewCategoryType('text');
+      setNewCategoryPriority('medium');
+      setNewCategoryDangerWeight(0);
+      setNewCategoryAutoTrigger(false);
+      setNewCategoryOptions([]);
+
+      Alert.alert('Success', 'Category created successfully!');
+      
+      // Optionally refresh the categories list to ensure consistency
+      // fetchCategories();
+    } catch (error: any) {
+      console.error('❌ Failed to create category:', error);
+      Alert.alert(
+        'Error', 
+        `Failed to create category: ${error.message || 'Unknown error'}`
+      );
+    }
   };
 
   const getActiveCategoriesCount = () => {
