@@ -10,6 +10,7 @@ import {
   SafeAreaView,
   TextInput,
   Platform,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -30,6 +31,149 @@ interface Message {
 
 interface VoiceAssistantScreenProps {}
 
+const SPEAKING_PLACEHOLDER = '[Speaking...]';
+
+// Animated Recording Indicator Component
+const AnimatedRecordingIndicator: React.FC = () => {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const waveAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Pulse animation - more subtle
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.08,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    // Wave animation - slower and more gentle
+    const waveAnimation = Animated.loop(
+      Animated.timing(waveAnim, {
+        toValue: 1,
+        duration: 2500,
+        useNativeDriver: true,
+      })
+    );
+
+    pulseAnimation.start();
+    waveAnimation.start();
+
+    return () => {
+      pulseAnimation.stop();
+      waveAnimation.stop();
+    };
+  }, []);
+
+  return (
+    <View style={styles.recordingIndicatorContainer}>
+      <Animated.View
+        style={[
+          styles.recordingWave,
+          {
+            transform: [
+              {
+                scale: waveAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 1.3],
+                }),
+              },
+            ],
+            opacity: waveAnim.interpolate({
+              inputRange: [0, 0.5, 1],
+              outputRange: [0.2, 0.4, 0.2],
+            }),
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.recordingCenter,
+          {
+            transform: [{ scale: pulseAnim }],
+          },
+        ]}
+      >
+        <Ionicons name="mic" size={24} color="#FFFFFF" />
+      </Animated.View>
+      <Text style={styles.recordingText}>Recording...</Text>
+    </View>
+  );
+};
+
+// Animated Processing Indicator Component
+const AnimatedProcessingIndicator: React.FC = () => {
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    // Rotation animation
+    const rotateAnimation = Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 2000,
+        useNativeDriver: true,
+      })
+    );
+
+    // Scale animation
+    const scaleAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    rotateAnimation.start();
+    scaleAnimation.start();
+
+    return () => {
+      rotateAnimation.stop();
+      scaleAnimation.stop();
+    };
+  }, []);
+
+  const rotateInterpolate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <View style={styles.processingIndicatorContainer}>
+      <Animated.View
+        style={[
+          styles.processingIcon,
+          {
+            transform: [
+              { rotate: rotateInterpolate },
+              { scale: scaleAnim },
+            ],
+          },
+        ]}
+      >
+        <Ionicons name="sync" size={24} color="#007AFF" />
+      </Animated.View>
+      <Text style={styles.processingText}>Processing your speech...</Text>
+    </View>
+  );
+};
+
 export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -48,10 +192,39 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
   const [currentAudioData, setCurrentAudioData] = useState<string>('');
   // Use a ref to avoid stale state when buffering streamed audio
   const audioBufferRef = useRef<string>('');
+  const pendingAssistantTextRef = useRef<string>('');
+  const awaitingPlaybackRef = useRef(false);
   
   const wsRef = useRef<WebSocket | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
+
+  const flushPendingAssistantText = (fallback?: string) => {
+    const finalText = pendingAssistantTextRef.current;
+    const hasContent = finalText && finalText.trim().length > 0;
+    const fallbackText = fallback || '[Speech response delivered]';
+
+    if (!hasContent && !fallback) {
+      // Nothing buffered and no fallback requested
+      return;
+    }
+
+    setMessages(prev => {
+      const newMessages = [...prev];
+      const lastMessage = newMessages[newMessages.length - 1];
+      if (lastMessage && lastMessage.role === 'assistant') {
+        const isPlaceholder = lastMessage.content === SPEAKING_PLACEHOLDER || !lastMessage.content || lastMessage.content === '[Processing your speech...]';
+        if (hasContent) {
+          lastMessage.content = finalText;
+        } else if (isPlaceholder) {
+          lastMessage.content = fallbackText;
+        }
+      }
+      return newMessages;
+    });
+
+    pendingAssistantTextRef.current = '';
+  };
 
   // Initialize the voice assistant
   useEffect(() => {
@@ -114,25 +287,31 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
           const assistantMessage: Message = {
             id: event.item.id || Date.now().toString(),
             role: 'assistant',
-            content: '',
+            content: SPEAKING_PLACEHOLDER,
             timestamp: new Date(),
           };
           setMessages(prev => [...prev, assistantMessage]);
+          pendingAssistantTextRef.current = '';
         }
         break;
         
       case 'conversation.item.updated':
         if (event.item?.type === 'message' && event.item?.role === 'assistant') {
           console.log('📝 Assistant message updated');
-          // Update the last assistant message
-          setMessages(prev => {
-            const newMessages = [...prev];
-            const lastMessage = newMessages[newMessages.length - 1];
-            if (lastMessage && lastMessage.role === 'assistant') {
-              lastMessage.content = event.item.content?.[0]?.text || '';
-            }
-            return newMessages;
-          });
+          const updatedText = event.item.content?.[0]?.text || '';
+          if (isMuted) {
+            setMessages(prev => {
+              const newMessages = [...prev];
+              const lastMessage = newMessages[newMessages.length - 1];
+              if (lastMessage && lastMessage.role === 'assistant') {
+                lastMessage.content = updatedText;
+              }
+              return newMessages;
+            });
+            pendingAssistantTextRef.current = '';
+          } else if (updatedText) {
+            pendingAssistantTextRef.current = updatedText;
+          }
         }
         break;
         
@@ -148,28 +327,43 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
         
       case 'response.output_audio_transcript.delta':
         console.log('📝 Audio transcript delta:', event.delta);
-        // Update the last assistant message with the transcript
-        setMessages(prev => {
-          const newMessages = [...prev];
-          const lastMessage = newMessages[newMessages.length - 1];
-          if (lastMessage && lastMessage.role === 'assistant') {
-            lastMessage.content += event.delta || '';
-          }
-          return newMessages;
-        });
+        if (isMuted) {
+          setMessages(prev => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage && lastMessage.role === 'assistant') {
+              const baseContent = lastMessage.content === SPEAKING_PLACEHOLDER ? '' : lastMessage.content;
+              const buffered = pendingAssistantTextRef.current;
+              const combinedBase = buffered ? `${baseContent}${buffered}` : baseContent;
+              lastMessage.content = `${combinedBase}${event.delta || ''}`;
+            }
+            return newMessages;
+          });
+          pendingAssistantTextRef.current = '';
+        } else {
+          pendingAssistantTextRef.current += event.delta || '';
+        }
         break;
 
       // Also handle explicit text stream events if the model emits them
       case 'response.output_text.delta':
         console.log('📝 Text delta:', event.delta);
-        setMessages(prev => {
-          const newMessages = [...prev];
-          const lastMessage = newMessages[newMessages.length - 1];
-          if (lastMessage && lastMessage.role === 'assistant') {
-            lastMessage.content += event.delta || '';
-          }
-          return newMessages;
-        });
+        if (isMuted) {
+          setMessages(prev => {
+            const newMessages = [...prev];
+            const lastMessage = newMessages[newMessages.length - 1];
+            if (lastMessage && lastMessage.role === 'assistant') {
+              const baseContent = lastMessage.content === SPEAKING_PLACEHOLDER ? '' : lastMessage.content;
+              const buffered = pendingAssistantTextRef.current;
+              const combinedBase = buffered ? `${baseContent}${buffered}` : baseContent;
+              lastMessage.content = `${combinedBase}${event.delta || ''}`;
+            }
+            return newMessages;
+          });
+          pendingAssistantTextRef.current = '';
+        } else {
+          pendingAssistantTextRef.current += event.delta || '';
+        }
         break;
 
       case 'response.output_text.done':
@@ -197,7 +391,14 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
         {
           const buffered = audioBufferRef.current || currentAudioData;
           if (buffered && !isMuted) {
-            playAudioData(buffered);
+            awaitingPlaybackRef.current = true;
+            playAudioData(buffered, () => {
+              awaitingPlaybackRef.current = false;
+              flushPendingAssistantText('[Speech response delivered]');
+            });
+          } else {
+            awaitingPlaybackRef.current = false;
+            flushPendingAssistantText('[Speech response delivered]');
           }
           // Reset buffers for next response
           audioBufferRef.current = '';
@@ -219,6 +420,9 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
         
       case 'response.done':
         console.log('✅ Response completed');
+        if (!awaitingPlaybackRef.current && pendingAssistantTextRef.current) {
+          flushPendingAssistantText('[Speech response delivered]');
+        }
         break;
         
       case 'error':
@@ -236,7 +440,7 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
     }
   };
 
-  const playAudioData = async (audioData: string) => {
+  const playAudioData = async (audioData: string, onPlaybackComplete?: () => void) => {
     try {
       console.log('🎵 Playing audio data...');
       console.log('🎵 Audio data length:', audioData.length);
@@ -265,16 +469,22 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
       const { sound } = await Audio.Sound.createAsync({ uri: fileUri }, { shouldPlay: true });
       console.log('🎵 Audio playback started');
 
-      sound.setOnPlaybackStatusUpdate((status) => {
+      sound.setOnPlaybackStatusUpdate(async (status) => {
         if (status.isLoaded && status.didJustFinish) {
           console.log('🎵 Audio playback completed');
-          sound.unloadAsync();
+          try {
+            await sound.unloadAsync();
+          } catch (err) {
+            console.log('⚠️ Failed to unload sound:', err);
+          }
           FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
+          onPlaybackComplete?.();
         }
       });
     } catch (error) {
       console.error('❌ Error playing audio:', error);
       console.log('🎵 Audio playback failed; transcript text is still shown');
+      onPlaybackComplete?.();
     }
   };
 
@@ -574,30 +784,43 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
     // The conversation state is managed by the server
   };
 
-  const renderMessage = (message: Message) => (
-    <View
-      key={message.id}
-      style={[
-        styles.messageContainer,
-        message.role === 'user' ? styles.userMessage : styles.assistantMessage,
-      ]}
-    >
-      <View style={styles.messageHeader}>
-        <Ionicons
-          name={message.role === 'user' ? 'person' : 'chatbubble'}
-          size={16}
-          color={message.role === 'user' ? '#007AFF' : '#34C759'}
-        />
-        <Text style={styles.messageRole}>
-          {message.role === 'user' ? 'You' : 'Assistant'}
-        </Text>
-        <Text style={styles.messageTime}>
-          {message.timestamp.toLocaleTimeString()}
-        </Text>
+  const renderMessage = (message: Message) => {
+    // Check if this is a special animated message
+    const isRecordingMessage = message.content === '[Recording... Speak now]';
+    const isProcessingMessage = message.content === '[Processing your speech...]';
+    
+    return (
+      <View
+        key={message.id}
+        style={[
+          styles.messageContainer,
+          message.role === 'user' ? styles.userMessage : styles.assistantMessage,
+        ]}
+      >
+        <View style={styles.messageHeader}>
+          <Ionicons
+            name={message.role === 'user' ? 'person' : 'chatbubble'}
+            size={16}
+            color={message.role === 'user' ? '#007AFF' : '#34C759'}
+          />
+          <Text style={styles.messageRole}>
+            {message.role === 'user' ? 'You' : 'Assistant'}
+          </Text>
+          <Text style={styles.messageTime}>
+            {message.timestamp.toLocaleTimeString()}
+          </Text>
+        </View>
+        
+        {isRecordingMessage ? (
+          <AnimatedRecordingIndicator />
+        ) : isProcessingMessage ? (
+          <AnimatedProcessingIndicator />
+        ) : (
+          <Text style={styles.messageContent}>{message.content}</Text>
+        )}
       </View>
-      <Text style={styles.messageContent}>{message.content}</Text>
-    </View>
-  );
+    );
+  };
 
   if (isLoading) {
     return (
@@ -931,5 +1154,65 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+  },
+  // Animated Recording Indicator Styles
+  recordingIndicatorContainer: {
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  recordingWave: {
+    position: 'absolute',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FF3B30',
+    opacity: 0.15,
+  },
+  recordingCenter: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  recordingText: {
+    fontSize: 14,
+    color: '#FF3B30',
+    fontWeight: '600',
+  },
+  // Animated Processing Indicator Styles
+  processingIndicatorContainer: {
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  processingIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F0F8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  processingText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '600',
   },
 });

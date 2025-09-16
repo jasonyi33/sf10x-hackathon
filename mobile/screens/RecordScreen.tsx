@@ -40,17 +40,28 @@ export const RecordScreen: React.FC = () => {
     setRecordingUri(uri);
     setUploadError(null);
     setTranscriptionError(null);
-    
-    // Set location if captured during recording
-    if (location && !selectedLocation) {
-      setSelectedLocation(location);
+
+    // Prefer the freshly captured location but don't overwrite manual selections
+    let locationForUpload = selectedLocation?.location;
+    if (location) {
+      if (!selectedLocation) {
+        setSelectedLocation(location);
+        locationForUpload = location.location;
+      }
     }
-    
-    // Start upload process
-    await uploadAudioFile(uri);
+
+    // Start upload process with the best available coordinates
+    await uploadAudioFile(uri, locationForUpload);
   };
 
-  const uploadAudioFile = async (uri: string) => {
+  const uploadAudioFile = async (
+    uri: string,
+    location?: {
+      latitude: number;
+      longitude: number;
+      address?: string;
+    }
+  ) => {
     try {
       setIsUploading(true);
       setUploadError(null);
@@ -63,7 +74,7 @@ export const RecordScreen: React.FC = () => {
       ErrorHandler.showSuccess('Audio processing started');
       
       // Start transcription with the actual audio file
-      await transcribeAudio(uri);
+      await transcribeAudio(uri, location);
     } catch (error) {
       console.error('❌ Upload error:', error);
       setUploadError('Upload failed');
@@ -74,7 +85,14 @@ export const RecordScreen: React.FC = () => {
     }
   };
 
-  const transcribeAudio = async (audioUrl: string) => {
+  const transcribeAudio = async (
+    audioUrl: string,
+    location?: {
+      latitude: number;
+      longitude: number;
+      address?: string;
+    }
+  ) => {
     try {
       setIsTranscribing(true);
       setTranscriptionError(null);
@@ -82,7 +100,7 @@ export const RecordScreen: React.FC = () => {
       console.log('🎤 Starting OpenAI Whisper transcription...');
       console.log('📤 Sending to backend:', audioUrl);
       
-      const result = await api.transcribe(audioUrl);
+      const result = await api.transcribe(audioUrl, location);
       
       console.log('✅ Transcription completed!');
       console.log('📝 Raw transcription:', result.transcription);

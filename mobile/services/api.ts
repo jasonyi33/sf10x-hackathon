@@ -530,7 +530,14 @@ export const api = {
   // TASK 3: Audio Recording & Transcription APIs
   
   // Transcribe audio - NEW FUNCTION
-  transcribe: async (audioUrl: string): Promise<TranscriptionResult> => {
+  transcribe: async (
+    audioUrl: string,
+    location?: {
+      latitude: number;
+      longitude: number;
+      address?: string;
+    }
+  ): Promise<TranscriptionResult> => {
     try {
       console.log('🎤 Starting real OpenAI Whisper transcription...');
       
@@ -550,7 +557,12 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ 
           audio_data: base64Audio,
-          location: { latitude: 37.7749, longitude: -122.4194 } // Default SF location
+          ...(location && {
+            location: {
+              latitude: location.latitude,
+              longitude: location.longitude,
+            }
+          })
         }),
       });
       
