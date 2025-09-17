@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { CategoryProvider } from './contexts/CategoryContext';
 
 // Import screens
 import { RecordScreen } from './screens/RecordScreen';
@@ -112,8 +113,10 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
-      <Toast />
+      <CategoryProvider>
+        <AppContent />
+        <Toast />
+      </CategoryProvider>
     </AuthProvider>
   );
 }

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../services/api';
+import { useCategories } from '../contexts/CategoryContext';
 
 interface Category {
   id: string;
@@ -25,64 +26,9 @@ interface Category {
 }
 
 export default function CategoriesScreen() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { categories, isLoading, toggleCategoryActive, refreshCategories } = useCategories();
 
-  // Fetch categories from API on component mount
-  useEffect(() => {
-    fetchCategories();
-  }, []);
 
-  const fetchCategories = async () => {
-    try {
-      setIsLoading(true);
-      console.log('📋 Fetching categories from API...');
-      const response = await api.getCategories();
-      console.log('📋 Raw API response:', response);
-      console.log('📋 Categories count:', response?.length || 0);
-      
-      // Add active state for UI (defaulting to true for all categories)
-      const categoriesWithActiveState = (response || []).map((cat: any) => ({
-        ...cat,
-        active: true // Default all categories to active for UI
-      }));
-      
-      console.log('📋 Categories with active state:', categoriesWithActiveState.map(c => c.name));
-      
-      // Sort categories with essential categories first in specific order
-      const sortedCategories = categoriesWithActiveState.sort((a, b) => {
-        // Define essential categories order: Name, Height, Weight, Age
-        const essentialOrder = ['name', 'height', 'weight', 'age'];
-        const aIndex = essentialOrder.indexOf(a.name.toLowerCase());
-        const bIndex = essentialOrder.indexOf(b.name.toLowerCase());
-        
-        // If both are essential categories, sort by their defined order
-        if (aIndex !== -1 && bIndex !== -1) {
-          return aIndex - bIndex;
-        }
-        
-        // Essential categories always come first
-        if (aIndex !== -1) return -1;
-        if (bIndex !== -1) return 1;
-        
-        // For non-essential categories, sort by priority then alphabetically
-        const priorityOrder: Record<string, number> = { high: 3, medium: 2, low: 1 };
-        const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
-        if (priorityDiff !== 0) return priorityDiff;
-        
-        // Finally sort alphabetically by name
-        return a.name.localeCompare(b.name);
-      });
-      
-      console.log('📋 Final sorted categories:', sortedCategories.map(c => c.name));
-      setCategories(sortedCategories);
-    } catch (error) {
-      console.error('❌ Failed to fetch categories:', error);
-      Alert.alert('Error', 'Failed to load categories. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Helper function to format category names for display
   const formatCategoryName = (name: string): string => {
@@ -194,24 +140,6 @@ export default function CategoriesScreen() {
     return mockIndividuals;
   };
 
-  const toggleCategoryActive = (categoryId: string) => {
-    setCategories(prev => 
-      prev.map(cat => {
-        if (cat.id === categoryId) {
-          // Prevent toggling off essential categories
-          if (isEssentialCategory(cat.name) && cat.active) {
-            Alert.alert(
-              'Cannot Disable Essential Category',
-              `${formatCategoryName(cat.name)} is an essential category and cannot be disabled.`
-            );
-            return cat; // Return unchanged
-          }
-          return { ...cat, active: !cat.active };
-        }
-        return cat;
-      })
-    );
-  };
 
   const validateNewCategory = () => {
     if (!newCategoryName.trim()) {
@@ -267,8 +195,8 @@ export default function CategoriesScreen() {
         active: true,
       };
 
-      // Update local state
-      setCategories(prev => [...prev, newCategory]);
+      // Refresh categories from context
+      await refreshCategories();
       
       // Reset form
       setNewCategoryName('');

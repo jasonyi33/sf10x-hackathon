@@ -616,17 +616,32 @@ export const api = {
       console.log('🔀 Merge with ID:', mergeWithId);
       console.log('🌍 API URL:', getApiUrl('/api/individuals'));
       
-      // Validate required fields before sending to backend (based on backend API response)
-      // According to backend: height and weight are required, name and skin_color are not
-      const requiredFields = ['height', 'weight'];
+      // Get categories to determine which fields are actually required
+      let requiredFields: string[] = [];
+      try {
+        const categoriesResponse = await api.getCategories();
+        console.log('📋 Categories response:', categoriesResponse);
+        requiredFields = (categoriesResponse || [])
+          .filter((cat: any) => cat.is_required)
+          .map((cat: any) => cat.name.toLowerCase());
+        console.log('📋 Required fields from categories:', requiredFields);
+        console.log('📋 Processed data keys:', Object.keys(processedData));
+      } catch (categoriesError) {
+        console.warn('⚠️ Could not fetch categories, using fallback validation:', categoriesError);
+        // Fallback to basic required fields if categories can't be fetched
+        requiredFields = ['name', 'height', 'weight'];
+      }
+      
+      // Validate required fields
       const missingFields = requiredFields.filter(field => 
         !processedData[field] || processedData[field] === '' || processedData[field] === null
       );
       
-      // Additional validation: name should not be empty even if not technically required
-      if (!processedData['name'] || processedData['name'] === '' || processedData['name'] === null) {
-        missingFields.push('name');
-      }
+      console.log('📋 Missing fields check:', missingFields.map(field => ({
+        field,
+        value: processedData[field],
+        isEmpty: !processedData[field] || processedData[field] === '' || processedData[field] === null
+      })));
       
       if (missingFields.length > 0) {
         const errorMessage = `Missing required fields: ${missingFields.join(', ')}. Please ensure all required fields are filled.`;
@@ -694,13 +709,25 @@ export const api = {
           body: JSON.stringify(requestBody)
         });
         
+        console.log('📡 Backend response status:', response.status);
+        console.log('📡 Backend response headers:', Object.fromEntries(response.headers.entries()));
+        
         if (!response.ok) {
           let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
           try {
             const errorData = await response.json();
+            console.log('📡 Backend error response:', errorData);
             errorMessage = errorData.detail || errorData.message || errorMessage;
           } catch (parseError) {
             console.error('❌ Failed to parse error response:', parseError);
+            // Try to get response as text if JSON parsing fails
+            try {
+              const errorText = await response.text();
+              console.log('📡 Backend error text:', errorText);
+              errorMessage = errorText || errorMessage;
+            } catch (textError) {
+              console.error('❌ Failed to get error text:', textError);
+            }
           }
           throw new Error(errorMessage);
         }
@@ -714,9 +741,7 @@ export const api = {
         };
       }
     } catch (error) {
-      console.error('❌ Save individual error:', error);
-      
-      // Extract meaningful error message
+      // Extract meaningful error message first
       let errorMessage = 'Unknown error occurred';
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -724,14 +749,15 @@ export const api = {
         errorMessage = error;
       } else if (error && typeof error === 'object') {
         // Try to extract error details from object
-        errorMessage = error.detail || error.message || JSON.stringify(error);
+        errorMessage = (error as any).detail || (error as any).message || JSON.stringify(error);
       }
       
-      return {
-        id: 'error-' + Date.now(),
-        success: false,
-        message: 'Save failed: ' + errorMessage
-      };
+      // Log the extracted error message instead of the raw error object
+      console.error('❌ Save individual error:', errorMessage);
+      console.error('❌ Raw error object:', error);
+      
+      // Throw the error instead of returning an error object
+      throw new Error(errorMessage);
     }
   },
 
