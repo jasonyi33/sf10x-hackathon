@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Test configuration
-BASE_URL = "http://localhost:8001"
+BASE_URL = "http://10.19.123.174:8001"
 TEST_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItMTIzIn0.test"
 
 # TODO: Replace these with your actual Supabase Storage URLs after uploading

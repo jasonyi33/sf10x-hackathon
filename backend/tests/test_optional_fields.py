@@ -7,7 +7,7 @@ import httpx
 import json
 from tests.test_api_integration import TEST_AUDIO_FILES
 
-BASE_URL = "http://localhost:8001"
+BASE_URL = "http://10.19.123.174:8001"
 TEST_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItMTIzIn0.test"
 
 async def test_optional_fields():

@@ -161,19 +161,19 @@ Veteran status: No Housing status: Homeless Danger score: 75"
 
 ### Check Embedding Coverage
 ```bash
-curl http://localhost:8000/api/embeddings/status
+curl http://10.19.123.174:8000/api/embeddings/status
 ```
 
 ### Regenerate Embeddings
 If you need to regenerate all embeddings:
 ```bash
-curl -X POST http://localhost:8000/api/embeddings/generate-all
+curl -X POST http://10.19.123.174:8000/api/embeddings/generate-all
 ```
 
 ### Individual Updates
 When individual profiles are updated, regenerate their embedding:
 ```bash
-curl -X POST http://localhost:8000/api/embeddings/generate \
+curl -X POST http://10.19.123.174:8000/api/embeddings/generate \
   -H "Content-Type: application/json" \
   -d '{"individual_id": "uuid"}'
 ```

@@ -18,7 +18,7 @@ load_dotenv()
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Test data
-BASE_URL = "http://localhost:8001"
+BASE_URL = "http://10.19.123.174:8001"
 TEST_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItMTIzIn0.test"
 
 # Test cases
