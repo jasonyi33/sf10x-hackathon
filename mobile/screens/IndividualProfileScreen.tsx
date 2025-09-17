@@ -17,7 +17,7 @@ import FieldDisplay from '../components/FieldDisplay';
 import InteractionHistoryItem from '../components/InteractionHistoryItem';
 import DangerScore from '../components/DangerScore';
 import InteractionDetailModal from '../components/InteractionDetailModal';
-import { IndividualLocationMap } from '../components/IndividualLocationMap';
+import IndividualLocationMap from '../components/IndividualLocationMap';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 
@@ -60,9 +60,6 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
       const profileData = await api.getIndividualProfile(individualId);
       
       if (profileData) {
-        console.log('📍 Full profile data:', profileData);
-        console.log('📍 Profile data.data:', profileData.data);
-        console.log('📍 Profile last_location:', profileData.last_location);
         setProfile(profileData);
       } else {
         Toast.show({ type: 'error', text1: 'Individual not found' });
@@ -197,12 +194,6 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
     // Skip certain fields that are handled separately
     if (key === 'name') return null;
     
-    // Skip location if it should be handled by the map component
-    if (key === 'location' || key === 'last_location') {
-      console.log(`📍 Skipping field rendering for ${key}:`, value);
-      return null;
-    }
-    
     // Format the field label (convert snake_case to Title Case)
     const label = key.split('_').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
@@ -279,22 +270,10 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
           </View>
         </View>
 
-        {/* Location Map Section */}
-        {(profile.last_location || profile.data.location) && (
-          <View style={styles.section}>
-            {(() => {
-              const locationData = profile.last_location || profile.data.location;
-              console.log('📍 Rendering location map with data:', locationData);
-              console.log('📍 Location data type:', typeof locationData);
-              return (
-                <IndividualLocationMap
-                  location={locationData}
-                  name={profile.name}
-                />
-              );
-            })()}
-          </View>
-        )}
+        {/* Location Section */}
+        <View style={styles.section}>
+          <IndividualLocationMap profile={profile} />
+        </View>
 
         {/* Interaction History Section */}
         <View style={styles.section}>

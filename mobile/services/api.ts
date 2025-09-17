@@ -136,6 +136,11 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
     updated_at: '2024-01-15T10:30:00Z',
     total_interactions: 3,
     last_interaction_date: '2024-01-15T10:30:00Z',
+    last_location: {
+      latitude: 37.7749,
+      longitude: -122.4194,
+      address: 'Market Street & 5th Avenue, San Francisco, CA'
+    },
     interactions: [
       {
         id: 'int1',
@@ -187,6 +192,11 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
     updated_at: '2024-01-12T14:20:00Z',
     total_interactions: 2,
     last_interaction_date: '2024-01-12T14:20:00Z',
+    last_location: {
+      latitude: 37.7849,
+      longitude: -122.4094,
+      address: 'Golden Gate Park, San Francisco, CA'
+    },
     interactions: [
       {
         id: 'int4',
@@ -475,31 +485,15 @@ export interface TranscriptionResult {
 const mockTranscription = (audioUrl: string): TranscriptionResult => {
   console.log('Using mock transcription for:', audioUrl);
   
-  // Test different confidence levels based on audio URL or generate random for variety
+  // Test different confidence levels based on audio URL
   let confidence = 87; // Default for testing merge UI (60-94% range)
-  let matchName = "John Smith";
   
   if (audioUrl.includes('high-confidence')) {
     confidence = 97; // Test streamlined confirmation (≥95%)
-    matchName = "John Doe"; // Closer match
   } else if (audioUrl.includes('low-confidence')) {
     confidence = 45; // Test no merge UI (<60%)
-    matchName = "James Johnson"; // Less similar
   } else if (audioUrl.includes('no-match')) {
     confidence = 0; // Test no matches
-  } else {
-    // Generate varying confidence levels for more realistic testing
-    const randomFactor = Math.random();
-    if (randomFactor > 0.7) {
-      confidence = 95 + Math.floor(Math.random() * 5); // 95-99% (high confidence)
-      matchName = "John Doe";
-    } else if (randomFactor > 0.3) {
-      confidence = 60 + Math.floor(Math.random() * 35); // 60-94% (medium confidence) 
-      matchName = "John Smith";
-    } else {
-      confidence = 30 + Math.floor(Math.random() * 30); // 30-59% (low confidence)
-      matchName = "Johnny Williams";
-    }
   }
   
   return {
@@ -507,19 +501,19 @@ const mockTranscription = (audioUrl: string): TranscriptionResult => {
     categorized_data: {
       name: "John",
       age: 45,
-      height: "6'0\"",
+      height: 72,
       weight: 180,
       skin_color: "Light",
-      substance_abuse_history: "Moderate",
+      substance_abuse: "Moderate",
       medical_conditions: "Diabetes",
-      additional_information: "Found near Market Street, needs medical attention"
+      location: "Market Street"
     },
-    missing_required: [],
+    missing_required: ["height", "weight", "skin_color"],
     potential_matches: confidence > 0 ? [
       {
-        id: "mock-individual-123",
+        id: "123",
         confidence: confidence,
-        name: matchName
+        name: "John Smith"
       }
     ] : []
   };
@@ -530,14 +524,7 @@ export const api = {
   // TASK 3: Audio Recording & Transcription APIs
   
   // Transcribe audio - NEW FUNCTION
-  transcribe: async (
-    audioUrl: string,
-    location?: {
-      latitude: number;
-      longitude: number;
-      address?: string;
-    }
-  ): Promise<TranscriptionResult> => {
+  transcribe: async (audioUrl: string): Promise<TranscriptionResult> => {
     try {
       console.log('🎤 Starting real OpenAI Whisper transcription...');
       
@@ -557,12 +544,7 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ 
           audio_data: base64Audio,
-          ...(location && {
-            location: {
-              latitude: location.latitude,
-              longitude: location.longitude,
-            }
-          })
+          location: { latitude: 37.7749, longitude: -122.4194 } // Default SF location
         }),
       });
       
@@ -582,182 +564,58 @@ export const api = {
       console.log('💾 Saving individual to database...');
       console.log('Data to save:', data);
       
-      // Check if this is a merge operation
-      const mergeWithId = data.existing_individual_id || data.merge_with_id;
-      
       // Extract categorized data (age, height, weight, etc.) from the data
-      // Don't extract Name/name from categorizedData - keep them in the data
-      const { id, danger_score, danger_override, data: existingData, existing_individual_id, merge_with_id, ...categorizedData } = data;
+      const { Name, name, id, danger_score, danger_override, data: existingData, location, ...categorizedData } = data;
       
       // Convert categorized data field names to lowercase for profile display
       const processedData: Record<string, any> = {};
-      console.log('📊 Raw categorized data entries:', Object.entries(categorizedData));
-      
-      const essentialFields = ['name', 'height', 'weight', 'age'];
-      
       Object.entries(categorizedData).forEach(([key, value]) => {
-        console.log(`📊 Processing field "${key}": "${value}" (type: ${typeof value})`);
-        const lowercaseKey = key.toLowerCase();
-        
-        // Always include essential fields, even if empty
-        if (essentialFields.includes(lowercaseKey)) {
-          processedData[lowercaseKey] = value || '';
-          console.log(`✅ Added essential field "${lowercaseKey}" = "${value || ''}"`);
-        } else if (value !== null && value !== undefined && value !== '') {
-          // Only include optional fields if they have a value
-          processedData[lowercaseKey] = value;
-          console.log(`✅ Added optional field "${lowercaseKey}" = "${value}"`);
-        } else {
-          console.log(`❌ Filtered out optional field "${key}" = "${value}" (empty/null/undefined)`);
+        if (value !== null && value !== undefined && value !== '') {
+          processedData[key.toLowerCase()] = value;
         }
       });
       
       console.log('📊 Processed categorized data:', processedData);
-      console.log('🔀 Merge with ID:', mergeWithId);
-      console.log('🌍 API URL:', getApiUrl('/api/individuals'));
+      console.log('📍 Location data:', location);
       
-      // Get categories to determine which fields are actually required
-      let requiredFields: string[] = [];
-      try {
-        const categoriesResponse = await api.getCategories();
-        console.log('📋 Categories response:', categoriesResponse);
-        requiredFields = (categoriesResponse || [])
-          .filter((cat: any) => cat.is_required)
-          .map((cat: any) => cat.name.toLowerCase());
-        console.log('📋 Required fields from categories:', requiredFields);
-        console.log('📋 Processed data keys:', Object.keys(processedData));
-      } catch (categoriesError) {
-        console.warn('⚠️ Could not fetch categories, using fallback validation:', categoriesError);
-        // Fallback to basic required fields if categories can't be fetched
-        requiredFields = ['name', 'height', 'weight'];
-      }
-      
-      // Validate required fields
-      const missingFields = requiredFields.filter(field => 
-        !processedData[field] || processedData[field] === '' || processedData[field] === null
-      );
-      
-      console.log('📋 Missing fields check:', missingFields.map(field => ({
-        field,
-        value: processedData[field],
-        isEmpty: !processedData[field] || processedData[field] === '' || processedData[field] === null
-      })));
-      
-      if (missingFields.length > 0) {
-        const errorMessage = `Missing required fields: ${missingFields.join(', ')}. Please ensure all required fields are filled.`;
-        console.error('❌ Validation failed:', errorMessage);
-        throw new Error(errorMessage);
-      }
-      
-      // Check authentication token
-      const authToken = await getAuthToken();
-      console.log('🔐 Auth token available:', authToken ? 'Yes' : 'No');
-      console.log('🔐 Auth token length:', authToken ? authToken.length : 0);
-      
-      if (mergeWithId) {
-        console.log('🔄 Merging with existing individual:', mergeWithId);
-        
-        const requestBody = {
-          data: processedData,
-          merge_with_id: mergeWithId
-        };
-        console.log('📤 Merge request body:', JSON.stringify(requestBody, null, 2));
-        
-        // Use backend API for proper merge with danger score calculation
-        const response = await fetch(getApiUrl('/api/individuals'), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${await getAuthToken()}`
-          },
-          body: JSON.stringify(requestBody)
-        });
-        
-        if (!response.ok) {
-          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.detail || errorData.message || errorMessage;
-          } catch (parseError) {
-            console.error('❌ Failed to parse error response:', parseError);
-          }
-          throw new Error(errorMessage);
-        }
-        
-        const result = await response.json();
-        console.log('✅ Successfully merged individual:', result);
+      // Use direct Supabase insert for real database
+      const { data: result, error } = await supabase
+        .from('individuals')
+        .insert({
+          id: id || generateUUID(),
+          name: Name || name || 'Unknown Individual',
+          data: existingData || processedData || {},
+          danger_score: danger_score || 0,
+          danger_override: danger_override || null,
+          last_location: location || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Save error:', error);
         return {
-          id: result.individual.id,
-          success: true,
-          message: 'Data merged successfully'
-        };
-      } else {
-        console.log('➕ Creating new individual');
-        
-        const requestBody = {
-          data: processedData
-        };
-        console.log('📤 Create request body:', JSON.stringify(requestBody, null, 2));
-        
-        // Use backend API for proper danger score calculation
-        const response = await fetch(getApiUrl('/api/individuals'), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${await getAuthToken()}`
-          },
-          body: JSON.stringify(requestBody)
-        });
-        
-        console.log('📡 Backend response status:', response.status);
-        console.log('📡 Backend response headers:', Object.fromEntries(response.headers.entries()));
-        
-        if (!response.ok) {
-          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-          try {
-            const errorData = await response.json();
-            console.log('📡 Backend error response:', errorData);
-            errorMessage = errorData.detail || errorData.message || errorMessage;
-          } catch (parseError) {
-            console.error('❌ Failed to parse error response:', parseError);
-            // Try to get response as text if JSON parsing fails
-            try {
-              const errorText = await response.text();
-              console.log('📡 Backend error text:', errorText);
-              errorMessage = errorText || errorMessage;
-            } catch (textError) {
-              console.error('❌ Failed to get error text:', textError);
-            }
-          }
-          throw new Error(errorMessage);
-        }
-        
-        const result = await response.json();
-        console.log('✅ Successfully saved new individual:', result);
-        return {
-          id: result.individual.id,
-          success: true,
-          message: 'Data saved successfully'
+          id: 'error-' + Date.now(),
+          success: false,
+          message: 'Failed to save: ' + error.message
         };
       }
+
+      console.log('✅ Successfully saved individual:', result);
+      return {
+        id: result.id,
+        success: true,
+        message: 'Data saved successfully to database'
+      };
     } catch (error) {
-      // Extract meaningful error message first
-      let errorMessage = 'Unknown error occurred';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      } else if (error && typeof error === 'object') {
-        // Try to extract error details from object
-        errorMessage = (error as any).detail || (error as any).message || JSON.stringify(error);
-      }
-      
-      // Log the extracted error message instead of the raw error object
-      console.error('❌ Save individual error:', errorMessage);
-      console.error('❌ Raw error object:', error);
-      
-      // Throw the error instead of returning an error object
-      throw new Error(errorMessage);
+      console.error('❌ Save individual error:', error);
+      return {
+        id: 'error-' + Date.now(),
+        success: false,
+        message: 'Save failed: ' + error
+      };
     }
   },
 
@@ -897,20 +755,6 @@ export const api = {
       }
 
       console.log('✅ Found individual profile:', individual);
-      console.log('📍 Location data from database:', individual.last_location);
-      console.log('📍 Location data type:', typeof individual.last_location);
-      
-      // Parse location data if it's a string
-      let lastLocation = individual.last_location;
-      if (typeof lastLocation === 'string') {
-        try {
-          lastLocation = JSON.parse(lastLocation);
-          console.log('📍 Parsed location data:', lastLocation);
-        } catch (e) {
-          console.error('📍 Failed to parse location data:', e);
-          lastLocation = null;
-        }
-      }
       
       // Convert to IndividualProfile format
       const profile: IndividualProfile = {
@@ -921,7 +765,7 @@ export const api = {
         data: individual.data || {},
         created_at: individual.created_at,
         updated_at: individual.updated_at,
-        last_location: lastLocation, // Include parsed location data
+        last_location: individual.last_location || null,
         interactions: [], // TODO: Add interactions when that table is set up
         total_interactions: 0 // TODO: Add interactions when that table is set up
       };
@@ -1013,44 +857,41 @@ export const api = {
   // Get categories
   getCategories: async (): Promise<any[]> => {
     try {
-      console.log('🔧 getCategories - USE_REAL_API:', API_CONFIG.USE_REAL_API);
-      console.log('🔧 getCategories - USE_MOCK_DATA:', API_CONFIG.DEMO.USE_MOCK_DATA);
-      
       if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
-        console.log('📋 Using mock categories');
+        console.log('Using mock categories');
         return [
           { id: '1', name: 'Name', type: 'text', is_required: true, priority: 'high' },
           { id: '2', name: 'Height', type: 'number', is_required: true, priority: 'medium' },
           { id: '3', name: 'Weight', type: 'number', is_required: true, priority: 'medium' },
           { id: '4', name: 'Age', type: 'number', is_required: false, priority: 'medium' },
           { id: '5', name: 'Skin Color', type: 'single-select', is_required: true, priority: 'high' },
-          { id: '6', name: 'Additional Information', type: 'text', is_required: false, priority: 'low' },
+          { id: '6', name: 'Gender', type: 'single-select', is_required: false, priority: 'medium' },
+          { id: '7', name: 'Medical Conditions', type: 'multi-select', is_required: false, priority: 'high' },
+          { id: '8', name: 'Substance Abuse History', type: 'single-select', is_required: false, priority: 'high' },
+          { id: '9', name: 'Housing Priority', type: 'single-select', is_required: false, priority: 'medium' },
+          { id: '10', name: 'Veteran Status', type: 'single-select', is_required: false, priority: 'medium' },
+          { id: '11', name: 'Additional Information', type: 'text', is_required: false, priority: 'low' },
         ];
       }
 
-      console.log('📋 Fetching categories from real API...');
       const result = await apiRequest('/api/categories');
-      console.log('📋 Real API categories response:', result);
-      console.log('📋 Categories count:', result?.categories?.length || 0);
-      
-      if (result?.categories && Array.isArray(result.categories)) {
-        console.log('📋 Category names:', result.categories.map((c: any) => c.name));
-        return result.categories;
-      } else {
-        console.warn('📋 No categories in API response, using fallback');
-        return [];
-      }
+      return result.categories || [];
     } catch (error) {
       console.error('Error fetching categories:', error);
       console.log('Falling back to mock categories due to API error');
-      // Fall back to mock data if real API fails
+      // Fall back to comprehensive mock data if real API fails
       return [
         { id: '1', name: 'Name', type: 'text', is_required: true, priority: 'high' },
         { id: '2', name: 'Height', type: 'number', is_required: true, priority: 'medium' },
         { id: '3', name: 'Weight', type: 'number', is_required: true, priority: 'medium' },
         { id: '4', name: 'Age', type: 'number', is_required: false, priority: 'medium' },
         { id: '5', name: 'Skin Color', type: 'single-select', is_required: true, priority: 'high' },
-        { id: '6', name: 'Additional Information', type: 'text', is_required: false, priority: 'low' },
+        { id: '6', name: 'Gender', type: 'single-select', is_required: false, priority: 'medium' },
+        { id: '7', name: 'Medical Conditions', type: 'multi-select', is_required: false, priority: 'high' },
+        { id: '8', name: 'Substance Abuse History', type: 'single-select', is_required: false, priority: 'high' },
+        { id: '9', name: 'Housing Priority', type: 'single-select', is_required: false, priority: 'medium' },
+        { id: '10', name: 'Veteran Status', type: 'single-select', is_required: false, priority: 'medium' },
+        { id: '11', name: 'Additional Information', type: 'text', is_required: false, priority: 'low' },
       ];
     }
   },
@@ -1161,102 +1002,6 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     });
-  },
-
-  // Get OpenAI API key for voice assistant
-  getOpenAIApiKey: async (): Promise<string | null> => {
-    try {
-      console.log('🔑 Fetching OpenAI API key...');
-      
-      const response = await apiRequest('/api/voice-assistant/api-key', {
-        method: 'GET',
-      });
-      
-      console.log('✅ OpenAI API key retrieved');
-      return response.api_key || null;
-    } catch (error) {
-      console.error('❌ Failed to get OpenAI API key:', error);
-      return null;
-    }
-  },
-
-  // Get local resources for voice assistant
-  getLocalResources: async (lat?: number, lng?: number) => {
-    try {
-      console.log('🏠 Fetching local resources...');
-      
-      const params = new URLSearchParams();
-      if (lat !== undefined) params.append('lat', lat.toString());
-      if (lng !== undefined) params.append('lng', lng.toString());
-      
-      const response = await apiRequest(`/api/voice-assistant/resources?${params.toString()}`, {
-        method: 'GET',
-      });
-      
-      console.log('✅ Local resources retrieved');
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to get local resources:', error);
-      throw error;
-    }
-  },
-
-  // Get safety guidelines for voice assistant
-  getSafetyGuidelines: async (category?: string) => {
-    try {
-      console.log('🛡️ Fetching safety guidelines...');
-      
-      const params = new URLSearchParams();
-      if (category) params.append('category', category);
-      
-      const response = await apiRequest(`/api/voice-assistant/guidelines?${params.toString()}`, {
-        method: 'GET',
-      });
-      
-      console.log('✅ Safety guidelines retrieved');
-      return response;
-    } catch (error) {
-      console.error('❌ Failed to get safety guidelines:', error);
-      throw error;
-    }
-  },
-
-  // Transcribe audio for voice assistant
-  transcribeAudio: async (audioUri: string) => {
-    try {
-      console.log('🎤 Transcribing audio for voice assistant...');
-      
-      // Create FormData for file upload
-      const formData = new FormData();
-      formData.append('audio', {
-        uri: audioUri,
-        type: 'audio/m4a',
-        name: 'voice_input.m4a',
-      } as any);
-
-      const token = await getAuthToken();
-      const response = await fetch(getApiUrl('/api/voice-assistant/transcribe'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Transcription response error:', errorText);
-        throw new Error(`Transcription failed: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Audio transcribed successfully');
-      return result;
-    } catch (error) {
-      console.error('❌ Failed to transcribe audio:', error);
-      throw error;
-    }
   },
 
   // Get all individuals (NEW METHOD)

@@ -40,28 +40,17 @@ export const RecordScreen: React.FC = () => {
     setRecordingUri(uri);
     setUploadError(null);
     setTranscriptionError(null);
-
-    // Prefer the freshly captured location but don't overwrite manual selections
-    let locationForUpload = selectedLocation?.location;
-    if (location) {
-      if (!selectedLocation) {
-        setSelectedLocation(location);
-        locationForUpload = location.location;
-      }
+    
+    // Set location if captured during recording
+    if (location && !selectedLocation) {
+      setSelectedLocation(location);
     }
-
-    // Start upload process with the best available coordinates
-    await uploadAudioFile(uri, locationForUpload);
+    
+    // Start upload process
+    await uploadAudioFile(uri);
   };
 
-  const uploadAudioFile = async (
-    uri: string,
-    location?: {
-      latitude: number;
-      longitude: number;
-      address?: string;
-    }
-  ) => {
+  const uploadAudioFile = async (uri: string) => {
     try {
       setIsUploading(true);
       setUploadError(null);
@@ -74,7 +63,7 @@ export const RecordScreen: React.FC = () => {
       ErrorHandler.showSuccess('Audio processing started');
       
       // Start transcription with the actual audio file
-      await transcribeAudio(uri, location);
+      await transcribeAudio(uri);
     } catch (error) {
       console.error('❌ Upload error:', error);
       setUploadError('Upload failed');
@@ -85,14 +74,7 @@ export const RecordScreen: React.FC = () => {
     }
   };
 
-  const transcribeAudio = async (
-    audioUrl: string,
-    location?: {
-      latitude: number;
-      longitude: number;
-      address?: string;
-    }
-  ) => {
+  const transcribeAudio = async (audioUrl: string) => {
     try {
       setIsTranscribing(true);
       setTranscriptionError(null);
@@ -100,7 +82,7 @@ export const RecordScreen: React.FC = () => {
       console.log('🎤 Starting OpenAI Whisper transcription...');
       console.log('📤 Sending to backend:', audioUrl);
       
-      const result = await api.transcribe(audioUrl, location);
+      const result = await api.transcribe(audioUrl);
       
       console.log('✅ Transcription completed!');
       console.log('📝 Raw transcription:', result.transcription);
@@ -142,8 +124,12 @@ export const RecordScreen: React.FC = () => {
 
   const handleSaveManualEntry = async (data: Record<string, any>) => {
     try {
-      // Data is already saved in ManualEntryForm component
-      // Just handle the UI state here
+      const saveData = {
+        ...data,
+        location: selectedLocation?.location,
+      };
+      
+      await api.saveIndividual(saveData);
       ErrorHandler.showSuccess('Data saved successfully');
       
       // Reset state
@@ -220,7 +206,7 @@ export const RecordScreen: React.FC = () => {
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
         <Text style={styles.title}>Voice Recording</Text>
-        <Text style={styles.subtitle}>Record observations below</Text>
+        {/* <Text style={styles.subtitle}>Record observations about homeless individuals</Text> */}
       </View>
 
       {/* Location Information */}
@@ -280,7 +266,6 @@ export const RecordScreen: React.FC = () => {
           result={transcriptionResult}
           onSave={handleSaveTranscription}
           onCancel={handleCancelTranscription}
-          location={selectedLocation?.location || null}
         />
       )}
 
