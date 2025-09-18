@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
@@ -10,12 +10,12 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CategoryProvider } from './contexts/CategoryContext';
 
 // Import screens
-import { RecordScreen } from './screens/RecordScreen';
-import SearchScreen from './screens/SearchScreen';
-import VoiceAssistantScreen from './screens/VoiceAssistantScreen';
+import { ModernRecordScreen } from './screens/ModernRecordScreen';
+import { ModernSearchScreen } from './screens/ModernSearchScreen';
+import { ModernIndividualProfileScreen } from './screens/ModernIndividualProfileScreen';
+import { ModernVoiceAssistantScreen } from './screens/ModernVoiceAssistantScreen';
 import CategoriesScreen from './screens/CategoriesScreen';
 import UserProfileScreen from './screens/UserProfileScreen';
-import IndividualProfileScreen from './screens/IndividualProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -23,16 +23,39 @@ const Stack = createStackNavigator();
 // Stack navigator for Search tab
 function SearchStack() {
   return (
-    <Stack.Navigator>
-      <Stack.Screen 
-        name="SearchMain" 
-        component={SearchScreen}
+    <Stack.Navigator
+      screenOptions={{
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        transitionSpec: {
+          open: {
+            animation: 'timing',
+            config: {
+              duration: 300,
+            },
+          },
+          close: {
+            animation: 'timing',
+            config: {
+              duration: 250,
+            },
+          },
+        },
+      }}
+    >
+      <Stack.Screen
+        name="SearchMain"
+        component={ModernSearchScreen}
         options={{ title: 'Search' }}
       />
-      <Stack.Screen 
-        name="IndividualProfile" 
-        component={IndividualProfileScreen}
-        options={{ title: 'Individual Profile' }}
+      <Stack.Screen
+        name="IndividualProfile"
+        component={ModernIndividualProfileScreen}
+        options={{
+          title: 'Individual Profile',
+          cardStyleInterpolator: CardStyleInterpolators.forModalPresentationIOS,
+        }}
       />
     </Stack.Navigator>
   );
@@ -79,19 +102,19 @@ function AppContent() {
           headerShown: true,
         })}
       >
-        <Tab.Screen 
-          name="Record" 
-          component={RecordScreen}
+        <Tab.Screen
+          name="Record"
+          component={ModernRecordScreen}
           options={{ title: 'Record' }}
         />
-        <Tab.Screen 
-          name="Search" 
+        <Tab.Screen
+          name="Search"
           component={SearchStack}
           options={{ title: 'Search', headerShown: false }}
         />
-        <Tab.Screen 
-          name="VoiceAssistant" 
-          component={VoiceAssistantScreen}
+        <Tab.Screen
+          name="VoiceAssistant"
+          component={ModernVoiceAssistantScreen}
           options={{ title: 'Assistant' }}
         />
         <Tab.Screen 

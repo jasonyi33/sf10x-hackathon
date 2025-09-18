@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { AudioRecorder } from '../components/AudioRecorder';
+import { ModernAudioRecorder } from '../components/ModernAudioRecorder';
 import { TranscriptionResults } from '../components/TranscriptionResults';
 import { ManualEntryForm } from '../components/ManualEntryForm';
 import { LocationPicker } from '../components/LocationPicker';

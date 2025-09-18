@@ -11,6 +11,7 @@ import {
   TextInput,
   Platform,
   Animated,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -20,6 +21,13 @@ import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { AudioProcessor, RECORDING_CONFIG, configureAudioRecording } from '../utils/audioProcessor';
 import { API_CONFIG } from '../config/api';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Input } from '../components/ui/Input';
+import { theme } from '../theme';
+
+const { width } = Dimensions.get('window');
 
 interface Message {
   id: string;
@@ -29,37 +37,33 @@ interface Message {
   isAudio?: boolean;
 }
 
-interface VoiceAssistantScreenProps {}
-
 const SPEAKING_PLACEHOLDER = '[Speaking...]';
 
-// Animated Recording Indicator Component
-const AnimatedRecordingIndicator: React.FC = () => {
+// Modern Animated Recording Indicator
+const ModernRecordingIndicator: React.FC = () => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const waveAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Pulse animation - more subtle
     const pulseAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.08,
-          duration: 1200,
+          toValue: 1.2,
+          duration: 1000,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 1200,
+          duration: 1000,
           useNativeDriver: true,
         }),
       ])
     );
 
-    // Wave animation - slower and more gentle
     const waveAnimation = Animated.loop(
       Animated.timing(waveAnim, {
         toValue: 1,
-        duration: 2500,
+        duration: 2000,
         useNativeDriver: true,
       })
     );
@@ -74,113 +78,82 @@ const AnimatedRecordingIndicator: React.FC = () => {
   }, []);
 
   return (
-    <View style={styles.recordingIndicatorContainer}>
+    <View style={styles.animatedContainer}>
       <Animated.View
         style={[
-          styles.recordingWave,
+          styles.waveCircle,
           {
-            transform: [
-              {
-                scale: waveAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1, 1.3],
-                }),
-              },
-            ],
+            transform: [{ scale: waveAnim }],
             opacity: waveAnim.interpolate({
-              inputRange: [0, 0.5, 1],
-              outputRange: [0.2, 0.4, 0.2],
+              inputRange: [0, 1],
+              outputRange: [0.3, 0.1],
             }),
           },
         ]}
       />
       <Animated.View
         style={[
-          styles.recordingCenter,
+          styles.pulseCircle,
           {
             transform: [{ scale: pulseAnim }],
           },
         ]}
       >
-        <Ionicons name="mic" size={24} color="#FFFFFF" />
+        <Ionicons name="mic" size={20} color={theme.colors.text.inverse} />
       </Animated.View>
-      <Text style={styles.recordingText}>Recording...</Text>
+      <Text style={styles.animatedText}>Recording your voice...</Text>
     </View>
   );
 };
 
-// Animated Processing Indicator Component
-const AnimatedProcessingIndicator: React.FC = () => {
+// Modern Animated Processing Indicator
+const ModernProcessingIndicator: React.FC = () => {
   const rotateAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Rotation animation
     const rotateAnimation = Animated.loop(
       Animated.timing(rotateAnim, {
         toValue: 1,
-        duration: 2000,
+        duration: 1500,
         useNativeDriver: true,
       })
     );
 
-    // Scale animation
-    const scaleAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 1.1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
     rotateAnimation.start();
-    scaleAnimation.start();
 
     return () => {
       rotateAnimation.stop();
-      scaleAnimation.stop();
     };
   }, []);
 
-  const rotateInterpolate = rotateAnim.interpolate({
+  const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
 
   return (
-    <View style={styles.processingIndicatorContainer}>
+    <View style={styles.animatedContainer}>
       <Animated.View
         style={[
-          styles.processingIcon,
+          styles.processingCircle,
           {
-            transform: [
-              { rotate: rotateInterpolate },
-              { scale: scaleAnim },
-            ],
+            transform: [{ rotate }],
           },
         ]}
       >
-        <Ionicons name="sync" size={24} color="#007AFF" />
+        <Ionicons name="sync" size={20} color={theme.colors.primary[600]} />
       </Animated.View>
-      <Text style={styles.processingText}>Processing your speech...</Text>
+      <Text style={styles.animatedText}>Processing your speech...</Text>
     </View>
   );
 };
 
-// Animated Speaking Indicator Component
-const AnimatedSpeakingIndicator: React.FC = () => {
-  const wave1Anim = useRef(new Animated.Value(0.3)).current;
-  const wave2Anim = useRef(new Animated.Value(0.5)).current;
-  const wave3Anim = useRef(new Animated.Value(0.4)).current;
-  const wave4Anim = useRef(new Animated.Value(0.6)).current;
-  const wave5Anim = useRef(new Animated.Value(0.3)).current;
+// Modern Animated Speaking Indicator
+const ModernSpeakingIndicator: React.FC = () => {
+  const wave1 = useRef(new Animated.Value(0.3)).current;
+  const wave2 = useRef(new Animated.Value(0.5)).current;
+  const wave3 = useRef(new Animated.Value(0.4)).current;
+  const wave4 = useRef(new Animated.Value(0.6)).current;
 
   useEffect(() => {
     const createWaveAnimation = (animValue: Animated.Value, delay: number = 0) => {
@@ -188,98 +161,58 @@ const AnimatedSpeakingIndicator: React.FC = () => {
         Animated.sequence([
           Animated.timing(animValue, {
             toValue: 1,
-            duration: 600,
+            duration: 500,
             delay,
             useNativeDriver: true,
           }),
           Animated.timing(animValue, {
             toValue: 0.3,
-            duration: 600,
+            duration: 500,
             useNativeDriver: true,
           }),
         ])
       );
     };
 
-    const wave1Animation = createWaveAnimation(wave1Anim, 0);
-    const wave2Animation = createWaveAnimation(wave2Anim, 100);
-    const wave3Animation = createWaveAnimation(wave3Anim, 200);
-    const wave4Animation = createWaveAnimation(wave4Anim, 300);
-    const wave5Animation = createWaveAnimation(wave5Anim, 400);
+    const animations = [
+      createWaveAnimation(wave1, 0),
+      createWaveAnimation(wave2, 100),
+      createWaveAnimation(wave3, 200),
+      createWaveAnimation(wave4, 300),
+    ];
 
-    wave1Animation.start();
-    wave2Animation.start();
-    wave3Animation.start();
-    wave4Animation.start();
-    wave5Animation.start();
+    animations.forEach(anim => anim.start());
 
     return () => {
-      wave1Animation.stop();
-      wave2Animation.stop();
-      wave3Animation.stop();
-      wave4Animation.stop();
-      wave5Animation.stop();
+      animations.forEach(anim => anim.stop());
     };
   }, []);
 
   return (
-    <View style={styles.speakingIndicatorContainer}>
-      <View style={styles.speakingIconContainer}>
-        <Ionicons name="volume-high" size={20} color="#34C759" />
-        <View style={styles.soundWavesContainer}>
-          <Animated.View
-            style={[
-              styles.soundWave,
-              {
-                transform: [{ scaleY: wave1Anim }],
-                opacity: wave1Anim,
-              },
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.soundWave,
-              {
-                transform: [{ scaleY: wave2Anim }],
-                opacity: wave2Anim,
-              },
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.soundWave,
-              {
-                transform: [{ scaleY: wave3Anim }],
-                opacity: wave3Anim,
-              },
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.soundWave,
-              {
-                transform: [{ scaleY: wave4Anim }],
-                opacity: wave4Anim,
-              },
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.soundWave,
-              {
-                transform: [{ scaleY: wave5Anim }],
-                opacity: wave5Anim,
-              },
-            ]}
-          />
+    <View style={styles.animatedContainer}>
+      <View style={styles.speakingContainer}>
+        <Ionicons name="volume-high" size={20} color={theme.colors.success[600]} />
+        <View style={styles.waveContainer}>
+          {[wave1, wave2, wave3, wave4].map((wave, index) => (
+            <Animated.View
+              key={index}
+              style={[
+                styles.soundWave,
+                {
+                  transform: [{ scaleY: wave }],
+                  opacity: wave,
+                },
+              ]}
+            />
+          ))}
         </View>
       </View>
-      <Text style={styles.speakingText}>Speaking...</Text>
+      <Text style={styles.animatedText}>Assistant speaking...</Text>
     </View>
   );
 };
 
-export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
+export const ModernVoiceAssistantScreen: React.FC = () => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -295,11 +228,10 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
   } | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [currentAudioData, setCurrentAudioData] = useState<string>('');
-  // Use a ref to avoid stale state when buffering streamed audio
+
   const audioBufferRef = useRef<string>('');
   const pendingAssistantTextRef = useRef<string>('');
   const awaitingPlaybackRef = useRef(false);
-  
   const wsRef = useRef<WebSocket | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
@@ -310,7 +242,6 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
     const fallbackText = fallback || '[Speech response delivered]';
 
     if (!hasContent && !fallback) {
-      // Nothing buffered and no fallback requested
       return;
     }
 
@@ -331,7 +262,6 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
     pendingAssistantTextRef.current = '';
   };
 
-  // Initialize the voice assistant
   useEffect(() => {
     initializeVoiceAssistant();
     return () => {
@@ -343,14 +273,12 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
 
   const getCurrentLocation = async () => {
     try {
-      // Request location permissions
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         console.log('Location permission denied');
         return null;
       }
 
-      // Get current location
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
         timeInterval: 5000,
@@ -371,24 +299,22 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
     }
   };
 
-  // Handle WebSocket events from OpenAI Realtime API
   const handleWebSocketEvent = (event: any) => {
     console.log('🔍 Processing WebSocket event:', event.type);
-    
+
     switch (event.type) {
       case 'session.created':
         console.log('✅ Session created successfully');
         break;
-        
+
       case 'session.updated':
         console.log('✅ Session updated successfully');
         break;
-        
+
       case 'conversation.item.created':
       case 'conversation.item.added':
         if (event.item?.type === 'message' && event.item?.role === 'assistant') {
           console.log('📝 Assistant message created/added');
-          // Add assistant message to UI
           const assistantMessage: Message = {
             id: event.item.id || Date.now().toString(),
             role: 'assistant',
@@ -399,7 +325,7 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
           pendingAssistantTextRef.current = '';
         }
         break;
-        
+
       case 'conversation.item.updated':
         if (event.item?.type === 'message' && event.item?.role === 'assistant') {
           console.log('📝 Assistant message updated');
@@ -419,17 +345,16 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
           }
         }
         break;
-        
+
       case 'conversation.item.done':
         if (event.item?.type === 'message' && event.item?.role === 'assistant') {
           console.log('✅ Assistant message completed');
-          // Scroll to bottom when message is complete
           setTimeout(() => {
             scrollViewRef.current?.scrollToEnd({ animated: true });
           }, 100);
         }
         break;
-        
+
       case 'response.output_audio_transcript.delta':
         console.log('📝 Audio transcript delta:', event.delta);
         if (isMuted) {
@@ -450,7 +375,6 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
         }
         break;
 
-      // Also handle explicit text stream events if the model emits them
       case 'response.output_text.delta':
         console.log('📝 Text delta:', event.delta);
         if (isMuted) {
@@ -474,25 +398,21 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
       case 'response.output_text.done':
         console.log('✅ Text output completed');
         break;
-        
+
       case 'response.output_audio_transcript.done':
         console.log('✅ Audio transcript completed');
         break;
-        
+
       case 'response.output_audio.delta':
         console.log('🎵 Audio delta received');
-        // Collect audio data
         if (event.delta) {
-          // Keep state updated for debugging/visibility
           setCurrentAudioData(prev => prev + event.delta);
-          // Append to ref buffer to avoid stale state in done handler
           audioBufferRef.current += event.delta;
         }
         break;
-        
+
       case 'response.output_audio.done':
         console.log('✅ Audio output completed');
-        // Play the collected audio data
         {
           const buffered = audioBufferRef.current || currentAudioData;
           if (buffered && !isMuted) {
@@ -505,40 +425,39 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
             awaitingPlaybackRef.current = false;
             flushPendingAssistantText('[Speech response delivered]');
           }
-          // Reset buffers for next response
           audioBufferRef.current = '';
           setCurrentAudioData('');
         }
         break;
-        
+
       case 'input_audio_buffer.speech_started':
         console.log('🎤 Speech started detected');
         break;
-        
+
       case 'input_audio_buffer.speech_stopped':
         console.log('🎤 Speech stopped detected');
         break;
-        
+
       case 'input_audio_buffer.committed':
         console.log('✅ Audio buffer committed');
         break;
-        
+
       case 'response.done':
         console.log('✅ Response completed');
         if (!awaitingPlaybackRef.current && pendingAssistantTextRef.current) {
           flushPendingAssistantText('[Speech response delivered]');
         }
         break;
-        
+
       case 'error':
         console.error('❌ Server error:', event.error);
         setError(event.error?.message || 'Server error occurred');
         break;
-        
+
       case 'echo':
         console.log('🔍 Echo event received (testing mode)');
         break;
-        
+
       default:
         console.log('🔍 Unhandled event type:', event.type);
         console.log('🔍 Full event data:', JSON.stringify(event, null, 2));
@@ -550,7 +469,6 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
       console.log('🎵 Playing audio data...');
       console.log('🎵 Audio data length:', audioData.length);
 
-      // Server outputs base64 PCM; convert to WAV and play from a temp file
       const pcmBytes = AudioProcessor.base64ToArrayBuffer(audioData);
       if (!AudioProcessor.validatePCMData(pcmBytes)) {
         throw new Error('Invalid PCM data format');
@@ -558,7 +476,6 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
 
       const wavBuffer = AudioProcessor.createWavFile(pcmBytes);
 
-      // Convert WAV ArrayBuffer to base64 to persist as a file
       const wavBytes = new Uint8Array(wavBuffer);
       let binary = '';
       const chunk = 0x8000;
@@ -596,7 +513,6 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
   const toggleMute = async () => {
     setIsMuted(!isMuted);
     if (!isMuted) {
-      // If we're muting, stop any current audio playback
       console.log('🔇 Muted - Audio output disabled');
     } else {
       console.log('🔊 Unmuted - Audio output enabled');
@@ -608,14 +524,10 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
       setIsLoading(true);
       setError(null);
 
-      // Get current location for location-based services
       await getCurrentLocation();
 
-      // Connect to our backend WebSocket proxy
-      // The backend will handle the authentication with OpenAI
       console.log('🔌 Connecting to backend WebSocket proxy...');
 
-      // Get the backend URL from our API config
       const backendUrl = API_CONFIG.BASE_URL.replace('http', 'ws');
       const wsUrl = `${backendUrl}/api/voice-assistant/realtime/ws`;
 
@@ -628,8 +540,6 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
         console.log('✅ Connected to OpenAI Realtime API');
         setIsConnected(true);
         console.log('🔌 WebSocket connection state:', ws.readyState);
-        
-        // Session is already configured via ephemeral token, no need to send again
         console.log('🔧 Session already configured via ephemeral token');
       };
 
@@ -637,8 +547,6 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
         try {
           const data = JSON.parse(event.data);
           console.log('📨 Received WebSocket message:', data);
-          
-          // Handle different event types
           handleWebSocketEvent(data);
         } catch (error) {
           console.error('❌ Error parsing WebSocket message:', error);
@@ -670,7 +578,6 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
     }
   };
 
-  // Add welcome message when connected
   const addWelcomeMessage = () => {
     if (!hasShownWelcome) {
       const welcomeMessage: Message = {
@@ -692,27 +599,21 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
     }
 
     try {
-      // Configure audio recording with optimized settings
       await configureAudioRecording();
 
-      // Start recording with fallback configuration to avoid AAC error
       const recording = new Audio.Recording();
-      
-      // Use the most basic configuration to avoid encoder errors
+
       try {
-        // Try with basic high quality preset first
         await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
       } catch (error) {
         console.log('⚠️ High quality preset failed, trying low quality...');
-        // Fallback to low quality if high quality fails
         await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.LOW_QUALITY);
       }
       await recording.startAsync();
-      
+
       recordingRef.current = recording;
       setIsRecording(true);
 
-      // Add user message showing recording started
       const userMessage: Message = {
         id: Date.now().toString(),
         role: 'user',
@@ -742,8 +643,7 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
 
       if (uri && wsRef.current) {
         console.log('🎤 Stopped recording, processing audio:', uri);
-        
-        // Update the user message to show processing
+
         setMessages(prev => {
           const newMessages = [...prev];
           const lastMessage = newMessages[newMessages.length - 1];
@@ -754,14 +654,12 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
         });
 
         try {
-          // Use backend Whisper transcription, then send text to Realtime
           console.log('🎤 Transcribing recorded audio via backend...');
-          const transcriptionResponse = await api.transcribeAudio(uri);
+          const transcriptionResponse = await api.transcribe(uri);
           const transcription = transcriptionResponse.transcription || '';
 
           console.log('🎤 Transcription result:', transcription);
 
-          // Update the user message with the actual transcription
           setMessages(prev => {
             const newMessages = [...prev];
             const lastMessage = newMessages[newMessages.length - 1];
@@ -771,7 +669,6 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
             return newMessages;
           });
 
-          // Send transcription as a user message to Realtime
           const messageEvent = {
             type: 'conversation.item.create',
             item: {
@@ -786,7 +683,6 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
           wsRef.current.send(JSON.stringify(messageEvent));
           console.log('✅ Sent transcribed text to Realtime');
 
-          // Trigger assistant response (speech output is configured server-side)
           setTimeout(() => {
             const responseEvent = { type: 'response.create' };
             wsRef.current?.send(JSON.stringify(responseEvent));
@@ -796,7 +692,6 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
         } catch (audioError) {
           console.error('Transcription failed:', audioError);
 
-          // Fallback: send a generic message if speech not recognized
           setMessages(prev => {
             const newMessages = [...prev];
             const lastMessage = newMessages[newMessages.length - 1];
@@ -832,7 +727,6 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
       return;
     }
 
-    // Add user message to chat
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -841,11 +735,9 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
     };
     setMessages(prev => [...prev, userMessage]);
 
-    // Send text message to assistant via WebSocket
     console.log('📤 Sending text message to GPT Realtime via WebSocket');
     console.log('📤 Message content:', text);
-    
-    // Send message via WebSocket
+
     const messageEvent = {
       type: "conversation.item.create",
       item: {
@@ -859,12 +751,11 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
         ],
       },
     };
-    
+
     if (wsRef.current) {
       wsRef.current.send(JSON.stringify(messageEvent));
       console.log('✅ Text message sent successfully via WebSocket');
-      
-      // Trigger assistant response
+
       setTimeout(() => {
         const responseEvent = {
           type: "response.create",
@@ -877,49 +768,49 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
 
   const clearConversation = () => {
     setMessages([]);
-    setHasShownWelcome(false); // Reset welcome message flag
-    // Note: WebSocket doesn't have a conversation.clear() method
-    // The conversation state is managed by the server
+    setHasShownWelcome(false);
   };
 
   const renderMessage = (message: Message) => {
-    // Check if this is a special animated message
     const isRecordingMessage = message.content === '[Recording... Speak now]';
     const isProcessingMessage = message.content === '[Processing your speech...]';
     const isSpeakingMessage = message.content === SPEAKING_PLACEHOLDER;
-    
+
     return (
-      <View
+      <Card
         key={message.id}
         style={[
-          styles.messageContainer,
-          message.role === 'user' ? styles.userMessage : styles.assistantMessage,
+          styles.messageCard,
+          message.role === 'user' ? styles.userMessageCard : styles.assistantMessageCard,
         ]}
+        variant={message.role === 'user' ? 'filled' : 'elevated'}
       >
         <View style={styles.messageHeader}>
-          <Ionicons
-            name={message.role === 'user' ? 'person' : 'chatbubble'}
-            size={16}
-            color={message.role === 'user' ? '#007AFF' : '#34C759'}
-          />
-          <Text style={styles.messageRole}>
-            {message.role === 'user' ? 'You' : 'Assistant'}
-          </Text>
-          <Text style={styles.messageTime}>
-            {message.timestamp.toLocaleTimeString()}
+          <View style={styles.roleContainer}>
+            <Ionicons
+              name={message.role === 'user' ? 'person' : 'chatbubble-ellipses'}
+              size={16}
+              color={message.role === 'user' ? theme.colors.primary[600] : theme.colors.success[600]}
+            />
+            <Text style={styles.roleName}>
+              {message.role === 'user' ? 'You' : 'Assistant'}
+            </Text>
+          </View>
+          <Text style={styles.timestamp}>
+            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
         </View>
-        
+
         {isRecordingMessage ? (
-          <AnimatedRecordingIndicator />
+          <ModernRecordingIndicator />
         ) : isProcessingMessage ? (
-          <AnimatedProcessingIndicator />
+          <ModernProcessingIndicator />
         ) : isSpeakingMessage ? (
-          <AnimatedSpeakingIndicator />
+          <ModernSpeakingIndicator />
         ) : (
           <Text style={styles.messageContent}>{message.content}</Text>
         )}
-      </View>
+      </Card>
     );
   };
 
@@ -927,7 +818,7 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={theme.colors.primary[600]} />
           <Text style={styles.loadingText}>Initializing Voice Assistant...</Text>
         </View>
       </SafeAreaView>
@@ -936,91 +827,120 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Voice Assistant</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity
-            style={styles.testButton}
-            onPress={() => {
-              if (wsRef.current && isConnected) {
-                console.log('🧪 Testing GPT Realtime speech output via WebSocket');
-                sendTextMessage('Hello, this is a test of the text to speech functionality.');
-              }
-            }}
-          >
-            <Ionicons name="play" size={16} color="#007AFF" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.muteButton}
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>Voice Assistant</Text>
+          <Badge variant={isConnected ? 'success' : 'danger'} size="small">
+            <View style={styles.statusDot} />
+            <Text style={styles.statusText}>
+              {isConnected ? 'Connected' : 'Disconnected'}
+            </Text>
+          </Badge>
+        </View>
+
+        <View style={styles.headerActions}>
+          <Button
+            variant="ghost"
+            size="small"
+            icon={isMuted ? 'volume-mute' : 'volume-high'}
             onPress={toggleMute}
-          >
-            <Ionicons 
-              name={isMuted ? "volume-mute" : "volume-high"} 
-              size={20} 
-              color={isMuted ? "#FF3B30" : "#007AFF"} 
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.clearButton}
+            style={styles.headerButton}
+          />
+          <Button
+            variant="ghost"
+            size="small"
+            icon="refresh"
+            onPress={initializeVoiceAssistant}
+            style={styles.headerButton}
+          />
+          <Button
+            variant="ghost"
+            size="small"
+            icon="trash-outline"
             onPress={clearConversation}
-          >
-            <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-          </TouchableOpacity>
-          <View style={[
-            styles.statusIndicator,
-            { backgroundColor: isConnected ? '#34C759' : '#FF3B30' }
-          ]} />
+            style={styles.headerButton}
+          />
         </View>
       </View>
 
+      {/* Error Message */}
       {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={initializeVoiceAssistant}
-          >
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
+        <Card style={styles.errorCard} variant="outlined">
+          <View style={styles.errorContent}>
+            <Ionicons name="alert-circle" size={24} color={theme.colors.danger[600]} />
+            <Text style={styles.errorText}>{error}</Text>
+            <Button
+              variant="danger"
+              size="small"
+              onPress={initializeVoiceAssistant}
+            >
+              Retry
+            </Button>
+          </View>
+        </Card>
       )}
 
+      {/* Messages */}
       <ScrollView
         ref={scrollViewRef}
         style={styles.messagesContainer}
         contentContainerStyle={styles.messagesContent}
+        showsVerticalScrollIndicator={false}
       >
+        {messages.length === 0 && !hasShownWelcome && isConnected && (
+          <Card style={styles.welcomeCard} variant="filled">
+            <View style={styles.welcomeContent}>
+              <Ionicons name="chatbubble-ellipses" size={48} color={theme.colors.primary[600]} />
+              <Text style={styles.welcomeTitle}>Welcome to Voice Assistant</Text>
+              <Text style={styles.welcomeText}>
+                I'm here to help with homeless outreach guidance, crisis intervention, and resource recommendations.
+                Start by recording a voice message or typing your question.
+              </Text>
+              <Button
+                variant="primary"
+                onPress={addWelcomeMessage}
+                style={styles.welcomeButton}
+              >
+                Get Started
+              </Button>
+            </View>
+          </Card>
+        )}
+
         {messages.map(renderMessage)}
       </ScrollView>
 
+      {/* Controls */}
       <View style={styles.controlsContainer}>
+        {/* Text Input */}
         <View style={styles.textInputContainer}>
-          <TextInput
-            style={styles.textInput}
+          <Input
             placeholder="Type your question here..."
             value={textInput}
             onChangeText={setTextInput}
             multiline
             maxLength={500}
+            rightIcon={
+              <Button
+                variant={textInput.trim() && isConnected ? 'primary' : 'ghost'}
+                size="small"
+                icon="send"
+                onPress={() => {
+                  if (textInput.trim() && isConnected) {
+                    sendTextMessage(textInput.trim());
+                    setTextInput('');
+                  }
+                }}
+                disabled={!textInput.trim() || !isConnected}
+              />
+            }
+            style={styles.textInput}
           />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              (!textInput.trim() || !isConnected) && styles.sendButtonDisabled
-            ]}
-            onPress={() => {
-              if (textInput.trim() && isConnected) {
-                sendTextMessage(textInput.trim());
-                setTextInput('');
-              }
-            }}
-            disabled={!textInput.trim() || !isConnected}
-          >
-            <Ionicons name="send" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
         </View>
-        
-        <View style={styles.voiceControlsContainer}>
+
+        {/* Voice Controls */}
+        <View style={styles.voiceControls}>
           <TouchableOpacity
             style={[
               styles.recordButton,
@@ -1042,313 +962,258 @@ export default function VoiceAssistantScreen({}: VoiceAssistantScreenProps) {
               }
             }}
             disabled={!isConnected || isProcessingAudio}
+            activeOpacity={0.7}
           >
             {isProcessingAudio ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <ActivityIndicator size="large" color={theme.colors.text.inverse} />
             ) : (
               <Ionicons
                 name={isRecording ? 'stop' : 'mic'}
                 size={32}
-                color={isRecording ? '#FFFFFF' : '#007AFF'}
+                color={isRecording ? theme.colors.text.inverse : theme.colors.primary[600]}
               />
             )}
           </TouchableOpacity>
-          <Text style={styles.recordButtonText}>
-            {isProcessingAudio ? 'Processing...' : isRecording ? 'Tap to stop' : 'Tap to start'}
-          </Text>
-          <Text style={[styles.recordButtonText, { fontSize: 12, marginTop: 4 }]}>
-            {isConnected ? 'Connected' : 'Not Connected'}
+
+          <Text style={styles.recordButtonLabel}>
+            {isProcessingAudio ? 'Processing...' : isRecording ? 'Tap to stop' : 'Tap to record'}
           </Text>
         </View>
       </View>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: theme.colors.surface,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: theme.spacing.xl,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
+    marginTop: theme.spacing.base,
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: theme.spacing.base,
+    paddingVertical: theme.spacing.md,
+    backgroundColor: theme.colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: theme.colors.border,
+  },
+  titleContainer: {
+    flex: 1,
+    gap: theme.spacing.sm,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
   },
-  headerButtons: {
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'currentColor',
+  },
+  statusText: {
+    fontSize: theme.typography.fontSize.xs,
+    color: 'currentColor',
+    marginLeft: theme.spacing.xs,
+  },
+  headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing.xs,
   },
-  testButton: {
-    padding: 8,
-    marginRight: 4,
+  headerButton: {
+    minWidth: 40,
   },
-  muteButton: {
-    padding: 8,
-    marginRight: 8,
+  errorCard: {
+    margin: theme.spacing.base,
+    borderColor: theme.colors.danger[200],
   },
-  clearButton: {
-    padding: 8,
-    marginRight: 12,
-  },
-  statusIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  errorContainer: {
-    backgroundColor: '#FFE5E5',
-    padding: 16,
-    margin: 16,
-    borderRadius: 8,
+  errorContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: theme.spacing.sm,
   },
   errorText: {
-    color: '#FF3B30',
     flex: 1,
-  },
-  retryButton: {
-    backgroundColor: '#FF3B30',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: theme.colors.danger[600],
+    fontSize: theme.typography.fontSize.sm,
   },
   messagesContainer: {
     flex: 1,
   },
   messagesContent: {
-    padding: 16,
+    paddingHorizontal: theme.spacing.base,
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.md,
   },
-  messageContainer: {
-    marginBottom: 16,
-    maxWidth: '85%',
+  welcomeCard: {
+    marginVertical: theme.spacing.xl,
   },
-  userMessage: {
+  welcomeContent: {
+    alignItems: 'center',
+    gap: theme.spacing.base,
+  },
+  welcomeTitle: {
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text.primary,
+    textAlign: 'center',
+  },
+  welcomeText: {
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  welcomeButton: {
+    marginTop: theme.spacing.sm,
+  },
+  messageCard: {
+    maxWidth: width * 0.85,
+  },
+  userMessageCard: {
     alignSelf: 'flex-end',
   },
-  assistantMessage: {
+  assistantMessageCard: {
     alignSelf: 'flex-start',
   },
   messageHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: theme.spacing.sm,
   },
-  messageRole: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 6,
-    color: '#666',
+  roleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
   },
-  messageTime: {
-    fontSize: 10,
-    color: '#999',
-    marginLeft: 'auto',
+  roleName: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.medium,
+    color: theme.colors.text.secondary,
+  },
+  timestamp: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.secondary,
   },
   messageContent: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.base,
     lineHeight: 22,
-    color: '#000',
-    backgroundColor: '#FFFFFF',
-    padding: 12,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    color: theme.colors.text.primary,
   },
-  controlsContainer: {
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
-  },
-  textInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#F2F2F7',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 16,
-    lineHeight: 20,
-    color: '#000',
-    maxHeight: 100,
-    paddingVertical: 8,
-  },
-  sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
+  animatedContainer: {
     alignItems: 'center',
-    marginLeft: 8,
+    paddingVertical: theme.spacing.base,
   },
-  sendButtonDisabled: {
-    backgroundColor: '#CCCCCC',
-  },
-  voiceControlsContainer: {
-    alignItems: 'center',
-  },
-  recordButton: {
+  waveCircle: {
+    position: 'absolute',
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 3,
-    borderColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    backgroundColor: theme.colors.danger[500],
   },
-  recordButtonActive: {
-    backgroundColor: '#FF3B30',
-    borderColor: '#CC2E24',
-  },
-  recordButtonProcessing: {
-    backgroundColor: '#FF9500',
-    borderColor: '#CC7700',
-  },
-  recordButtonDisabled: {
-    borderColor: '#CCCCCC',
-    opacity: 0.5,
-  },
-  recordButtonText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  // Animated Recording Indicator Styles
-  recordingIndicatorContainer: {
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  recordingWave: {
-    position: 'absolute',
+  pulseCircle: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#FF3B30',
-    opacity: 0.15,
-  },
-  recordingCenter: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#FF3B30',
+    backgroundColor: theme.colors.danger[500],
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
-  recordingText: {
-    fontSize: 14,
-    color: '#FF3B30',
-    fontWeight: '600',
-  },
-  // Animated Processing Indicator Styles
-  processingIndicatorContainer: {
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  processingIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#F0F8FF',
+  processingCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: theme.colors.primary[100],
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
-  processingText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  // Animated Speaking Indicator Styles
-  speakingIndicatorContainer: {
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  speakingIconContainer: {
+  speakingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
   },
-  soundWavesContainer: {
+  waveContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 8,
+    gap: theme.spacing.xs,
     height: 20,
   },
   soundWave: {
     width: 3,
     height: 16,
-    backgroundColor: '#34C759',
-    marginHorizontal: 1,
+    backgroundColor: theme.colors.success[500],
     borderRadius: 1.5,
   },
-  speakingText: {
-    fontSize: 14,
-    color: '#34C759',
-    fontWeight: '600',
+  animatedText: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
+    fontWeight: theme.typography.fontWeight.medium,
+  },
+  controlsContainer: {
+    paddingHorizontal: theme.spacing.base,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    gap: theme.spacing.base,
+  },
+  textInputContainer: {
+    marginBottom: theme.spacing.sm,
+  },
+  textInput: {
+    marginBottom: 0,
+  },
+  voiceControls: {
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  recordButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: theme.colors.background,
+    borderWidth: 3,
+    borderColor: theme.colors.primary[500],
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...theme.shadows.lg,
+  },
+  recordButtonActive: {
+    backgroundColor: theme.colors.danger[500],
+    borderColor: theme.colors.danger[600],
+  },
+  recordButtonProcessing: {
+    backgroundColor: theme.colors.warning[500],
+    borderColor: theme.colors.warning[600],
+  },
+  recordButtonDisabled: {
+    borderColor: theme.colors.neutral[300],
+    opacity: 0.5,
+  },
+  recordButtonLabel: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
   },
 });
