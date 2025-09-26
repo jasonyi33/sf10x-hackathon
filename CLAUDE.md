@@ -105,7 +105,7 @@ Always validate these fields are present:
 - Only `number` and `single_select` types can have danger weights
 - Auto-trigger fields immediately set score to 100
 - Formula: (value/300 * weight) for numbers, (option_value * weight) for selects
-- Manual override via slider sets `danger_override` field
+- Manual override via slider sets `urgency_override` field
 - Display: Show override if set, otherwise calculated score
 
 ### Duplicate Detection

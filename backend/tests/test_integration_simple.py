@@ -67,7 +67,7 @@ async def run_integration_test():
                 expected = test_data["expected_data"]
                 actual = result["categorized_data"]
                 
-                for field in ["name", "skin_color"]:
+                for field in ["name", "age"]:
                     if actual.get(field) == expected.get(field):
                         print(f"   ✅ {field}: {actual.get(field)}")
                     else:

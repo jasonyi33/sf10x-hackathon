@@ -16,14 +16,14 @@ import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { IndividualProfile } from '../types';
 import { api } from '../services/api';
-import { getDangerScoreColor, getDisplayDangerScore } from '../utils/dangerScore';
+import { getUrgencyScoreColor, getDisplayUrgencyScore } from '../utils/urgencyScore';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { theme } from '../theme';
 import FieldDisplay from '../components/FieldDisplay';
 import InteractionHistoryItem from '../components/InteractionHistoryItem';
-import DangerScore from '../components/DangerScore';
+import UrgencyScore from '../components/UrgencyScore';
 import InteractionDetailModal from '../components/InteractionDetailModal';
 import IndividualLocationMap from '../components/IndividualLocationMap';
 
@@ -108,8 +108,8 @@ export const ModernIndividualProfileScreen: React.FC<{ navigation: any; route: a
                       const result = await api.saveIndividual({
                         id: deleted.id,
                         name: deleted.name,
-                        danger_score: deleted.danger_score,
-                        danger_override: deleted.danger_override,
+                        urgency_score: deleted.urgency_score,
+                        urgency_override: deleted.urgency_override,
                         data: deleted.data,
                       });
                       if (result?.success) {
@@ -164,7 +164,7 @@ export const ModernIndividualProfileScreen: React.FC<{ navigation: any; route: a
     setSelectedInteraction(null);
   };
 
-  const handleDangerOverrideChange = async (overrideValue: number | null) => {
+  const handleUrgencyOverrideChange = async (overrideValue: number | null) => {
     if (!profile) return;
 
     const updatedProfile = {
@@ -174,7 +174,7 @@ export const ModernIndividualProfileScreen: React.FC<{ navigation: any; route: a
     setProfile(updatedProfile);
 
     try {
-      const success = await api.updateDangerOverride(profile.id, overrideValue);
+      const success = await api.updateUrgencyOverride(profile.id, overrideValue);
       if (!success) {
         setProfile(profile);
         Toast.show({ type: 'error', text1: 'Update failed', text2: 'Could not update urgency override.' });
@@ -193,9 +193,9 @@ export const ModernIndividualProfileScreen: React.FC<{ navigation: any; route: a
   };
 
   const getDangerLabel = (score: number) => {
-    if (score >= 67) return 'High Risk';
-    if (score >= 34) return 'Medium Risk';
-    return 'Low Risk';
+    if (score >= 67) return 'High Urgency';
+    if (score >= 34) return 'Medium Urgency';
+    return 'Low Urgency';
   };
 
   const renderField = (key: string, value: any, isRequired: boolean = false) => {
@@ -236,7 +236,7 @@ export const ModernIndividualProfileScreen: React.FC<{ navigation: any; route: a
               </View>
               <View style={styles.fieldsGrid}>
                 {Object.entries(profile.data).map(([key, value]) =>
-                  renderField(key, value, ['height', 'weight', 'skin_color'].includes(key))
+                  renderField(key, value, ['height', 'weight'].includes(key))
                 )}
               </View>
             </Card>
@@ -262,11 +262,11 @@ export const ModernIndividualProfileScreen: React.FC<{ navigation: any; route: a
                 <View style={styles.statItem}>
                   <Text style={[
                     styles.statNumber,
-                    { color: getDangerScoreColor(getDisplayDangerScore(profile)) }
+                    { color: getUrgencyScoreColor(getDisplayUrgencyScore(profile)) }
                   ]}>
-                    {Math.round(getDisplayDangerScore(profile))}
+                    {Math.round(getDisplayUrgencyScore(profile))}
                   </Text>
-                  <Text style={styles.statLabel}>Risk Score</Text>
+                  <Text style={styles.statLabel}>Urgency Score</Text>
                 </View>
               </View>
             </Card>
@@ -342,7 +342,7 @@ export const ModernIndividualProfileScreen: React.FC<{ navigation: any; route: a
     );
   }
 
-  const displayScore = getDisplayDangerScore(profile);
+  const displayScore = getDisplayUrgencyScore(profile);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -363,9 +363,9 @@ export const ModernIndividualProfileScreen: React.FC<{ navigation: any; route: a
             </View>
 
             <View style={styles.dangerSection}>
-              <DangerScore
+              <UrgencyScore
                 individual={profile}
-                onOverrideChange={handleDangerOverrideChange}
+                onOverrideChange={handleUrgencyOverrideChange}
                 showSlider={true}
               />
             </View>

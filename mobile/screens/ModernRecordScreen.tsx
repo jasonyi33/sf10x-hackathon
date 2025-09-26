@@ -280,7 +280,18 @@ export const ModernRecordScreen: React.FC = () => {
                 <View>
                   <TranscriptionResults
                     result={transcriptionResult}
-                    onReset={resetRecording}
+                    onSave={(data) => {
+                      console.log('Transcription saved:', data);
+                      Toast.show({
+                        type: 'success',
+                        text1: 'Success',
+                        text2: 'Individual information has been saved',
+                        position: 'top',
+                      });
+                      resetRecording();
+                    }}
+                    onCancel={resetRecording}
+                    location={selectedLocation?.location}
                   />
                   <Button
                     variant="secondary"
@@ -338,7 +349,7 @@ export const ModernRecordScreen: React.FC = () => {
         onRequestClose={() => setShowLocationPicker(false)}
       >
         <LocationPicker
-          onLocationSelect={handleLocationSelect}
+          onLocationSelected={handleLocationSelect}
           onCancel={() => setShowLocationPicker(false)}
         />
       </Modal>

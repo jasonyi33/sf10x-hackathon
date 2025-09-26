@@ -79,7 +79,7 @@ This product is a mobile voice transcription application designed for San Franci
 - 2.4 Allow location adjustment via map interface
 - 2.5 No AI processing - direct save to database
 - 2.6 Validation rules before save:
-    - Required fields (demo hardcoded): Height, Weight, Skin Color
+    - Required fields (demo hardcoded): Height, Weight, Age
     - Name: Required, non-empty
     - Number fields: Positive integers only, max 300
     - Single-select: Must be from predefined options IF a value is selected
@@ -96,7 +96,7 @@ This product is a mobile voice transcription application designed for San Franci
 - 3.5 Process entire transcription, then show all results at once (no streaming for MVP)
 - 3.6 Show loading spinner during processing
 - 3.7 Apply same validation as manual entry:
-    - Ensure required fields are populated (Name, Height, Weight, Skin Color)
+    - Ensure required fields are populated (Name, Height, Weight, Age)
     - If required fields missing, highlight for user to fill manually
 - 3.8 Delete audio file from storage after user confirms save - **NOT IMPLEMENTED FOR MVP**
 - 3.9 If recording fails mid-session, show error and allow re-recording
@@ -124,14 +124,14 @@ This product is a mobile voice transcription application designed for San Franci
     - Full address of interaction location
     - Original transcription (if voice entry)
 - 5.4 Display danger score with color coding:
-    - Show danger_override if not null
-    - Otherwise show calculated danger_score
+    - Show urgency_override if not null
+    - Otherwise show calculated urgency_score
     - Color based on displayed value
 - 5.5 Show total interaction count
 - 5.6 Display last interaction date prominently
 - 5.7 Manual danger override: 
     - Slider (0-100) below danger score
-    - Sets danger_override field
+    - Sets urgency_override field
     - Persists until manually changed again
     - Show "Manual" indicator when override active
 
@@ -160,7 +160,7 @@ This product is a mobile voice transcription application designed for San Franci
     - Gender (single-select: Male:0, Female:0, Other:0, Unknown:0)
     - Height (number, inches, max 300, required)
     - Weight (number, pounds, max 300, required)
-    - Skin Color (single-select: Light:0, Medium:0, Dark:0, required)
+    - Age (single-select: Light:0, Medium:0, Dark:0, required)
     - Substance abuse history (multi-select: None, Mild, Moderate, Severe, In Recovery)
 - 7.5 No edit/delete categories in MVP (create-only)
 
@@ -172,14 +172,14 @@ This product is a mobile voice transcription application designed for San Franci
     - Missing values treated as 0
     - Final score = (sum of weighted values / sum of weights) * 100
 - 8.2 Display logic:
-    - If danger_override is set: display danger_override
-    - Otherwise: display calculated danger_score
+    - If urgency_override is set: display urgency_override
+    - Otherwise: display calculated urgency_score
     - Color based on displayed value:
       - 0-33: Green (#10B981)
       - 34-66: Yellow (#F59E0B)
       - 67-100: Red (#EF4444)
 - 8.3 Auto-trigger categories immediately set score to 100
-- 8.4 Manual override via slider (0-100), sets danger_override field
+- 8.4 Manual override via slider (0-100), sets urgency_override field
 - 8.5 Recalculate only when danger-weighted fields change
 - 8.6 Priority (high/medium/low) does NOT affect danger calculation
 
@@ -433,8 +433,8 @@ Authorization: Bearer <token>
   "individual": {
     "id": "uuid",
     "name": "John Doe",
-    "danger_score": 45,
-    "danger_override": null,
+    "urgency_score": 45,
+    "urgency_override": null,
     "data": {...},
     "created_at": "2024-01-20T10:30:00Z",
     "updated_at": "2024-01-20T10:30:00Z"
@@ -459,7 +459,7 @@ Authorization: Bearer <token>
 - `search`: Search term (searches name and all JSONB data fields)
 - `limit`: Max results (default 20)
 - `offset`: Pagination offset
-- `sort_by`: "last_seen" | "danger_score" | "name" (default: "last_seen")
+- `sort_by`: "last_seen" | "urgency_score" | "name" (default: "last_seen")
 - `sort_order`: "asc" | "desc" (default: "desc")
 
 **Response**:
@@ -469,8 +469,8 @@ Authorization: Bearer <token>
     {
       "id": "uuid",
       "name": "John Doe",
-      "danger_score": 75,
-      "danger_override": null,
+      "urgency_score": 75,
+      "urgency_override": null,
       "last_seen": "2024-01-20T10:30:00Z",
       "last_location": {
         "latitude": 37.7749,
@@ -493,8 +493,8 @@ Authorization: Bearer <token>
   "individual": {
     "id": "uuid",
     "name": "John Doe",
-    "danger_score": 75,
-    "danger_override": null,
+    "urgency_score": 75,
+    "urgency_override": null,
     "data": {
       // All current field values
     },
@@ -522,15 +522,15 @@ Authorization: Bearer <token>
 **Request**:
 ```json
 {
-  "danger_override": 85  // null to remove override
+  "urgency_override": 85  // null to remove override
 }
 ```
 
 **Response**:
 ```json
 {
-  "danger_score": 75,
-  "danger_override": 85,
+  "urgency_score": 75,
+  "urgency_override": 85,
   "display_score": 85  // What to show in UI
 }
 ```
@@ -604,7 +604,7 @@ Authorization: Bearer <token>
 **Purpose**: Export all individuals to CSV (no filtering for MVP)
 **Format**: Basic CSV with essential fields only
 **Response**: File download with:
-- Headers: name, height, weight, skin_color, danger_score, last_seen
+- Headers: name, height, weight, skin_color, urgency_score, last_seen
 - Multi-select values comma-separated (e.g., "Moderate, In Recovery")
 - All individuals included (no filtering)
 - Content-Type: text/csv
@@ -618,8 +618,8 @@ CREATE TABLE individuals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   data JSONB NOT NULL DEFAULT '{}', -- All categorized fields
-  danger_score INTEGER DEFAULT 0,
-  danger_override INTEGER, -- Manual override via slider (NULL if not set)
+  urgency_score INTEGER DEFAULT 0,
+  urgency_override INTEGER, -- Manual override via slider (NULL if not set)
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -743,7 +743,7 @@ Always required (hardcoded for MVP):
 - Name (text, non-empty)
 - Height (number, 0-300)
 - Weight (number, 0-300)
-- Skin Color (single-select: Light/Medium/Dark)
+- Age (single-select: Light/Medium/Dark)
 
 ### Validation Rules
 - Number fields: Must be integers 0-300
@@ -762,8 +762,8 @@ Always required (hardcoded for MVP):
 - Text, multi-select, date, location types are ignored
 
 **Display Logic**:
-- Show `danger_override` if not null
-- Otherwise show calculated `danger_score`
+- Show `urgency_override` if not null
+- Otherwise show calculated `urgency_score`
 - Color coding:
   - Green (#10B981): 0-33
   - Yellow (#F59E0B): 34-66
@@ -1073,8 +1073,8 @@ async def search_individuals(
         WHEN $2 = 'last_seen' AND $3 = 'desc' THEN MAX(inter.created_at)
       END DESC NULLS LAST,
       CASE
-        WHEN $2 = 'danger_score' AND $3 = 'desc' THEN 
-          COALESCE(i.danger_override, i.danger_score)
+        WHEN $2 = 'urgency_score' AND $3 = 'desc' THEN 
+          COALESCE(i.urgency_override, i.urgency_score)
       END DESC,
       CASE
         WHEN $2 = 'name' AND $3 = 'asc' THEN i.name
@@ -1106,7 +1106,7 @@ async def search_individuals(
 
 ### Danger Score Calculation Implementation
 ```python
-def calculate_danger_score(individual_data: dict, categories: list) -> int:
+def calculate_urgency_score(individual_data: dict, categories: list) -> int:
     """Calculate danger score - only numeric and single-select fields"""
     
     # Check for auto-trigger first
@@ -1149,11 +1149,11 @@ def calculate_danger_score(individual_data: dict, categories: list) -> int:
         
     return int((weighted_sum / total_weight) * 100)
 
-def get_display_danger_score(individual: dict) -> int:
+def get_display_urgency_score(individual: dict) -> int:
     """Get danger score to display (override or calculated)"""
-    if individual.get('danger_override') is not None:
-        return individual['danger_override']
-    return individual['danger_score']
+    if individual.get('urgency_override') is not None:
+        return individual['urgency_override']
+    return individual['urgency_score']
 ```
 
 ### LLM Prompts
@@ -1167,7 +1167,7 @@ Rules:
 - For multi-select, return array of matching options
 - For single-select, return one option from the available choices
 - For numbers, extract digits only
-- Always attempt to extract required fields: Name, Height, Weight, Skin Color
+- Always attempt to extract required fields: Name, Height, Weight, Age
 - Return null for missing non-required information
 - Be conservative - only extract explicitly stated info
 - For skin color, map descriptions to Light/Medium/Dark
@@ -1454,7 +1454,7 @@ Example individuals:
 ### 4. Critical Features Checklist
 - [ ] Voice recording with timer
 - [ ] Live transcription display
-- [ ] Required field validation (Name, Height, Weight, Skin Color)
+- [ ] Required field validation (Name, Height, Weight, Age)
 - [ ] Category value editing
 - [ ] Duplicate merge flow
 - [ ] Danger score calculation

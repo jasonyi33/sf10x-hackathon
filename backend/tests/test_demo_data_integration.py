@@ -33,14 +33,14 @@ class TestDemoDataIntegration:
             # Mock the demo individuals
             mock_individuals = [
                 {"id": "550e8400-e29b-41d4-a716-446655440001", "name": "John Doe", 
-                 "data": {"height": 72, "weight": 180, "skin_color": "Light"},
-                 "danger_score": 75, "danger_override": None},
+                 "data": {"height": 72, "weight": 180, "age": "Light"},
+                 "urgency_score": 75, "urgency_override": None},
                 {"id": "550e8400-e29b-41d4-a716-446655440002", "name": "Sarah Smith",
-                 "data": {"height": 64, "weight": 130, "skin_color": "Dark"},
-                 "danger_score": 20, "danger_override": 40},
+                 "data": {"height": 64, "weight": 130, "age": "Dark"},
+                 "urgency_score": 20, "urgency_override": 40},
                 {"id": "550e8400-e29b-41d4-a716-446655440003", "name": "Robert Johnson",
-                 "data": {"height": 70, "weight": 200, "skin_color": "Medium"},
-                 "danger_score": 90, "danger_override": None}
+                 "data": {"height": 70, "weight": 200, "age": "Medium"},
+                 "urgency_score": 90, "urgency_override": None}
             ]
             
             # Mock interactions
@@ -89,13 +89,13 @@ class TestDemoDataIntegration:
         # Verify specific individuals from demo data
         john = next((r for r in rows if r["name"] == "John Doe"), None)
         assert john is not None
-        assert john["danger_score"] == "75"
+        assert john["urgency_score"] == "75"
         
         sarah = next((r for r in rows if r["name"] == "Sarah Smith"), None)
         assert sarah is not None
-        assert sarah["danger_score"] == "40"  # Override value
+        assert sarah["urgency_score"] == "40"  # Override value
         
         robert = next((r for r in rows if r["name"] == "Robert Johnson"), None)
         assert robert is not None
-        assert robert["danger_score"] == "90"
+        assert robert["urgency_score"] == "90"
         

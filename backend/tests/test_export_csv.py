@@ -34,10 +34,10 @@ class TestExportCSV:
                 "data": {
                     "height": 72,
                     "weight": 180,
-                    "skin_color": "Light"
+                    "age": "Light"
                 },
-                "danger_score": 75,
-                "danger_override": None
+                "urgency_score": 75,
+                "urgency_override": None
             },
             {
                 "id": "456", 
@@ -45,10 +45,10 @@ class TestExportCSV:
                 "data": {
                     "height": 64,
                     "weight": 130,
-                    "skin_color": "Dark"
+                    "age": "Dark"
                 },
-                "danger_score": 30,
-                "danger_override": 50  # Override set
+                "urgency_score": 30,
+                "urgency_override": 50  # Override set
             }
         ]
         
@@ -102,8 +102,8 @@ class TestExportCSV:
         
         assert len(rows) == 2
         assert rows[0]["name"] == "John Doe"
-        assert rows[0]["danger_score"] == "75"  # No override
-        assert rows[1]["danger_score"] == "50"  # Override used
+        assert rows[0]["urgency_score"] == "75"  # No override
+        assert rows[1]["urgency_score"] == "50"  # Override used
             
     async def test_export_empty_database(self):
         """Test CSV export with no individuals"""
@@ -143,7 +143,7 @@ class TestExportCSV:
                 
         assert response.status_code == 200
         csv_content = response.text
-        assert "name,height,weight,skin_color,danger_score,last_seen" in csv_content
+        assert "name,height,weight,age,urgency_score,last_seen" in csv_content
         assert len(csv_content.strip().split('\n')) == 1  # Headers only
             
     async def test_export_null_values(self):
@@ -154,10 +154,10 @@ class TestExportCSV:
             "data": {
                 "height": None,  # Null value
                 "weight": 150,
-                "skin_color": "Medium"
+                "age": "Medium"
             },
-            "danger_score": 0,
-            "danger_override": None
+            "urgency_score": 0,
+            "urgency_override": None
         }
         
         with patch("api.export.create_client") as mock_create_client:

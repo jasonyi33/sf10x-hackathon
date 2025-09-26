@@ -528,7 +528,10 @@ export const ModernVoiceAssistantScreen: React.FC = () => {
 
       console.log('🔌 Connecting to backend WebSocket proxy...');
 
-      const backendUrl = API_CONFIG.BASE_URL.replace('http', 'ws');
+      // Properly convert HTTP/HTTPS to WS/WSS
+      const backendUrl = API_CONFIG.BASE_URL.replace(/^https?:/, (match) =>
+        match === 'https:' ? 'wss:' : 'ws:'
+      );
       const wsUrl = `${backendUrl}/api/voice-assistant/realtime/ws`;
 
       console.log('🔌 WebSocket URL:', wsUrl);
@@ -583,7 +586,7 @@ export const ModernVoiceAssistantScreen: React.FC = () => {
       const welcomeMessage: Message = {
         id: 'welcome',
         role: 'assistant',
-        content: 'Hello! I\'m your homeless outreach assistant. I can help you with crisis intervention, care protocols, resource recommendations, and safety guidance, among other things. How can I assist you today?',
+        content: 'Quick homeless outreach assistant ready. Ask about crisis intervention, safety protocols, resources, or emergencies. Keep questions brief for fastest response.',
         timestamp: new Date(),
       };
       setMessages([welcomeMessage]);
@@ -603,10 +606,38 @@ export const ModernVoiceAssistantScreen: React.FC = () => {
 
       const recording = new Audio.Recording();
 
+      // Optimized audio settings for faster transcription
+      const recordingOptions = {
+        android: {
+          extension: '.m4a',
+          outputFormat: Audio.RECORDING_FORMAT_MPEG_4,
+          audioEncoder: Audio.RECORDING_OPTION_ANDROID_AUDIO_ENCODER_AAC,
+          sampleRate: 16000, // Lower sample rate for faster processing
+          numberOfChannels: 1, // Mono for efficiency
+          bitRate: 64000, // Lower bitrate
+        },
+        ios: {
+          extension: '.m4a',
+          outputFormat: Audio.RECORDING_FORMAT_MPEG_4,
+          audioQuality: Audio.RECORDING_QUALITY_MEDIUM, // Medium quality for speed
+          sampleRate: 16000, // Optimized for Whisper
+          numberOfChannels: 1, // Mono
+          bitRate: 64000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+        web: {
+          mimeType: 'audio/webm;codecs=opus',
+          bitsPerSecond: 64000,
+        },
+      };
+
       try {
-        await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+        await recording.prepareToRecordAsync(recordingOptions);
+        console.log('🎤 Using optimized audio settings for fast transcription');
       } catch (error) {
-        console.log('⚠️ High quality preset failed, trying low quality...');
+        console.log('⚠️ Optimized settings failed, trying LOW_QUALITY preset...');
         await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.LOW_QUALITY);
       }
       await recording.startAsync();
@@ -654,9 +685,18 @@ export const ModernVoiceAssistantScreen: React.FC = () => {
         });
 
         try {
-          console.log('🎤 Transcribing recorded audio via backend...');
+          console.log('🎤 Fast transcribing recorded audio via backend...');
+          const startTime = Date.now();
           const transcriptionResponse = await api.transcribe(uri);
           const transcription = transcriptionResponse.transcription || '';
+          const transcriptionTime = Date.now() - startTime;
+          console.log(`⚡ Transcription completed in ${transcriptionTime}ms`);
+
+          // Optimize for speed - skip if too short
+          if (!transcription || transcription.length < 3) {
+            console.log('⚠️ Transcription too short, using fallback');
+            throw new Error('Transcription too short');
+          }
 
           console.log('🎤 Transcription result:', transcription);
 
@@ -683,11 +723,10 @@ export const ModernVoiceAssistantScreen: React.FC = () => {
           wsRef.current.send(JSON.stringify(messageEvent));
           console.log('✅ Sent transcribed text to Realtime');
 
-          setTimeout(() => {
-            const responseEvent = { type: 'response.create' };
-            wsRef.current?.send(JSON.stringify(responseEvent));
-            console.log('🎯 Triggered assistant response');
-          }, 100);
+          // Immediate response trigger for faster interaction
+          const responseEvent = { type: 'response.create' };
+          wsRef.current.send(JSON.stringify(responseEvent));
+          console.log('🎯 Triggered immediate assistant response');
 
         } catch (audioError) {
           console.error('Transcription failed:', audioError);
@@ -756,13 +795,12 @@ export const ModernVoiceAssistantScreen: React.FC = () => {
       wsRef.current.send(JSON.stringify(messageEvent));
       console.log('✅ Text message sent successfully via WebSocket');
 
-      setTimeout(() => {
-        const responseEvent = {
-          type: "response.create",
-        };
-        wsRef.current?.send(JSON.stringify(responseEvent));
-        console.log('🎯 Triggered assistant response');
-      }, 100);
+      // Immediate response for text messages
+    const responseEvent = {
+      type: "response.create",
+    };
+    wsRef.current.send(JSON.stringify(responseEvent));
+    console.log('🎯 Triggered immediate text response');
     }
   };
 
@@ -892,10 +930,10 @@ export const ModernVoiceAssistantScreen: React.FC = () => {
           <Card style={styles.welcomeCard} variant="filled">
             <View style={styles.welcomeContent}>
               <Ionicons name="chatbubble-ellipses" size={48} color={theme.colors.primary[600]} />
-              <Text style={styles.welcomeTitle}>Welcome to Voice Assistant</Text>
+              <Text style={styles.welcomeTitle}>Fast Voice Assistant</Text>
               <Text style={styles.welcomeText}>
-                I'm here to help with homeless outreach guidance, crisis intervention, and resource recommendations.
-                Start by recording a voice message or typing your question.
+                Quick guidance for homeless outreach, crisis intervention, and safety protocols.
+                Keep questions brief for fastest response.
               </Text>
               <Button
                 variant="primary"

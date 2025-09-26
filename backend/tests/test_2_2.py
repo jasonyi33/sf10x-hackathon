@@ -38,7 +38,7 @@ MOCK_CATEGORIES = [
         "options": None
     },
     {
-        "name": "skin_color",
+        "name": "age",
         "type": "single_select",
         "is_required": True,
         "options": [
@@ -75,7 +75,7 @@ TEST_TRANSCRIPTIONS = [
             "name": "Sarah Smith",
             "height": 64,  # 5'4" = 64 inches
             "weight": 120,
-            "skin_color": "Dark",
+            "age": "Dark",
             "substance_abuse_history": ["In Recovery"]
         }
     },
@@ -86,7 +86,7 @@ TEST_TRANSCRIPTIONS = [
             "name": "John Doe",
             "height": 72,  # 6 feet = 72 inches
             "weight": 180,
-            "skin_color": "Light"
+            "age": "Light"
         }
     },
     {
@@ -94,7 +94,7 @@ TEST_TRANSCRIPTIONS = [
         "text": "Met someone named Robert, medium skin tone, seems to be a veteran.",
         "expected": {
             "name": "Robert",
-            "skin_color": "Medium",
+            "age": "Medium",
             "height": None,
             "weight": None
         }
@@ -104,7 +104,7 @@ TEST_TRANSCRIPTIONS = [
         "text": "Maria Garcia, pale skin, 5'2\", 110 lbs.",
         "expected": {
             "name": "Maria Garcia", 
-            "skin_color": "Light",  # pale -> Light
+            "age": "Light",  # pale -> Light
             "height": 62,  # 5'2" = 62 inches
             "weight": 110
         }

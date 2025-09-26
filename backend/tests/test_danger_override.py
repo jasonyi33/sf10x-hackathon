@@ -37,7 +37,7 @@ class TestDangerOverride:
             mock.return_value = supabase_mock
             yield supabase_mock
     
-    def test_set_danger_override_success(self, client, mock_supabase):
+    def test_set_urgency_override_success(self, client, mock_supabase):
         """Test setting danger override value"""
         individual_id = str(uuid4())
         
@@ -46,23 +46,23 @@ class TestDangerOverride:
         mock_supabase.table.return_value.update.return_value = mock_update
         mock_update.eq.return_value.execute.return_value.data = [{
             "id": individual_id,
-            "danger_score": 45,  # Original calculated score
-            "danger_override": 85  # New override value
+            "urgency_score": 45,  # Original calculated score
+            "urgency_override": 85  # New override value
         }]
         
         response = client.put(
             f"/api/individuals/{individual_id}/danger-override",
-            json={"danger_override": 85},
+            json={"urgency_override": 85},
             headers={"Authorization": "Bearer test-token"}
         )
         
         assert response.status_code == 200
         data = response.json()
-        assert data["danger_score"] == 45
-        assert data["danger_override"] == 85
+        assert data["urgency_score"] == 45
+        assert data["urgency_override"] == 85
         assert data["display_score"] == 85  # Should show override
     
-    def test_remove_danger_override(self, client, mock_supabase):
+    def test_remove_urgency_override(self, client, mock_supabase):
         """Test removing danger override (null)"""
         individual_id = str(uuid4())
         
@@ -71,47 +71,47 @@ class TestDangerOverride:
         mock_supabase.table.return_value.update.return_value = mock_update
         mock_update.eq.return_value.execute.return_value.data = [{
             "id": individual_id,
-            "danger_score": 45,
-            "danger_override": None  # Override removed
+            "urgency_score": 45,
+            "urgency_override": None  # Override removed
         }]
         
         response = client.put(
             f"/api/individuals/{individual_id}/danger-override",
-            json={"danger_override": None},
+            json={"urgency_override": None},
             headers={"Authorization": "Bearer test-token"}
         )
         
         assert response.status_code == 200
         data = response.json()
-        assert data["danger_score"] == 45
-        assert data["danger_override"] is None
+        assert data["urgency_score"] == 45
+        assert data["urgency_override"] is None
         assert data["display_score"] == 45  # Should show calculated score
     
-    def test_danger_override_validation_min(self, client, mock_supabase):
+    def test_urgency_override_validation_min(self, client, mock_supabase):
         """Test danger override minimum value validation"""
         individual_id = str(uuid4())
         
         response = client.put(
             f"/api/individuals/{individual_id}/danger-override",
-            json={"danger_override": -1},  # Invalid: less than 0
+            json={"urgency_override": -1},  # Invalid: less than 0
             headers={"Authorization": "Bearer test-token"}
         )
         
         assert response.status_code == 422  # Validation error
     
-    def test_danger_override_validation_max(self, client, mock_supabase):
+    def test_urgency_override_validation_max(self, client, mock_supabase):
         """Test danger override maximum value validation"""
         individual_id = str(uuid4())
         
         response = client.put(
             f"/api/individuals/{individual_id}/danger-override",
-            json={"danger_override": 101},  # Invalid: greater than 100
+            json={"urgency_override": 101},  # Invalid: greater than 100
             headers={"Authorization": "Bearer test-token"}
         )
         
         assert response.status_code == 422  # Validation error
     
-    def test_danger_override_individual_not_found(self, client, mock_supabase):
+    def test_urgency_override_individual_not_found(self, client, mock_supabase):
         """Test updating non-existent individual"""
         individual_id = str(uuid4())
         
@@ -122,14 +122,14 @@ class TestDangerOverride:
         
         response = client.put(
             f"/api/individuals/{individual_id}/danger-override",
-            json={"danger_override": 50},
+            json={"urgency_override": 50},
             headers={"Authorization": "Bearer test-token"}
         )
         
         assert response.status_code == 404
         assert "Individual not found" in response.json()["detail"]
     
-    def test_danger_override_edge_values(self, client, mock_supabase):
+    def test_urgency_override_edge_values(self, client, mock_supabase):
         """Test edge values (0 and 100)"""
         individual_id = str(uuid4())
         
@@ -138,40 +138,40 @@ class TestDangerOverride:
         mock_supabase.table.return_value.update.return_value = mock_update
         mock_update.eq.return_value.execute.return_value.data = [{
             "id": individual_id,
-            "danger_score": 75,
-            "danger_override": 0
+            "urgency_score": 75,
+            "urgency_override": 0
         }]
         
         response = client.put(
             f"/api/individuals/{individual_id}/danger-override",
-            json={"danger_override": 0},
+            json={"urgency_override": 0},
             headers={"Authorization": "Bearer test-token"}
         )
         
         assert response.status_code == 200
         data = response.json()
-        assert data["danger_override"] == 0
+        assert data["urgency_override"] == 0
         assert data["display_score"] == 0
         
         # Test 100 value
         mock_update.eq.return_value.execute.return_value.data = [{
             "id": individual_id,
-            "danger_score": 75,
-            "danger_override": 100
+            "urgency_score": 75,
+            "urgency_override": 100
         }]
         
         response = client.put(
             f"/api/individuals/{individual_id}/danger-override",
-            json={"danger_override": 100},
+            json={"urgency_override": 100},
             headers={"Authorization": "Bearer test-token"}
         )
         
         assert response.status_code == 200
         data = response.json()
-        assert data["danger_override"] == 100
+        assert data["urgency_override"] == 100
         assert data["display_score"] == 100
     
-    def test_danger_override_no_auth(self, client, mock_supabase):
+    def test_urgency_override_no_auth(self, client, mock_supabase):
         """Test endpoint requires authentication"""
         # Clear dependency override temporarily
         original_override = app.dependency_overrides.get(get_current_user)
@@ -181,7 +181,7 @@ class TestDangerOverride:
             individual_id = str(uuid4())
             response = client.put(
                 f"/api/individuals/{individual_id}/danger-override",
-                json={"danger_override": 50}
+                json={"urgency_override": 50}
             )
             assert response.status_code in [401, 422]
         finally:

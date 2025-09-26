@@ -87,7 +87,7 @@ INSERT INTO categories (name, type, is_required, is_preset, options) VALUES
 ('name', 'text', true, true, null),
 ('height', 'number', true, true, null),
 ('weight', 'number', true, true, null),
-('skin_color', 'single_select', true, true, 
+('age', 'single_select', true, true, 
  '[{"label": "Light", "value": 0}, {"label": "Medium", "value": 0}, {"label": "Dark", "value": 0}]'::jsonb),
 ('gender', 'single_select', false, true,
  '[{"label": "Male", "value": 0}, {"label": "Female", "value": 0}, {"label": "Other", "value": 0}, {"label": "Unknown", "value": 0}]'::jsonb),
@@ -120,8 +120,8 @@ INSERT INTO categories (name, type, is_required, is_preset, options) VALUES
 3. **Only numeric and single-select types can have danger weights**
 
 **Display Logic**:
-- If danger_override is set: display danger_override
-- Otherwise: display calculated danger_score
+- If urgency_override is set: display urgency_override
+- Otherwise: display calculated urgency_score
 - Color coding: 0-33 Green, 34-66 Yellow, 67-100 Red
 
 ## Audio Recording Specifications

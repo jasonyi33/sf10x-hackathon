@@ -26,7 +26,7 @@ def fix_categories_schema():
         
         # Add missing columns
         migrations = [
-            "ALTER TABLE categories ADD COLUMN IF NOT EXISTS danger_weight INTEGER DEFAULT 0",
+            "ALTER TABLE categories ADD COLUMN IF NOT EXISTS urgency_weight INTEGER DEFAULT 0",
             "ALTER TABLE categories ADD COLUMN IF NOT EXISTS auto_trigger BOOLEAN DEFAULT FALSE", 
             "ALTER TABLE categories ADD COLUMN IF NOT EXISTS is_required BOOLEAN DEFAULT FALSE",
             "ALTER TABLE categories ADD COLUMN IF NOT EXISTS is_preset BOOLEAN DEFAULT FALSE",

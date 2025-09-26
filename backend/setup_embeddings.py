@@ -39,8 +39,8 @@ def get_supabase_client() -> Client:
                         {
                             "id": "550e8400-e29b-41d4-a716-446655440001",
                             "name": "John Doe",
-                            "danger_score": 75,
-                            "danger_override": None,
+                            "urgency_score": 75,
+                            "urgency_override": None,
                             "data": {"age": 45, "height": 72, "weight": 180},
                             "created_at": "2024-01-15T10:30:00Z",
                             "updated_at": "2024-01-15T10:30:00Z"
@@ -134,8 +134,6 @@ async def setup_embeddings():
                         text_parts.append(f"Height: {data['height']} inches")
                     if data.get('weight'):
                         text_parts.append(f"Weight: {data['weight']} pounds")
-                    if data.get('skin_color'):
-                        text_parts.append(f"Skin color: {data['skin_color']}")
                     if data.get('gender'):
                         text_parts.append(f"Gender: {data['gender']}")
                     if data.get('substance_abuse_history'):

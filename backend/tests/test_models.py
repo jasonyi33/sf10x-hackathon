@@ -78,7 +78,7 @@ class TestSaveIndividualRequest:
                 "name": "John Doe",
                 "height": 72,
                 "weight": 180,
-                "skin_color": "Light"
+                "age": "Light"
             }
         )
         assert request.data["name"] == "John Doe"
@@ -101,7 +101,7 @@ class TestSaveIndividualRequest:
                 "name": "Jane Smith",
                 "height": 65,
                 "weight": 140,
-                "skin_color": "Dark",
+                "age": "Dark",
                 "gender": "Female",
                 "substance_abuse_history": ["None"]
             },
@@ -124,7 +124,7 @@ class TestSaveIndividualRequest:
                     # Missing name
                     "height": 72,
                     "weight": 180,
-                    "skin_color": "Light"
+                    "age": "Light"
                 }
             )
         assert "Missing required fields: ['name']" in str(exc_info.value)
@@ -135,13 +135,13 @@ class TestSaveIndividualRequest:
             SaveIndividualRequest(
                 data={
                     "name": "John Doe"
-                    # Missing height, weight, skin_color
+                    # Missing height, weight, age
                 }
             )
         assert "Missing required fields:" in str(exc_info.value)
         assert "height" in str(exc_info.value)
         assert "weight" in str(exc_info.value)
-        assert "skin_color" in str(exc_info.value)
+        assert "age" in str(exc_info.value)
     
     def test_null_required_field(self):
         """Test validation fails when required field is null"""
@@ -151,7 +151,7 @@ class TestSaveIndividualRequest:
                     "name": "John Doe",
                     "height": None,  # Null is not allowed
                     "weight": 180,
-                    "skin_color": "Light"
+                    "age": "Light"
                 }
             )
         assert "Missing required fields: ['height']" in str(exc_info.value)
@@ -164,23 +164,23 @@ class TestDangerOverrideRequest:
         """Test valid danger override values"""
         # Valid values
         for value in [0, 50, 100]:
-            request = DangerOverrideRequest(danger_override=value)
-            assert request.danger_override == value
+            request = DangerOverrideRequest(urgency_override=value)
+            assert request.urgency_override == value
     
     def test_null_override(self):
         """Test null override (remove override)"""
-        request = DangerOverrideRequest(danger_override=None)
-        assert request.danger_override is None
+        request = DangerOverrideRequest(urgency_override=None)
+        assert request.urgency_override is None
     
     def test_invalid_override_too_high(self):
         """Test danger override > 100 fails"""
         with pytest.raises(ValueError):
-            DangerOverrideRequest(danger_override=101)
+            DangerOverrideRequest(urgency_override=101)
     
     def test_invalid_override_negative(self):
         """Test negative danger override fails"""
         with pytest.raises(ValueError):
-            DangerOverrideRequest(danger_override=-1)
+            DangerOverrideRequest(urgency_override=-1)
 
 
 class TestResponseModels:
@@ -191,9 +191,9 @@ class TestResponseModels:
         summary = IndividualSummary(
             id=uuid4(),
             name="John Doe",
-            danger_score=75,
-            danger_override=None,
-            display_score=75,  # Should match danger_score when no override
+            urgency_score=75,
+            urgency_override=None,
+            display_score=75,  # Should match urgency_score when no override
             last_seen=datetime.now(),
             last_location={
                 "latitude": 37.7749,
@@ -201,42 +201,42 @@ class TestResponseModels:
                 "address": "Market St & 5th"  # Abbreviated
             }
         )
-        assert summary.display_score == summary.danger_score
+        assert summary.display_score == summary.urgency_score
     
     def test_individual_summary_with_override(self):
         """Test IndividualSummary with danger override"""
         summary = IndividualSummary(
             id=uuid4(),
             name="Jane Smith",
-            danger_score=20,
-            danger_override=40,
+            urgency_score=20,
+            urgency_override=40,
             display_score=40,  # Should match override when set
             last_seen=datetime.now(),
             last_location=None
         )
-        assert summary.display_score == summary.danger_override
-        assert summary.display_score != summary.danger_score
+        assert summary.display_score == summary.urgency_override
+        assert summary.display_score != summary.urgency_score
     
     def test_individual_response(self):
         """Test IndividualResponse model"""
         response = IndividualResponse(
             id=uuid4(),
             name="Test Person",
-            danger_score=50,
-            danger_override=None,
+            urgency_score=50,
+            urgency_override=None,
             display_score=50,
             data={
                 "name": "Test Person",
                 "height": 70,
                 "weight": 160,
-                "skin_color": "Medium",
+                "age": "Medium",
                 "veteran_status": "Unknown"
             },
             created_at=datetime.now(),
             updated_at=datetime.now()
         )
         assert response.data["veteran_status"] == "Unknown"
-        assert response.display_score == response.danger_score
+        assert response.display_score == response.urgency_score
     
     def test_interaction_summary(self):
         """Test InteractionSummary model"""
@@ -275,22 +275,22 @@ class TestResponseModels:
         assert "height" in detail.changes
         assert detail.location["address"].startswith("123 Main Library")
     
-    def test_danger_override_response(self):
+    def test_urgency_override_response(self):
         """Test DangerOverrideResponse model"""
         response = DangerOverrideResponse(
-            danger_score=75,
-            danger_override=90,
+            urgency_score=75,
+            urgency_override=90,
             display_score=90  # Should be override value
         )
-        assert response.display_score == response.danger_override
+        assert response.display_score == response.urgency_override
         
         # Test without override
         response2 = DangerOverrideResponse(
-            danger_score=75,
-            danger_override=None,
-            display_score=75  # Should be danger_score
+            urgency_score=75,
+            urgency_override=None,
+            display_score=75  # Should be urgency_score
         )
-        assert response2.display_score == response2.danger_score
+        assert response2.display_score == response2.urgency_score
     
     def test_search_response(self):
         """Test SearchIndividualsResponse model"""
@@ -298,8 +298,8 @@ class TestResponseModels:
             IndividualSummary(
                 id=uuid4(),
                 name=f"Person {i}",
-                danger_score=i * 10,
-                danger_override=None,
+                urgency_score=i * 10,
+                urgency_override=None,
                 display_score=i * 10,
                 last_seen=datetime.now(),
                 last_location=None
@@ -322,10 +322,10 @@ class TestResponseModels:
         individual = IndividualResponse(
             id=uuid4(),
             name="Detail Test",
-            danger_score=60,
-            danger_override=None,
+            urgency_score=60,
+            urgency_override=None,
             display_score=60,
-            data={"name": "Detail Test", "height": 70, "weight": 160, "skin_color": "Light"},
+            data={"name": "Detail Test", "height": 70, "weight": 160, "age": "Light"},
             created_at=datetime.now(),
             updated_at=datetime.now()
         )

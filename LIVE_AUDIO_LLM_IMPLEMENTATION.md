@@ -74,7 +74,7 @@ from supabase import create_client, Client
 
 from api.auth import get_current_user
 from services.openai_service import OpenAIService
-from services.danger_calculator import calculate_danger_score
+from services.danger_calculator import calculate_urgency_score
 from services.validation_helper import validate_categorized_data
 
 
@@ -717,8 +717,8 @@ saveIndividual: async (data: any) => {
         id: id || generateUUID(),
         name: Name || name || 'Unknown Individual',
         data: existingData || categorizedData || {},
-        danger_score: danger_score || 0,
-        danger_override: data.danger_override || null,
+        urgency_score: urgency_score || 0,
+        urgency_override: data.urgency_override || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -773,14 +773,14 @@ searchIndividuals: async (query: string): Promise<SearchResult[]> => {
     // Convert to SearchResult format
     const searchResults: SearchResult[] = individuals.map(individual => {
       // Calculate display score (override or calculated)
-      const displayScore = individual.danger_override !== null && individual.danger_override !== undefined 
-        ? individual.danger_override 
-        : individual.danger_score;
+      const displayScore = individual.urgency_override !== null && individual.urgency_override !== undefined 
+        ? individual.urgency_override 
+        : individual.urgency_score;
       
       return {
         id: individual.id,
         name: individual.name,
-        danger_score: displayScore,
+        urgency_score: displayScore,
         last_seen: individual.updated_at,
         last_seen_days: calculateDaysAgo(individual.updated_at),
         last_interaction_date: individual.updated_at,
@@ -820,8 +820,8 @@ getIndividualProfile: async (individualId: string): Promise<IndividualProfile | 
     const profile: IndividualProfile = {
       id: individual.id,
       name: individual.name,
-      danger_score: individual.danger_score,
-      danger_override: individual.danger_override,
+      urgency_score: individual.urgency_score,
+      urgency_override: individual.urgency_override,
       data: individual.data || {},
       created_at: individual.created_at,
       updated_at: individual.updated_at,
@@ -846,7 +846,7 @@ updateDangerOverride: async (individualId: string, overrideValue: number | null)
     const { data, error } = await supabase
       .from('individuals')
       .update({ 
-        danger_override: overrideValue,
+        urgency_override: overrideValue,
         updated_at: new Date().toISOString()
       })
       .eq('id', individualId)
@@ -912,8 +912,8 @@ saveIndividual: async (data: any) => {
         id: data.id || generateUUID(),
                   name: data.Name || data.name || 'Unknown Individual',
         data: data.data || {},
-        danger_score: data.danger_score || 0,
-        danger_override: data.danger_override || null,
+        urgency_score: data.urgency_score || 0,
+        urgency_override: data.urgency_override || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -1027,7 +1027,7 @@ The search functionality has been completely overhauled to work with real databa
 interface SearchResult {
   id: string;
   name: string;
-  danger_score: number;        // Uses override if available
+  urgency_score: number;        // Uses override if available
   last_seen: string;          // Updated timestamp
   last_seen_days: number;     // Calculated days ago
   last_interaction_date: string;

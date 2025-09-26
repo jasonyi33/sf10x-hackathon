@@ -107,7 +107,7 @@ TEST_CASES = [
     },
     {
         "name": "All zero weights",
-        "data": {"weight": 200},  # weight has 0 danger_weight
+        "data": {"weight": 200},  # weight has 0 urgency_weight
         "expected": 0
     },
     {
@@ -128,7 +128,7 @@ TEST_CASES = [
 print("Testing Task 2.3: Urgency Score Calculator")
 print("=" * 50)
 
-# Test calculate_danger_score
+# Test calculate_urgency_score
 for test in TEST_CASES:
     print(f"\nTest: {test['name']}")
     print(f"Data: {test['data']}")

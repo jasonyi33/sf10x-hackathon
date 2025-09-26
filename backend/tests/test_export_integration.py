@@ -40,12 +40,12 @@ class TestExportIntegration:
                     "data": {
                         "height": 72,
                         "weight": 180,
-                        "skin_color": "Light",
+                        "age": "Light",
                         "gender": "Male",
                         "substance_abuse_history": ["Moderate", "In Recovery"]  # Multi-select
                     },
-                    "danger_score": 65,
-                    "danger_override": None
+                    "urgency_score": 65,
+                    "urgency_override": None
                 },
                 {
                     "id": str(uuid4()),
@@ -53,10 +53,10 @@ class TestExportIntegration:
                     "data": {
                         "height": 60,
                         "weight": 120,
-                        "skin_color": "Dark"
+                        "age": "Dark"
                     },
-                    "danger_score": 85,
-                    "danger_override": 30  # Manual override
+                    "urgency_score": 85,
+                    "urgency_override": 30  # Manual override
                 },
                 {
                     "id": str(uuid4()),
@@ -64,10 +64,10 @@ class TestExportIntegration:
                     "data": {
                         "height": 0,  # Edge case: zero value
                         "weight": None,  # Missing value
-                        "skin_color": ""  # Empty string
+                        "age": ""  # Empty string
                     },
-                    "danger_score": 0,
-                    "danger_override": None
+                    "urgency_score": 0,
+                    "urgency_override": None
                 }
             ]
             
@@ -123,19 +123,19 @@ class TestExportIntegration:
         assert rows[0]["name"] == "Complete Individual"
         assert rows[0]["height"] == "72"
         assert rows[0]["weight"] == "180"
-        assert rows[0]["skin_color"] == "Light"
-        assert rows[0]["danger_score"] == "65"  # No override
+        assert rows[0]["age"] == "Light"
+        assert rows[0]["urgency_score"] == "65"  # No override
         assert rows[0]["last_seen"] == "2024-01-20T09:00:00Z"  # Most recent
         
         # Verify second individual (with override)
         assert rows[1]["name"] == "Override Individual"
-        assert rows[1]["danger_score"] == "30"  # Override value, not 85
+        assert rows[1]["urgency_score"] == "30"  # Override value, not 85
         assert rows[1]["last_seen"] == "2024-01-18T14:30:00Z"
         
         # Verify third individual (edge cases)
         assert rows[2]["name"] == "Minimal Individual"
         assert rows[2]["height"] == "0"  # Zero preserved
         assert rows[2]["weight"] == ""  # Null becomes empty
-        assert rows[2]["skin_color"] == ""  # Empty preserved
-        assert rows[2]["danger_score"] == "0"
+        assert rows[2]["age"] == ""  # Empty preserved
+        assert rows[2]["urgency_score"] == "0"
         assert rows[2]["last_seen"] == ""  # No interactions

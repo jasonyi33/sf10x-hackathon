@@ -85,7 +85,7 @@ async def test_optional_fields():
                     print(f"   - {field}: {value}")
                 
                 # Check if required fields are still being extracted
-                required_present = all(field in data for field in ["name", "height", "weight", "skin_color"])
+                required_present = all(field in data for field in ["name", "height", "weight"])
                 print(f"\n   {'✅' if required_present else '❌'} All required fields present")
         
         print("\n" + "="*60)

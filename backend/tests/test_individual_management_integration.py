@@ -45,10 +45,10 @@ class TestIndividualManagementIntegration:
             {"id": str(uuid4()), "name": "name", "type": "text", "is_required": True},
             {"id": str(uuid4()), "name": "height", "type": "number", "is_required": True},
             {"id": str(uuid4()), "name": "weight", "type": "number", "is_required": True},
-            {"id": str(uuid4()), "name": "skin_color", "type": "single_select", "is_required": True,
+            {"id": str(uuid4()), "name": "age", "type": "single_select", "is_required": True,
              "options": [{"label": "Light", "value": 0}, {"label": "Medium", "value": 0}, {"label": "Dark", "value": 0}]},
             {"id": str(uuid4()), "name": "veteran_status", "type": "single_select", "is_required": False,
-             "options": [{"label": "Yes", "value": 0}, {"label": "No", "value": 0}], "danger_weight": 30}
+             "options": [{"label": "Yes", "value": 0}, {"label": "No", "value": 0}], "urgency_weight": 30}
         ]
     
     def test_full_individual_management_flow(self, client, mock_supabase, mock_categories):
@@ -66,14 +66,14 @@ class TestIndividualManagementIntegration:
             "individual": {
                 "id": individual_id,
                 "name": "John Doe",
-                "danger_score": 45,
-                "danger_override": None,
+                "urgency_score": 45,
+                "urgency_override": None,
                 "display_score": 45,  # Added display_score
                 "data": {
                     "name": "John Doe",
                     "height": 72,
                     "weight": 180,
-                    "skin_color": "Light",
+                    "age": "Light",
                     "veteran_status": "Yes"
                 },
                 "created_at": datetime.now(timezone.utc).isoformat(),
@@ -97,7 +97,7 @@ class TestIndividualManagementIntegration:
                         "name": "John Doe",
                         "height": 72,
                         "weight": 180,
-                        "skin_color": "Light",
+                        "age": "Light",
                         "veteran_status": "Yes"
                     },
                     "location": {
@@ -113,15 +113,15 @@ class TestIndividualManagementIntegration:
         assert create_response.status_code == 200
         create_data = create_response.json()
         assert create_data["individual"]["id"] == individual_id
-        assert create_data["individual"]["danger_score"] == 45
+        assert create_data["individual"]["urgency_score"] == 45
         
         # Step 2: Search for the individual
         mock_service.search_individuals = AsyncMock(return_value={
             "individuals": [{
                 "id": individual_id,
                 "name": "John Doe",
-                "danger_score": 45,
-                "danger_override": None,
+                "urgency_score": 45,
+                "urgency_override": None,
                 "display_score": 45,
                 "last_seen": datetime.now(timezone.utc).isoformat(),
                 "last_location": {"latitude": 37.7749, "longitude": -122.4194, "address": "Market St"}
@@ -147,14 +147,14 @@ class TestIndividualManagementIntegration:
             "individual": {
                 "id": individual_id,
                 "name": "John Doe",
-                "danger_score": 45,
-                "danger_override": None,
+                "urgency_score": 45,
+                "urgency_override": None,
                 "display_score": 45,
                 "data": {
                     "name": "John Doe",
                     "height": 72,
                     "weight": 180,
-                    "skin_color": "Light",
+                    "age": "Light",
                     "veteran_status": "Yes"
                 },
                 "created_at": datetime.now(timezone.utc).isoformat(),
@@ -185,19 +185,19 @@ class TestIndividualManagementIntegration:
         mock_supabase.table.return_value.update.return_value = mock_update
         mock_update.eq.return_value.execute.return_value.data = [{
             "id": individual_id,
-            "danger_score": 45,
-            "danger_override": 85
+            "urgency_score": 45,
+            "urgency_override": 85
         }]
         
         override_response = client.put(
             f"/api/individuals/{individual_id}/danger-override",
-            json={"danger_override": 85},
+            json={"urgency_override": 85},
             headers={"Authorization": "Bearer test-token"}
         )
         
         assert override_response.status_code == 200
         override_data = override_response.json()
-        assert override_data["danger_override"] == 85
+        assert override_data["urgency_override"] == 85
         assert override_data["display_score"] == 85
         
         # Step 5: Merge with new data
@@ -205,14 +205,14 @@ class TestIndividualManagementIntegration:
             "individual": {
                 "id": individual_id,
                 "name": "John Doe",
-                "danger_score": 50,  # Recalculated
-                "danger_override": 85,  # Preserved
+                "urgency_score": 50,  # Recalculated
+                "urgency_override": 85,  # Preserved
                 "display_score": 85,  # Shows override
                 "data": {
                     "name": "John Doe",
                     "height": 73,  # Changed
                     "weight": 185,  # Changed
-                    "skin_color": "Light",
+                    "age": "Light",
                     "veteran_status": "Yes",
                     "substance_abuse_history": ["Moderate"]  # New field
                 },
@@ -237,7 +237,7 @@ class TestIndividualManagementIntegration:
                         "name": "John Doe",
                         "height": 73,
                         "weight": 185,
-                        "skin_color": "Light",
+                        "age": "Light",
                         "veteran_status": "Yes",
                         "substance_abuse_history": ["Moderate"]
                     },
@@ -249,7 +249,7 @@ class TestIndividualManagementIntegration:
         assert merge_response.status_code == 200
         merge_data = merge_response.json()
         assert merge_data["individual"]["id"] == individual_id  # Same ID
-        assert merge_data["individual"]["danger_override"] == 85  # Preserved
+        assert merge_data["individual"]["urgency_override"] == 85  # Preserved
         assert merge_data["individual"]["data"]["height"] == 73  # Updated data
         
         # Step 6: Get interaction history
@@ -280,7 +280,7 @@ class TestIndividualManagementIntegration:
                     "name": "John Doe",
                     "height": 72,
                     "weight": 180,
-                    "skin_color": "Light",
+                    "age": "Light",
                     "veteran_status": "Yes"
                 }
             }
@@ -305,8 +305,8 @@ class TestIndividualManagementIntegration:
             mock_individuals.append({
                 "id": str(uuid4()),
                 "name": f"Person {i}",
-                "danger_score": i % 100,
-                "danger_override": None,
+                "urgency_score": i % 100,
+                "urgency_override": None,
                 "display_score": i % 100,
                 "last_seen": datetime.now(timezone.utc).isoformat(),
                 "last_location": {"latitude": 37.7749, "longitude": -122.4194, "address": f"Street {i}"}
@@ -345,7 +345,7 @@ class TestIndividualManagementIntegration:
             {"id": str(uuid4()), "name": "name", "type": "text", "is_required": True},
             {"id": str(uuid4()), "name": "height", "type": "number", "is_required": True},
             {"id": str(uuid4()), "name": "weight", "type": "number", "is_required": True},
-            {"id": str(uuid4()), "name": "skin_color", "type": "single_select", "is_required": True}
+            {"id": str(uuid4()), "name": "age", "type": "single_select", "is_required": True}
         ]
         mock_supabase.table.return_value.select.return_value.execute.return_value.data = mock_categories
         
@@ -355,7 +355,7 @@ class TestIndividualManagementIntegration:
                 "data": {
                     "name": "Test Person",
                     "height": 70
-                    # Missing weight and skin_color
+                    # Missing weight and age
                 }
             },
             headers={"Authorization": "Bearer test-token"}
@@ -385,7 +385,7 @@ class TestIndividualManagementIntegration:
         # Test 3: Invalid danger override value
         response = client.put(
             f"/api/individuals/{uuid4()}/danger-override",
-            json={"danger_override": 150},  # > 100
+            json={"urgency_override": 150},  # > 100
             headers={"Authorization": "Bearer test-token"}
         )
         assert response.status_code == 422
@@ -397,7 +397,7 @@ class TestIndividualManagementIntegration:
             response = client.post(
                 "/api/individuals",
                 json={
-                    "data": {"name": "Test", "height": 70, "weight": 160, "skin_color": "Light"},
+                    "data": {"name": "Test", "height": 70, "weight": 160, "age": "Light"},
                     "merge_with_id": str(uuid4())
                 },
                 headers={"Authorization": "Bearer test-token"}
@@ -413,7 +413,7 @@ class TestIndividualManagementIntegration:
             "name": "Jane Smith",
             "height": 65,
             "weight": 140,
-            "skin_color": "Dark",
+            "age": "Dark",
             "medical_conditions": ["Diabetes", "Hypertension"]
         }
         
@@ -422,8 +422,8 @@ class TestIndividualManagementIntegration:
             "individual": {
                 "id": individual_id,
                 "name": "Jane Smith",
-                "danger_score": 30,
-                "danger_override": None,
+                "urgency_score": 30,
+                "urgency_override": None,
                 "display_score": 30,
                 "data": initial_data,
                 "created_at": datetime.now(timezone.utc).isoformat(),
@@ -444,7 +444,7 @@ class TestIndividualManagementIntegration:
             {"id": str(uuid4()), "name": "name", "type": "text", "is_required": True},
             {"id": str(uuid4()), "name": "height", "type": "number", "is_required": True},
             {"id": str(uuid4()), "name": "weight", "type": "number", "is_required": True},
-            {"id": str(uuid4()), "name": "skin_color", "type": "single_select", "is_required": True},
+            {"id": str(uuid4()), "name": "age", "type": "single_select", "is_required": True},
             {"id": str(uuid4()), "name": "medical_conditions", "type": "multi_select", "is_required": False}
         ]
         
@@ -466,8 +466,8 @@ class TestIndividualManagementIntegration:
             "individual": {
                 "id": individual_id,
                 "name": "Jane Smith",
-                "danger_score": 30,
-                "danger_override": None,
+                "urgency_score": 30,
+                "urgency_override": None,
                 "display_score": 30,
                 "data": initial_data,
                 "created_at": datetime.now(timezone.utc).isoformat(),
@@ -480,8 +480,8 @@ class TestIndividualManagementIntegration:
             "individual": {
                 "id": individual_id,
                 "name": "Jane Smith",
-                "danger_score": 32,  # Slightly changed due to weight
-                "danger_override": None,
+                "urgency_score": 32,  # Slightly changed due to weight
+                "urgency_override": None,
                 "display_score": 32,
                 "data": updated_data,
                 "created_at": datetime.now(timezone.utc).isoformat(),
@@ -527,26 +527,26 @@ class TestIndividualManagementIntegration:
         # First update sets danger override to 60
         mock_update.eq.return_value.execute.return_value.data = [{
             "id": individual_id,
-            "danger_score": 45,
-            "danger_override": 60
+            "urgency_score": 45,
+            "urgency_override": 60
         }]
         
         response1 = client.put(
             f"/api/individuals/{individual_id}/danger-override",
-            json={"danger_override": 60},
+            json={"urgency_override": 60},
             headers={"Authorization": "Bearer test-token"}
         )
         
         # Second update sets danger override to 80
         mock_update.eq.return_value.execute.return_value.data = [{
             "id": individual_id,
-            "danger_score": 45,
-            "danger_override": 80
+            "urgency_score": 45,
+            "urgency_override": 80
         }]
         
         response2 = client.put(
             f"/api/individuals/{individual_id}/danger-override",
-            json={"danger_override": 80},
+            json={"urgency_override": 80},
             headers={"Authorization": "Bearer test-token"}
         )
         
@@ -554,7 +554,7 @@ class TestIndividualManagementIntegration:
         assert response2.status_code == 200
         
         # Last update wins
-        assert response2.json()["danger_override"] == 80
+        assert response2.json()["urgency_override"] == 80
 
 
 # Clean up dependency override after tests

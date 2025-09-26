@@ -49,8 +49,8 @@ def get_supabase_client() -> Client:
                         {
                             "id": "550e8400-e29b-41d4-a716-446655440001",
                             "name": "John Doe",
-                            "danger_score": 75,
-                            "danger_override": None,
+                            "urgency_score": 75,
+                            "urgency_override": None,
                             "data": {"age": 45, "height": 72, "weight": 180},
                             "created_at": "2024-01-15T10:30:00Z",
                             "updated_at": "2024-01-15T10:30:00Z"
@@ -119,8 +119,6 @@ async def generate_embedding_for_individual(
                 text_parts.append(f"Height: {data['height']} inches")
             if data.get('weight'):
                 text_parts.append(f"Weight: {data['weight']} pounds")
-            if data.get('skin_color'):
-                text_parts.append(f"Skin color: {data['skin_color']}")
             if data.get('gender'):
                 text_parts.append(f"Gender: {data['gender']}")
             if data.get('substance_abuse_history'):
@@ -262,8 +260,8 @@ async def semantic_search_individuals(
                                 embedding_results.append({
                                     "id": individual_id,
                                     "name": individual_data.get('name'),
-                                    "danger_score": individual_data.get('danger_score'),
-                                    "danger_override": individual_data.get('danger_override'),
+                                    "urgency_score": individual_data.get('urgency_score'),
+                                    "urgency_override": individual_data.get('urgency_override'),
                                     "data": individual_data.get('data', {}),
                                     "similarity_score": similarity_score,
                                     "search_type": "semantic"
@@ -297,8 +295,8 @@ async def semantic_search_individuals(
                 all_results.append({
                     "id": result['id'],
                     "name": result.get('name'),
-                    "danger_score": result.get('danger_score'),
-                    "danger_override": result.get('danger_override'),
+                    "urgency_score": result.get('urgency_score'),
+                    "urgency_override": result.get('urgency_override'),
                     "data": result.get('data', {}),
                     "search_type": "exact",
                     "similarity_score": 1.0  # Exact matches get perfect score
@@ -367,8 +365,6 @@ async def generate_embeddings_for_all_individuals(
                         text_parts.append(f"Height: {data['height']} inches")
                     if data.get('weight'):
                         text_parts.append(f"Weight: {data['weight']} pounds")
-                    if data.get('skin_color'):
-                        text_parts.append(f"Skin color: {data['skin_color']}")
                     if data.get('gender'):
                         text_parts.append(f"Gender: {data['gender']}")
                     if data.get('substance_abuse_history'):

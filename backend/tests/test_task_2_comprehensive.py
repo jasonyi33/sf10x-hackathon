@@ -64,7 +64,7 @@ async def test_task_2_comprehensive():
             print_pass(f"Categories endpoint returns {len(categories)} categories")
             
             # Check required preset categories
-            preset_names = ["name", "height", "weight", "skin_color", "gender", "substance_abuse_history"]
+            preset_names = ["name", "height", "weight", "age", "gender", "substance_abuse_history"]
             found_presets = {cat["name"] for cat in categories if cat.get("is_preset")}
             
             for preset in preset_names:
@@ -76,7 +76,7 @@ async def test_task_2_comprehensive():
             
             # Verify category structure
             for cat in categories[:1]:  # Check first category structure
-                required_fields = ["id", "name", "type", "is_required", "is_preset", "danger_weight", "auto_trigger"]
+                required_fields = ["id", "name", "type", "is_required", "is_preset", "urgency_weight", "auto_trigger"]
                 for field in required_fields:
                     assert field in cat
                 print_pass("Category structure matches specification")
@@ -154,7 +154,7 @@ async def test_task_2_comprehensive():
                 data = result["categorized_data"]
                 
                 # Check required fields
-                required_fields = ["name", "height", "weight", "skin_color"]
+                required_fields = ["name", "height", "weight"]
                 for field in required_fields:
                     if field in data and data[field] is not None:
                         print_pass(f"{field}: {data[field]}")
@@ -169,10 +169,10 @@ async def test_task_2_comprehensive():
                     print_info("substance_abuse_history: Not extracted")
                 
                 # Verify skin color mapping
-                if data.get("skin_color") in ["Light", "Medium", "Dark"]:
-                    print_pass(f"Skin color correctly mapped to: {data['skin_color']}")
+                if data.get("age") in ["Light", "Medium", "Dark"]:
+                    print_pass(f"Skin color correctly mapped to: {data['age']}")
                 else:
-                    print_fail(f"Invalid skin color: {data.get('skin_color')}")
+                    print_fail(f"Invalid skin color: {data.get('age')}")
                     all_tests_passed = False
                     
         except Exception as e:
@@ -186,16 +186,16 @@ async def test_task_2_comprehensive():
         # Note: We can't directly test this without saving individuals
         # but we can verify the service exists
         try:
-            from services.danger_calculator import calculate_danger_score
+            from services.urgency_calculator import calculate_urgency_score
             print_pass("Danger calculator service exists")
             
             # Test with mock data
             test_data = {"height": 90, "weight": 200}
             test_categories = [
-                {"name": "height", "type": "number", "danger_weight": 30},
-                {"name": "weight", "type": "number", "danger_weight": 50}
+                {"name": "height", "type": "number", "urgency_weight": 30},
+                {"name": "weight", "type": "number", "urgency_weight": 50}
             ]
-            score = calculate_danger_score(test_data, test_categories)
+            score = calculate_urgency_score(test_data, test_categories)
             assert isinstance(score, int)
             assert 0 <= score <= 100
             print_pass(f"Danger score calculation works: {score}")

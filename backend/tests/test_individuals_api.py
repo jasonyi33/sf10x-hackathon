@@ -32,7 +32,7 @@ class TestIndividualsAPI:
                     "name": "Test Person",
                     "height": 70,
                     "weight": 160,
-                    "skin_color": "Medium",
+                    "age": "Medium",
                     "gender": "Female"
                 },
                 "location": {
@@ -47,7 +47,7 @@ class TestIndividualsAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["individual"]["name"] == "Test Person"
-        assert data["individual"]["danger_score"] >= 0
+        assert data["individual"]["urgency_score"] >= 0
         assert data["interaction"]["has_transcription"] == False
     
     @pytest.mark.asyncio
@@ -59,7 +59,7 @@ class TestIndividualsAPI:
                 "data": {
                     "name": "Test Person",
                     "height": 70
-                    # Missing weight and skin_color
+                    # Missing weight and age
                 }
             },
             headers={"Authorization": f"Bearer {auth_token}"}
@@ -80,7 +80,7 @@ class TestIndividualsAPI:
                     "name": "John Doe",
                     "height": 72,
                     "weight": 180,
-                    "skin_color": "Light"
+                    "age": "Light"
                 }
             },
             headers={"Authorization": f"Bearer {auth_token}"}
@@ -96,7 +96,7 @@ class TestIndividualsAPI:
                     "name": "John Doe",
                     "height": 73,  # Changed
                     "weight": 180,  # Same
-                    "skin_color": "Light",  # Same
+                    "age": "Light",  # Same
                     "veteran_status": "Yes"  # New
                 },
                 "merge_with_id": individual_id
@@ -119,7 +119,7 @@ class TestIndividualsAPI:
                     "name": "Test",
                     "height": 70,
                     "weight": 160,
-                    "skin_color": "Light"
+                    "age": "Light"
                 },
                 "merge_with_id": str(uuid4())  # Non-existent ID
             },
@@ -139,7 +139,7 @@ class TestIndividualsAPI:
                     "name": "Voice Person",
                     "height": 68,
                     "weight": 150,
-                    "skin_color": "Dark"
+                    "age": "Dark"
                 },
                 "transcription": "Met Voice Person near the library...",
                 "audio_url": "https://example.com/audio.m4a",
@@ -166,7 +166,7 @@ class TestIndividualsAPI:
                     "name": "Test",
                     "height": 70,
                     "weight": 160,
-                    "skin_color": "Light"
+                    "age": "Light"
                 }
             }
         )

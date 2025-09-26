@@ -23,7 +23,7 @@ TEST_AUDIO_FILES = {
             "name": "John",
             "height": 72,  # 6 feet
             "weight": 180,
-            "skin_color": "Light"
+            "age": "Light"
         },
         "expected_missing": []
     },
@@ -34,7 +34,7 @@ TEST_AUDIO_FILES = {
             "name": "Sarah",
             "height": 64,  # 5'4"
             "weight": 120,
-            "skin_color": "Dark"
+            "age": "Dark"
         },
         "expected_missing": []
     },
@@ -45,7 +45,7 @@ TEST_AUDIO_FILES = {
             "name": "Robert",
             "height": 70,  # 5'10"
             "weight": 200,
-            "skin_color": "Medium"
+            "age": "Medium"
         },
         "expected_missing": []
     }
@@ -80,7 +80,7 @@ async def test_categories_endpoint(client, auth_headers):
     assert "name" in category_names
     assert "height" in category_names
     assert "weight" in category_names
-    assert "skin_color" in category_names
+    assert "age" in category_names
 
 
 @pytest.mark.asyncio

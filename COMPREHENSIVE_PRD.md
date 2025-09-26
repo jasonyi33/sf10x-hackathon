@@ -51,8 +51,8 @@ individuals (
   id UUID PRIMARY KEY,
   name TEXT NOT NULL,
   data JSONB,  -- Flexible field storage
-  danger_score INTEGER,
-  danger_override INTEGER,
+  urgency_score INTEGER,
+  urgency_override INTEGER,
   last_location JSONB,
   created_at TIMESTAMP,
   updated_at TIMESTAMP
@@ -208,14 +208,14 @@ score = (value / 300) * weight
 score = option_value * weight
 
 // Final calculation
-danger_score = (sum(scores) / sum(weights)) * 100
+urgency_score = (sum(scores) / sum(weights)) * 100
 ```
 
 #### Display Logic
 - **Green (0-33)**: #10B981
 - **Yellow (34-66)**: #F59E0B
 - **Red (67-100)**: #EF4444
-- **Manual Override**: Slider sets danger_override field
+- **Manual Override**: Slider sets urgency_override field
 - **Auto-trigger**: Immediately sets score to 100
 
 ### 6. Location Services
@@ -357,12 +357,12 @@ interface Individual {
     height?: number;
     weight?: number;
     age?: number;
-    skin_color?: 'Light' | 'Medium' | 'Dark';
+    age?: 'Light' | 'Medium' | 'Dark';
     gender?: string;
     [key: string]: any;  // Dynamic fields
   };
-  danger_score: number;
-  danger_override?: number;
+  urgency_score: number;
+  urgency_override?: number;
   last_location?: {
     latitude: number;
     longitude: number;

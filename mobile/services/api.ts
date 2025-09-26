@@ -78,40 +78,40 @@ const mockIndividuals: SearchResult[] = [
   {
     id: '1',
     name: 'John Doe',
-    danger_score: 75,
-    danger_override: null,
+    urgency_score: 75,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-15T10:30:00Z'),
     last_interaction_date: '2024-01-15T10:30:00Z',
   },
   {
     id: '2',
     name: 'Sarah Smith',
-    danger_score: 20,
-    danger_override: 40,
+    urgency_score: 20,
+    urgency_override: 40,
     last_seen_days: calculateDaysAgo('2024-01-12T14:20:00Z'),
     last_interaction_date: '2024-01-12T14:20:00Z',
   },
   {
     id: '3',
     name: 'Robert Johnson',
-    danger_score: 90,
-    danger_override: null,
+    urgency_score: 90,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-16T09:15:00Z'),
     last_interaction_date: '2024-01-16T09:15:00Z',
   },
   {
     id: '4',
     name: 'Maria Garcia',
-    danger_score: 15,
-    danger_override: null,
+    urgency_score: 15,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-10T16:45:00Z'),
     last_interaction_date: '2024-01-10T16:45:00Z',
   },
   {
     id: '5',
     name: 'David Wilson',
-    danger_score: 60,
-    danger_override: null,
+    urgency_score: 60,
+    urgency_override: null,
     last_seen_days: calculateDaysAgo('2024-01-14T11:30:00Z'),
     last_interaction_date: '2024-01-14T11:30:00Z',
   },
@@ -122,13 +122,12 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
   '1': {
     id: '1',
     name: 'John Doe',
-    danger_score: 75,
-    danger_override: null,
+    urgency_score: 75,
+    urgency_override: null,
     data: {
       name: 'John Doe',
       height: 72,
       weight: 180,
-      skin_color: 'Light',
       gender: 'Male',
       substance_abuse_history: ['Moderate'],
     },
@@ -147,7 +146,6 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
         individual_id: '1',
         user_id: 'user1',
         transcription: 'Met John near Market Street. About 45 years old, 6 feet tall, maybe 180 pounds. Light skin. Shows signs of moderate substance abuse, been on streets 3 months. Needs diabetes medication.',
-        data: { name: 'John Doe', height: 72, weight: 180, skin_color: 'Light' },
         location: { lat: 37.7749, lng: -122.4194 },
         created_at: '2024-01-15T10:30:00Z',
         worker_name: 'Officer Smith',
@@ -178,13 +176,12 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
   '2': {
     id: '2',
     name: 'Sarah Smith',
-    danger_score: 20,
-    danger_override: 40,
+    urgency_score: 20,
+    urgency_override: 40,
     data: {
       name: 'Sarah Smith',
       height: 65,
       weight: 140,
-      skin_color: 'Medium',
       gender: 'Female',
       substance_abuse_history: ['None'],
     },
@@ -203,7 +200,6 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
         individual_id: '2',
         user_id: 'user1',
         transcription: 'Met Sarah at the library. She is 35 years old, 5\'5", about 140 pounds. Medium skin tone. No signs of substance abuse. She is looking for housing assistance.',
-        data: { name: 'Sarah Smith', height: 65, weight: 140, skin_color: 'Medium' },
         location: { lat: 37.7749, lng: -122.4194 },
         created_at: '2024-01-12T14:20:00Z',
         worker_name: 'Officer Smith',
@@ -231,7 +227,7 @@ const mockDataStore = {
       name: "Sarah Smith",
       urgency_score: 15,
       urgency_override: null,
-      data: { age: 32, height: 65, weight: 140, skin_color: "Light", gender: "Female", substance_abuse_history: ["None"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Low" },
+      data: { age: 32, height: 65, weight: 140, gender: "Female", substance_abuse_history: ["None"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Low" },
       created_at: "2024-01-10T09:00:00Z",
       updated_at: "2024-01-15T14:30:00Z",
       total_interactions: 2,
@@ -243,7 +239,7 @@ const mockDataStore = {
       name: "Michael Chen",
       urgency_score: 25,
       urgency_override: null,
-      data: { age: 28, height: 68, weight: 155, skin_color: "Medium", gender: "Male", substance_abuse_history: ["None"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Medium" },
+      data: { age: 28, height: 68, weight: 155, gender: "Male", substance_abuse_history: ["None"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Medium" },
       created_at: "2024-01-11T10:15:00Z",
       updated_at: "2024-01-16T11:45:00Z",
       total_interactions: 1,
@@ -253,9 +249,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440003": {
       id: "550e8400-e29b-41d4-a716-446655440003",
       name: "Emily Rodriguez",
-      danger_score: 30,
-      danger_override: null,
-      data: { age: 35, height: 62, weight: 130, skin_color: "Medium", gender: "Female", substance_abuse_history: ["Mild"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Medium" },
+      urgency_score: 30,
+      urgency_override: null,
+      data: { age: 35, height: 62, weight: 130, gender: "Female", substance_abuse_history: ["Mild"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Medium" },
       created_at: "2024-01-12T08:30:00Z",
       updated_at: "2024-01-17T16:20:00Z",
       total_interactions: 1,
@@ -265,9 +261,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440004": {
       id: "550e8400-e29b-41d4-a716-446655440004",
       name: "David Wilson",
-      danger_score: 20,
-      danger_override: null,
-      data: { age: 45, height: 70, weight: 175, skin_color: "Light", gender: "Male", substance_abuse_history: ["None"], veteran_status: "Yes", medical_conditions: ["None"], housing_priority: "High" },
+      urgency_score: 20,
+      urgency_override: null,
+      data: { age: 45, height: 70, weight: 175, gender: "Male", substance_abuse_history: ["None"], veteran_status: "Yes", medical_conditions: ["None"], housing_priority: "High" },
       created_at: "2024-01-13T12:00:00Z",
       updated_at: "2024-01-18T09:15:00Z",
       total_interactions: 1,
@@ -277,9 +273,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440005": {
       id: "550e8400-e29b-41d4-a716-446655440005",
       name: "Lisa Thompson",
-      danger_score: 18,
-      danger_override: null,
-      data: { age: 29, height: 64, weight: 145, skin_color: "Light", gender: "Female", substance_abuse_history: ["Mild"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Low" },
+      urgency_score: 18,
+      urgency_override: null,
+      data: { age: 29, height: 64, weight: 145, gender: "Female", substance_abuse_history: ["Mild"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Low" },
       created_at: "2024-01-14T14:45:00Z",
       updated_at: "2024-01-19T13:30:00Z",
       total_interactions: 1,
@@ -289,9 +285,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440006": {
       id: "550e8400-e29b-41d4-a716-446655440006",
       name: "James Brown",
-      danger_score: 32,
-      danger_override: null,
-      data: { age: 52, height: 72, weight: 185, skin_color: "Dark", gender: "Male", substance_abuse_history: ["None"], veteran_status: "Yes", medical_conditions: ["Heart Disease"], housing_priority: "High" },
+      urgency_score: 32,
+      urgency_override: null,
+      data: { age: 52, height: 72, weight: 185, gender: "Male", substance_abuse_history: ["None"], veteran_status: "Yes", medical_conditions: ["Heart Disease"], housing_priority: "High" },
       created_at: "2024-01-15T11:20:00Z",
       updated_at: "2024-01-20T10:45:00Z",
       total_interactions: 1,
@@ -301,9 +297,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440007": {
       id: "550e8400-e29b-41d4-a716-446655440007",
       name: "John Doe",
-      danger_score: 75,
-      danger_override: null,
-      data: { age: 45, height: 72, weight: 180, skin_color: "Light", gender: "Male", substance_abuse_history: ["Moderate"], veteran_status: "No", medical_conditions: ["Diabetes"], housing_priority: "High" },
+      urgency_score: 75,
+      urgency_override: null,
+      data: { age: 45, height: 72, weight: 180, gender: "Male", substance_abuse_history: ["Moderate"], veteran_status: "No", medical_conditions: ["Diabetes"], housing_priority: "High" },
       created_at: "2024-01-10T08:00:00Z",
       updated_at: "2024-01-15T15:30:00Z",
       total_interactions: 2,
@@ -313,9 +309,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440008": {
       id: "550e8400-e29b-41d4-a716-446655440008",
       name: "Maria Garcia",
-      danger_score: 55,
-      danger_override: null,
-      data: { age: 38, height: 63, weight: 150, skin_color: "Medium", gender: "Female", substance_abuse_history: ["Moderate"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Critical" },
+      urgency_score: 55,
+      urgency_override: null,
+      data: { age: 38, height: 63, weight: 150, gender: "Female", substance_abuse_history: ["Moderate"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Critical" },
       created_at: "2024-01-11T09:30:00Z",
       updated_at: "2024-01-16T12:15:00Z",
       total_interactions: 1,
@@ -325,9 +321,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440009": {
       id: "550e8400-e29b-41d4-a716-446655440009",
       name: "Robert Johnson",
-      danger_score: 90,
-      danger_override: null,
-      data: { age: 58, height: 70, weight: 200, skin_color: "Medium", gender: "Male", substance_abuse_history: ["Severe"], veteran_status: "Yes", medical_conditions: ["Chronic Pain"], housing_priority: "Critical" },
+      urgency_score: 90,
+      urgency_override: null,
+      data: { age: 58, height: 70, weight: 200, gender: "Male", substance_abuse_history: ["Severe"], veteran_status: "Yes", medical_conditions: ["Chronic Pain"], housing_priority: "Critical" },
       created_at: "2024-01-12T10:45:00Z",
       updated_at: "2024-01-17T14:20:00Z",
       total_interactions: 1,
@@ -337,9 +333,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440010": {
       id: "550e8400-e29b-41d4-a716-446655440010",
       name: "Jennifer Lee",
-      danger_score: 45,
-      danger_override: null,
-      data: { age: 42, height: 66, weight: 160, skin_color: "Light", gender: "Female", substance_abuse_history: ["Mild"], veteran_status: "No", medical_conditions: ["Mobility Issues"], housing_priority: "High" },
+      urgency_score: 45,
+      urgency_override: null,
+      data: { age: 42, height: 66, weight: 160, gender: "Female", substance_abuse_history: ["Mild"], veteran_status: "No", medical_conditions: ["Mobility Issues"], housing_priority: "High" },
       created_at: "2024-01-13T13:15:00Z",
       updated_at: "2024-01-18T11:45:00Z",
       total_interactions: 1,
@@ -349,9 +345,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440011": {
       id: "550e8400-e29b-41d4-a716-446655440011",
       name: "Thomas Anderson",
-      danger_score: 60,
-      danger_override: null,
-      data: { age: 49, height: 71, weight: 190, skin_color: "Dark", gender: "Male", substance_abuse_history: ["Moderate"], veteran_status: "Yes", medical_conditions: ["Heart Disease"], housing_priority: "High" },
+      urgency_score: 60,
+      urgency_override: null,
+      data: { age: 49, height: 71, weight: 190, gender: "Male", substance_abuse_history: ["Moderate"], veteran_status: "Yes", medical_conditions: ["Heart Disease"], housing_priority: "High" },
       created_at: "2024-01-14T15:00:00Z",
       updated_at: "2024-01-19T16:30:00Z",
       total_interactions: 1,
@@ -361,9 +357,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440012": {
       id: "550e8400-e29b-41d4-a716-446655440012",
       name: "Amanda White",
-      danger_score: 50,
-      danger_override: null,
-      data: { age: 33, height: 65, weight: 145, skin_color: "Light", gender: "Female", substance_abuse_history: ["Severe"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Critical" },
+      urgency_score: 50,
+      urgency_override: null,
+      data: { age: 33, height: 65, weight: 145, gender: "Female", substance_abuse_history: ["Severe"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Critical" },
       created_at: "2024-01-15T12:30:00Z",
       updated_at: "2024-01-20T13:15:00Z",
       total_interactions: 1,
@@ -373,9 +369,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440013": {
       id: "550e8400-e29b-41d4-a716-446655440013",
       name: "Christopher Davis",
-      danger_score: 40,
-      danger_override: null,
-      data: { age: 47, height: 69, weight: 175, skin_color: "Medium", gender: "Male", substance_abuse_history: ["Moderate"], veteran_status: "No", medical_conditions: ["Diabetes"], housing_priority: "High" },
+      urgency_score: 40,
+      urgency_override: null,
+      data: { age: 47, height: 69, weight: 175, gender: "Male", substance_abuse_history: ["Moderate"], veteran_status: "No", medical_conditions: ["Diabetes"], housing_priority: "High" },
       created_at: "2024-01-16T09:45:00Z",
       updated_at: "2024-01-21T10:20:00Z",
       total_interactions: 1,
@@ -385,9 +381,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440014": {
       id: "550e8400-e29b-41d4-a716-446655440014",
       name: "Jessica Martinez",
-      danger_score: 35,
-      danger_override: null,
-      data: { age: 36, height: 64, weight: 155, skin_color: "Medium", gender: "Female", substance_abuse_history: ["Mild"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Medium" },
+      urgency_score: 35,
+      urgency_override: null,
+      data: { age: 36, height: 64, weight: 155, gender: "Female", substance_abuse_history: ["Mild"], veteran_status: "No", medical_conditions: ["None"], housing_priority: "Medium" },
       created_at: "2024-01-17T11:00:00Z",
       updated_at: "2024-01-22T14:45:00Z",
       total_interactions: 1,
@@ -397,9 +393,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440015": {
       id: "550e8400-e29b-41d4-a716-446655440015",
       name: "Daniel Taylor",
-      danger_score: 100,
-      danger_override: null,
-      data: { age: 55, height: 73, weight: 210, skin_color: "Dark", gender: "Male", substance_abuse_history: ["Severe"], veteran_status: "Yes", medical_conditions: ["Chronic Pain"], housing_priority: "Critical", violent_behavior: "Physical" },
+      urgency_score: 100,
+      urgency_override: null,
+      data: { age: 55, height: 73, weight: 210, gender: "Male", substance_abuse_history: ["Severe"], veteran_status: "Yes", medical_conditions: ["Chronic Pain"], housing_priority: "Critical", behavior: "Physical" },
       created_at: "2024-01-10T07:30:00Z",
       updated_at: "2024-01-15T16:45:00Z",
       total_interactions: 1,
@@ -409,9 +405,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440016": {
       id: "550e8400-e29b-41d4-a716-446655440016",
       name: "Nicole Clark",
-      danger_score: 100,
-      danger_override: null,
-      data: { age: 41, height: 67, weight: 170, skin_color: "Light", gender: "Female", substance_abuse_history: ["Severe"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Critical", violent_behavior: "Physical" },
+      urgency_score: 100,
+      urgency_override: null,
+      data: { age: 41, height: 67, weight: 170, gender: "Female", substance_abuse_history: ["Severe"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Critical", behavior: "Physical" },
       created_at: "2024-01-11T08:45:00Z",
       updated_at: "2024-01-16T17:20:00Z",
       total_interactions: 1,
@@ -421,9 +417,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440017": {
       id: "550e8400-e29b-41d4-a716-446655440017",
       name: "Kevin Lewis",
-      danger_score: 100,
-      danger_override: null,
-      data: { age: 44, height: 70, weight: 185, skin_color: "Medium", gender: "Male", substance_abuse_history: ["Moderate"], veteran_status: "Yes", medical_conditions: ["Heart Disease"], housing_priority: "Critical", violent_behavior: "Physical" },
+      urgency_score: 100,
+      urgency_override: null,
+      data: { age: 44, height: 70, weight: 185, gender: "Male", substance_abuse_history: ["Moderate"], veteran_status: "Yes", medical_conditions: ["Heart Disease"], housing_priority: "Critical", behavior: "Physical" },
       created_at: "2024-01-12T10:15:00Z",
       updated_at: "2024-01-17T18:30:00Z",
       total_interactions: 1,
@@ -433,9 +429,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440018": {
       id: "550e8400-e29b-41d4-a716-446655440018",
       name: "Rachel Green",
-      danger_score: 85,
-      danger_override: null,
-      data: { age: 39, height: 65, weight: 160, skin_color: "Light", gender: "Female", substance_abuse_history: ["Severe"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Critical" },
+      urgency_score: 85,
+      urgency_override: null,
+      data: { age: 39, height: 65, weight: 160, gender: "Female", substance_abuse_history: ["Severe"], veteran_status: "No", medical_conditions: ["Mental Health"], housing_priority: "Critical" },
       created_at: "2024-01-13T12:45:00Z",
       updated_at: "2024-01-18T19:15:00Z",
       total_interactions: 1,
@@ -445,9 +441,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440019": {
       id: "550e8400-e29b-41d4-a716-446655440019",
       name: "Steven Hall",
-      danger_score: 80,
-      danger_override: null,
-      data: { age: 51, height: 71, weight: 195, skin_color: "Dark", gender: "Male", substance_abuse_history: ["Severe"], veteran_status: "Yes", medical_conditions: ["Chronic Pain"], housing_priority: "Critical" },
+      urgency_score: 80,
+      urgency_override: null,
+      data: { age: 51, height: 71, weight: 195, gender: "Male", substance_abuse_history: ["Severe"], veteran_status: "Yes", medical_conditions: ["Chronic Pain"], housing_priority: "Critical" },
       created_at: "2024-01-14T14:00:00Z",
       updated_at: "2024-01-19T20:45:00Z",
       total_interactions: 1,
@@ -457,9 +453,9 @@ const mockDataStore = {
     "550e8400-e29b-41d4-a716-446655440020": {
       id: "550e8400-e29b-41d4-a716-446655440020",
       name: "Michelle Adams",
-      danger_score: 70,
-      danger_override: null,
-      data: { age: 37, height: 66, weight: 165, skin_color: "Medium", gender: "Female", substance_abuse_history: ["Moderate"], veteran_status: "No", medical_conditions: ["Mobility Issues"], housing_priority: "High" },
+      urgency_score: 70,
+      urgency_override: null,
+      data: { age: 37, height: 66, weight: 165, gender: "Female", substance_abuse_history: ["Moderate"], veteran_status: "No", medical_conditions: ["Mobility Issues"], housing_priority: "High" },
       created_at: "2024-01-15T15:30:00Z",
       updated_at: "2024-01-20T21:30:00Z",
       total_interactions: 1,
@@ -503,12 +499,11 @@ const mockTranscription = (audioUrl: string): TranscriptionResult => {
       age: 45,
       height: 72,
       weight: 180,
-      skin_color: "Light",
       substance_abuse: "Moderate",
       medical_conditions: "Diabetes",
       location: "Market Street"
     },
-    missing_required: ["height", "weight", "skin_color"],
+    missing_required: ["height", "weight"],
     potential_matches: confidence > 0 ? [
       {
         id: "123",
@@ -565,7 +560,7 @@ export const api = {
       console.log('Data to save:', data);
       
       // Extract categorized data (age, height, weight, etc.) from the data
-      const { Name, name, id, danger_score, danger_override, data: existingData, location, ...categorizedData } = data;
+      const { Name, name, id, urgency_score, urgency_override, data: existingData, location, ...categorizedData } = data;
       
       // Convert categorized data field names to lowercase for profile display
       const processedData: Record<string, any> = {};
@@ -585,8 +580,8 @@ export const api = {
           id: id || generateUUID(),
           name: Name || name || 'Unknown Individual',
           data: existingData || processedData || {},
-          danger_score: danger_score || 0,
-          danger_override: danger_override || null,
+          urgency_score: urgency_score || 0,
+          urgency_override: urgency_override || null,
           last_location: location || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -657,14 +652,14 @@ export const api = {
       // Convert to SearchResult format
       const searchResults: SearchResult[] = individuals.map(individual => {
         // Calculate display score (override or calculated)
-                const displayScore = individual.danger_override !== null && individual.danger_override !== undefined
-          ? individual.danger_override
-          : individual.danger_score;
+                const displayScore = individual.urgency_override !== null && individual.urgency_override !== undefined
+          ? individual.urgency_override
+          : individual.urgency_score;
         
         return {
           id: individual.id,
           name: individual.name,
-          danger_score: displayScore,
+          urgency_score: displayScore,
           last_seen: individual.updated_at,
           last_seen_days: calculateDaysAgo(individual.updated_at),
           last_interaction_date: individual.updated_at,
@@ -707,14 +702,14 @@ export const api = {
       // Convert hybrid search results to SearchResult format
       const searchResults: SearchResult[] = result.results.map((item: any) => {
         // Calculate display score (override or calculated)
-        const displayScore = item.danger_override !== null && item.danger_override !== undefined
-          ? item.danger_override
-          : item.danger_score;
+        const displayScore = item.urgency_override !== null && item.urgency_override !== undefined
+          ? item.urgency_override
+          : item.urgency_score;
         
         return {
           id: item.id,
           name: item.name,
-          danger_score: displayScore,
+          urgency_score: displayScore,
           last_seen: new Date().toISOString(), // We don't have this in embedding results
           last_seen_days: 0, // We don't have this in embedding results
           last_interaction_date: new Date().toISOString(), // We don't have this in embedding results
@@ -760,8 +755,8 @@ export const api = {
       const profile: IndividualProfile = {
         id: individual.id,
         name: individual.name,
-        danger_score: individual.danger_score,
-        danger_override: individual.danger_override,
+        urgency_score: individual.urgency_score,
+        urgency_override: individual.urgency_override,
         data: individual.data || {},
         created_at: individual.created_at,
         updated_at: individual.updated_at,
@@ -778,17 +773,17 @@ export const api = {
   },
 
   // Update urgency override
-  updateDangerOverride: async (individualId: string, overrideValue: number | null): Promise<boolean> => {
+  updateUrgencyOverride: async (individualId: string, overrideValue: number | null): Promise<boolean> => {
     try {
       console.log('⚠️ Updating urgency override in database...');
       console.log('Individual ID:', individualId);
       console.log('Override value:', overrideValue);
-      
+
       // Use direct Supabase update for real database
       const { data, error } = await supabase
         .from('individuals')
-        .update({ 
-          danger_override: overrideValue,
+        .update({
+          urgency_override: overrideValue,
           updated_at: new Date().toISOString()
         })
         .eq('id', individualId)
@@ -796,7 +791,7 @@ export const api = {
         .single();
 
       if (error) {
-        console.error('❌ Danger override update error:', error);
+        console.error('❌ Urgency override update error:', error);
         return false;
       }
 
@@ -864,7 +859,6 @@ export const api = {
           { id: '2', name: 'Height', type: 'number', is_required: true, priority: 'medium' },
           { id: '3', name: 'Weight', type: 'number', is_required: true, priority: 'medium' },
           { id: '4', name: 'Age', type: 'number', is_required: false, priority: 'medium' },
-          { id: '5', name: 'Skin Color', type: 'single-select', is_required: true, priority: 'high' },
           { id: '6', name: 'Gender', type: 'single-select', is_required: false, priority: 'medium' },
           { id: '7', name: 'Medical Conditions', type: 'multi-select', is_required: false, priority: 'high' },
           { id: '8', name: 'Substance Abuse History', type: 'single-select', is_required: false, priority: 'high' },
@@ -885,7 +879,6 @@ export const api = {
         { id: '2', name: 'Height', type: 'number', is_required: true, priority: 'medium' },
         { id: '3', name: 'Weight', type: 'number', is_required: true, priority: 'medium' },
         { id: '4', name: 'Age', type: 'number', is_required: false, priority: 'medium' },
-        { id: '5', name: 'Skin Color', type: 'single-select', is_required: true, priority: 'high' },
         { id: '6', name: 'Gender', type: 'single-select', is_required: false, priority: 'medium' },
         { id: '7', name: 'Medical Conditions', type: 'multi-select', is_required: false, priority: 'high' },
         { id: '8', name: 'Substance Abuse History', type: 'single-select', is_required: false, priority: 'high' },
@@ -1025,14 +1018,14 @@ export const api = {
       // Convert to SearchResult format
       const searchResults: SearchResult[] = individuals.map(individual => {
         // Calculate display score (override or calculated)
-        const displayScore = individual.danger_override !== null && individual.danger_override !== undefined
-          ? individual.danger_override
-          : individual.danger_score;
+        const displayScore = individual.urgency_override !== null && individual.urgency_override !== undefined
+          ? individual.urgency_override
+          : individual.urgency_score;
         
         return {
           id: individual.id,
           name: individual.name,
-          danger_score: displayScore,
+          urgency_score: displayScore,
           last_seen: individual.updated_at,
           last_seen_days: calculateDaysAgo(individual.updated_at),
           last_interaction_date: individual.updated_at,

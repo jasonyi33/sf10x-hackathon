@@ -2,12 +2,38 @@
 // Update these values when backend becomes available
 
 export const API_CONFIG = {
-  // Backend API URL - using localhost for development
-  BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8001',
-  
-  // Enable real API calls (set to true to use real transcription)
-  USE_REAL_API: true, // Set to true to use real transcription
-  
+  // Demo configuration - multiple backend options
+  DEMO_BACKEND_OPTIONS: {
+    // Option 1: Local development (requires local backend running)
+    LOCAL: 'http://localhost:8001',
+
+    // Option 2: Railway deployment (stable public URL)
+    RAILWAY: 'https://sf10x-demo-test-production.up.railway.app',
+
+    // Option 3: Mock mode (no backend required - great for demos)
+    MOCK: 'mock://demo',
+  },
+
+  // Current demo mode - change this for different demo scenarios
+  DEMO_MODE: 'RAILWAY', // Options: 'LOCAL', 'RAILWAY', 'MOCK'
+
+  // Backend API URL - automatically selected based on demo mode
+  BASE_URL: (() => {
+    const mode = process.env.EXPO_PUBLIC_DEMO_MODE || 'RAILWAY';
+    const options = {
+      LOCAL: 'http://localhost:8001',
+      RAILWAY: 'https://sf10x-demo-test-production.up.railway.app',
+      MOCK: 'mock://demo',
+    };
+    return process.env.EXPO_PUBLIC_API_BASE_URL || options[mode as keyof typeof options] || options.LOCAL;
+  })(),
+
+  // Enable real API calls (automatically disabled in MOCK mode)
+  USE_REAL_API: (() => {
+    const mode = process.env.EXPO_PUBLIC_DEMO_MODE || 'RAILWAY';
+    return mode !== 'MOCK';
+  })(),
+
   // Supabase Configuration (for direct frontend access if needed)
   SUPABASE: {
     URL: 'https://vhfyquescrbwbbvvhxdg.supabase.co/', // TODO: Replace with your Supabase URL
@@ -31,9 +57,12 @@ export const API_CONFIG = {
   
   // Demo configuration
   DEMO: {
-    // Use mock data for demo (set to false to use real API)
-    USE_MOCK_DATA: false, // Using real API
-    
+    // Use mock data for demo (automatically set based on demo mode)
+    USE_MOCK_DATA: (() => {
+      const mode = process.env.EXPO_PUBLIC_DEMO_MODE || 'RAILWAY';
+      return mode === 'MOCK';
+    })(),
+
     // Mock response delays (ms)
     MOCK_DELAY: 1000,
   }

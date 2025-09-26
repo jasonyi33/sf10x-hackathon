@@ -65,11 +65,11 @@ class TestTask215EndToEnd:
                 "is_required": True,
                 "is_preset": True,
                 "options": None,
-                "danger_weight": 10  # For danger calculation
+                "urgency_weight": 10  # For danger calculation
             },
             {
                 "id": str(uuid4()),
-                "name": "skin_color",
+                "name": "age",
                 "type": "single_select",
                 "is_required": True,
                 "is_preset": True,
@@ -110,7 +110,7 @@ class TestTask215EndToEnd:
                     {"label": "Yes", "value": 0.8},
                     {"label": "No", "value": 0}
                 ],
-                "danger_weight": 50,
+                "urgency_weight": 50,
                 "auto_trigger": False
             },
             {
@@ -123,7 +123,7 @@ class TestTask215EndToEnd:
                     {"label": "Yes", "value": 1},
                     {"label": "No", "value": 0}
                 ],
-                "danger_weight": 100,
+                "urgency_weight": 100,
                 "auto_trigger": True  # Auto-trigger sets score to 100
             }
         ]
@@ -146,14 +146,14 @@ class TestTask215EndToEnd:
             "individual": {
                 "id": individual1_id,
                 "name": "John Doe",
-                "danger_score": 45,  # Calculated from weight
-                "danger_override": None,
+                "urgency_score": 45,  # Calculated from weight
+                "urgency_override": None,
                 "display_score": 45,
                 "data": {
                     "name": "John Doe",
                     "height": 72,  # 6 feet as per PRD example
                     "weight": 180,
-                    "skin_color": "Light",
+                    "age": "Light",
                     "gender": "Male",
                     "substance_abuse_history": ["Moderate"],
                     "veteran_status": "Yes"
@@ -184,7 +184,7 @@ class TestTask215EndToEnd:
                         "name": "John Doe",
                         "height": 72,
                         "weight": 180,
-                        "skin_color": "Light",
+                        "age": "Light",
                         "gender": "Male",
                         "substance_abuse_history": ["Moderate"],
                         "veteran_status": "Yes"
@@ -203,7 +203,7 @@ class TestTask215EndToEnd:
         assert create_response.status_code == 200
         create_data = create_response.json()
         assert create_data["individual"]["name"] == "John Doe"
-        assert create_data["individual"]["danger_score"] == 45
+        assert create_data["individual"]["urgency_score"] == 45
         assert create_data["interaction"]["has_transcription"] == True
         print("✅ Voice entry with all fields successful")
         
@@ -217,7 +217,7 @@ class TestTask215EndToEnd:
                 "data": {
                     "name": "Jane Smith",
                     "height": 65
-                    # Missing weight and skin_color (required)
+                    # Missing weight and age (required)
                 }
             },
             headers={"Authorization": "Bearer test-token"}
@@ -238,8 +238,8 @@ class TestTask215EndToEnd:
                 {
                     "id": individual1_id,
                     "name": "John Doe",
-                    "danger_score": 45,
-                    "danger_override": None,
+                    "urgency_score": 45,
+                    "urgency_override": None,
                     "display_score": 45,
                     "last_seen": datetime.now(timezone.utc).isoformat(),
                     "last_location": {
@@ -271,7 +271,7 @@ class TestTask215EndToEnd:
         # Test 3.2: Pagination
         with patch('api.individuals.IndividualService', return_value=mock_service):
             page_response = client.get(
-                "/api/individuals?limit=10&offset=20&sort_by=danger_score&sort_order=desc",
+                "/api/individuals?limit=10&offset=20&sort_by=urgency_score&sort_order=desc",
                 headers={"Authorization": "Bearer test-token"}
             )
         
@@ -286,14 +286,14 @@ class TestTask215EndToEnd:
             "individual": {
                 "id": individual1_id,
                 "name": "John Doe",
-                "danger_score": 45,
-                "danger_override": None,
+                "urgency_score": 45,
+                "urgency_override": None,
                 "display_score": 45,
                 "data": {
                     "name": "John Doe",
                     "height": 72,
                     "weight": 180,
-                    "skin_color": "Light",
+                    "age": "Light",
                     "gender": "Male",
                     "substance_abuse_history": ["Moderate"],
                     "veteran_status": "Yes"
@@ -336,39 +336,39 @@ class TestTask215EndToEnd:
         mock_supabase.table.return_value.update.return_value = mock_update
         mock_update.eq.return_value.execute.return_value.data = [{
             "id": individual1_id,
-            "danger_score": 45,
-            "danger_override": 85
+            "urgency_score": 45,
+            "urgency_override": 85
         }]
         
         override_response = client.put(
             f"/api/individuals/{individual1_id}/danger-override",
-            json={"danger_override": 85},
+            json={"urgency_override": 85},
             headers={"Authorization": "Bearer test-token"}
         )
         
         assert override_response.status_code == 200
         override_data = override_response.json()
-        assert override_data["danger_score"] == 45  # Original calculated
-        assert override_data["danger_override"] == 85  # Manual override
+        assert override_data["urgency_score"] == 45  # Original calculated
+        assert override_data["urgency_override"] == 85  # Manual override
         assert override_data["display_score"] == 85  # Shows override
         print("✅ Danger override set successfully")
         
         # Test 5.2: Remove danger override
         mock_update.eq.return_value.execute.return_value.data = [{
             "id": individual1_id,
-            "danger_score": 45,
-            "danger_override": None
+            "urgency_score": 45,
+            "urgency_override": None
         }]
         
         remove_response = client.put(
             f"/api/individuals/{individual1_id}/danger-override",
-            json={"danger_override": None},
+            json={"urgency_override": None},
             headers={"Authorization": "Bearer test-token"}
         )
         
         assert remove_response.status_code == 200
         remove_data = remove_response.json()
-        assert remove_data["danger_override"] is None
+        assert remove_data["urgency_override"] is None
         assert remove_data["display_score"] == 45  # Back to calculated
         print("✅ Danger override removed successfully")
         
@@ -380,14 +380,14 @@ class TestTask215EndToEnd:
             "individual": {
                 "id": individual1_id,  # Same ID - merged
                 "name": "John Doe",
-                "danger_score": 50,  # Recalculated
-                "danger_override": None,
+                "urgency_score": 50,  # Recalculated
+                "urgency_override": None,
                 "display_score": 50,
                 "data": {
                     "name": "John Doe",
                     "height": 73,  # Updated
                     "weight": 185,  # Updated
-                    "skin_color": "Light",
+                    "age": "Light",
                     "gender": "Male",
                     "substance_abuse_history": ["Moderate", "In Recovery"],  # Updated
                     "veteran_status": "Yes",
@@ -414,7 +414,7 @@ class TestTask215EndToEnd:
                         "name": "John Doe",
                         "height": 73,
                         "weight": 185,
-                        "skin_color": "Light",
+                        "age": "Light",
                         "gender": "Male",
                         "substance_abuse_history": ["Moderate", "In Recovery"],
                         "veteran_status": "Yes",
@@ -467,7 +467,7 @@ class TestTask215EndToEnd:
                     "name": "John Doe",
                     "height": 72,
                     "weight": 180,
-                    "skin_color": "Light",
+                    "age": "Light",
                     "gender": "Male",
                     "substance_abuse_history": ["Moderate"],
                     "veteran_status": "Yes"
@@ -504,14 +504,14 @@ class TestTask215EndToEnd:
             "individual": {
                 "id": individual2_id,
                 "name": "High Risk Person",
-                "danger_score": 100,  # Auto-triggered to 100
-                "danger_override": None,
+                "urgency_score": 100,  # Auto-triggered to 100
+                "urgency_override": None,
                 "display_score": 100,
                 "data": {
                     "name": "High Risk Person",
                     "height": 70,
                     "weight": 200,
-                    "skin_color": "Medium",
+                    "age": "Medium",
                     "weapon_possession": "Yes"  # Auto-trigger field
                 },
                 "created_at": datetime.now(timezone.utc).isoformat(),
@@ -535,7 +535,7 @@ class TestTask215EndToEnd:
                         "name": "High Risk Person",
                         "height": 70,
                         "weight": 200,
-                        "skin_color": "Medium",
+                        "age": "Medium",
                         "weapon_possession": "Yes"
                     }
                 },
@@ -544,7 +544,7 @@ class TestTask215EndToEnd:
         
         assert weapon_response.status_code == 200
         weapon_data = weapon_response.json()
-        assert weapon_data["individual"]["danger_score"] == 100  # Auto-triggered
+        assert weapon_data["individual"]["urgency_score"] == 100  # Auto-triggered
         print("✅ Auto-trigger danger score working")
         
         # ========== SCENARIO 9: Error Handling ==========
@@ -569,7 +569,7 @@ class TestTask215EndToEnd:
         # Test 9.3: Invalid danger override value
         response = client.put(
             f"/api/individuals/{individual1_id}/danger-override",
-            json={"danger_override": 150},  # > 100
+            json={"urgency_override": 150},  # > 100
             headers={"Authorization": "Bearer test-token"}
         )
         assert response.status_code == 422
@@ -596,8 +596,8 @@ class TestTask215EndToEnd:
         start_time = time.time()
         
         mock_service.search_individuals = AsyncMock(return_value={
-            "individuals": [{"id": str(uuid4()), "name": f"Person {i}", "danger_score": i % 100, 
-                            "danger_override": None, "display_score": i % 100,
+            "individuals": [{"id": str(uuid4()), "name": f"Person {i}", "urgency_score": i % 100, 
+                            "urgency_override": None, "display_score": i % 100,
                             "last_seen": datetime.now(timezone.utc).isoformat(),
                             "last_location": {"latitude": 37.7749, "longitude": -122.4194, 
                                             "address": f"Street {i}"}} for i in range(20)],

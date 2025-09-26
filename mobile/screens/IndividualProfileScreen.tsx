@@ -12,10 +12,10 @@ import {
 } from 'react-native';
 import { IndividualProfile, IndividualProfileScreenProps } from '../types';
 import { api } from '../services/api';
-import { getDangerScoreColor, getDisplayDangerScore } from '../utils/dangerScore';
+import { getUrgencyScoreColor, getDisplayUrgencyScore } from '../utils/urgencyScore';
 import FieldDisplay from '../components/FieldDisplay';
 import InteractionHistoryItem from '../components/InteractionHistoryItem';
-import DangerScore from '../components/DangerScore';
+import UrgencyScore from '../components/UrgencyScore';
 import InteractionDetailModal from '../components/InteractionDetailModal';
 import IndividualLocationMap from '../components/IndividualLocationMap';
 import { Ionicons } from '@expo/vector-icons';
@@ -103,8 +103,8 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
                       const result = await api.saveIndividual({
                         id: deleted.id,
                         name: deleted.name,
-                        danger_score: deleted.danger_score,
-                        danger_override: deleted.danger_override,
+                        urgency_score: deleted.urgency_score,
+                        urgency_override: deleted.urgency_override,
                         data: deleted.data,
                       });
                       if (result?.success) {
@@ -164,7 +164,7 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
   };
 
   // Function to handle urgency override change
-  const handleDangerOverrideChange = async (overrideValue: number | null) => {
+  const handleUrgencyOverrideChange = async (overrideValue: number | null) => {
     if (!profile) return;
     
     // Immediately update local state for instant UI feedback
@@ -175,7 +175,7 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
     setProfile(updatedProfile);
     
     try {
-              const success = await api.updateDangerOverride(profile.id, overrideValue);
+              const success = await api.updateUrgencyOverride(profile.id, overrideValue);
       if (!success) {
         // Revert the change if the API call failed
         setProfile(profile);
@@ -237,8 +237,8 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
   }
 
   // Calculate the display urgency score
-  const displayScore = getDisplayDangerScore(profile);
-  const scoreColor = getDangerScoreColor(displayScore);
+  const displayScore = getDisplayUrgencyScore(profile);
+  const scoreColor = getUrgencyScoreColor(displayScore);
 
   return (
     <View style={styles.container}>
@@ -252,9 +252,9 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
           <Text style={styles.name}>{profile.name}</Text>
           
           {/* Urgency Score Component */}
-          <DangerScore
+          <UrgencyScore
             individual={profile}
-            onOverrideChange={handleDangerOverrideChange}
+            onOverrideChange={handleUrgencyOverrideChange}
             showSlider={true}
           />
         </View>
@@ -265,7 +265,7 @@ export default function IndividualProfileScreen({ navigation, route }: any) {
           <View style={styles.fieldsContainer}>
             {/* Render all data fields */}
             {Object.entries(profile.data).map(([key, value]) => 
-              renderField(key, value, key === 'name' || key === 'height' || key === 'weight' || key === 'skin_color')
+              renderField(key, value, key === 'name' || key === 'height' || key === 'weight')
             )}
           </View>
         </View>

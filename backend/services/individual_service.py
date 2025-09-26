@@ -14,13 +14,13 @@ from db.models import (
     IndividualSummary,
     SearchIndividualsResponse,
     IndividualDetailResponse,
-    DangerOverrideResponse,
+    UrgencyOverrideResponse,
     InteractionsResponse,
     InteractionDetail,
     SaveIndividualResponse,
     LocationData
 )
-from services.danger_calculator import calculate_danger_score
+from services.urgency_calculator import calculate_urgency_score
 
 
 class IndividualService:
@@ -104,19 +104,19 @@ class IndividualService:
     ) -> SaveIndividualResponse:
         """
         Save a new individual or update existing (merge).
-        
+
         Logic:
-        1. Calculate danger score
+        1. Calculate urgency score
         2. If merge_with_id: update existing individual
         3. Else: create new individual
         4. Create interaction record with changes only
         5. Return both records
         """
-        # Calculate danger score
-        # First fetch categories to get danger weights
+        # Calculate urgency score
+        # First fetch categories to get urgency weights
         categories_response = self.supabase.table("categories").select("*").execute()
         categories = categories_response.data
-        danger_score = calculate_danger_score(data, categories)
+        urgency_score = calculate_urgency_score(data, categories)
         
         # Prepare location dict if provided
         location_dict = None
@@ -149,7 +149,7 @@ class IndividualService:
             # Update existing individual with location if provided
             update_data = {
                 "name": name,
-                "danger_score": danger_score,
+                "urgency_score": urgency_score,
                 "data": data,
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
@@ -184,7 +184,7 @@ class IndividualService:
             # Create new individual with location if provided
             individual_data = {
                 "name": name,
-                "danger_score": danger_score,
+                "urgency_score": urgency_score,
                 "data": data
             }
             
@@ -217,9 +217,9 @@ class IndividualService:
         individual_resp = IndividualResponse(
             id=individual["id"],
             name=individual["name"],
-            danger_score=individual["danger_score"],
-            danger_override=individual.get("danger_override"),
-            display_score=individual.get("danger_override") or individual["danger_score"],
+            urgency_score=individual["urgency_score"],
+            urgency_override=individual.get("urgency_override"),
+            display_score=individual.get("urgency_override") or individual["urgency_score"],
             data=individual["data"],
             created_at=individual["created_at"],
             updated_at=individual["updated_at"],
@@ -325,9 +325,9 @@ class IndividualService:
                     key=lambda x: x["_last_seen"],
                     reverse=(sort_order == "desc")
                 )
-            elif sort_by == "danger_score":
+            elif sort_by == "urgency_score":
                 individuals.sort(
-                    key=lambda x: x["danger_score"],
+                    key=lambda x: x["urgency_score"],
                     reverse=(sort_order == "desc")
                 )
             else:  # sort by name
@@ -343,7 +343,7 @@ class IndividualService:
             results = []
             for ind in paginated:
                 # Calculate display score
-                display_score = ind.get("danger_override") or ind["danger_score"]
+                display_score = ind.get("urgency_override") or ind["urgency_score"]
                 
                 # Get last location with abbreviated address
                 last_location = ind.get("_last_location")
@@ -353,8 +353,8 @@ class IndividualService:
                 results.append(IndividualSummary(
                     id=ind["id"],
                     name=ind["name"],
-                    danger_score=ind["danger_score"],
-                    danger_override=ind.get("danger_override"),
+                    urgency_score=ind["urgency_score"],
+                    urgency_override=ind.get("urgency_override"),
                     display_score=display_score,
                     last_seen=ind.get("_last_seen", ind["created_at"]),
                     last_location=last_location
@@ -422,9 +422,9 @@ class IndividualService:
         individual_resp = IndividualResponse(
             id=individual["id"],
             name=individual["name"],
-            danger_score=individual["danger_score"],
-            danger_override=individual.get("danger_override"),
-            display_score=individual.get("danger_override") or individual["danger_score"],
+            urgency_score=individual["urgency_score"],
+            urgency_override=individual.get("urgency_override"),
+            display_score=individual.get("urgency_override") or individual["urgency_score"],
             data=individual["data"],
             created_at=individual["created_at"],
             updated_at=individual["updated_at"],
@@ -447,16 +447,16 @@ class IndividualService:
             recent_interactions=interaction_summaries
         )
     
-    async def update_danger_override(
+    async def update_urgency_override(
         self,
         individual_id: UUID,
-        danger_override: Optional[int]
-    ) -> DangerOverrideResponse:
-        """Update manual danger score override"""
+        urgency_override: Optional[int]
+    ) -> UrgencyOverrideResponse:
+        """Update manual urgency score override"""
         # Update individual
         update_query = self.supabase.table("individuals") \
             .update({
-                "danger_override": danger_override,
+                "urgency_override": urgency_override,
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }) \
             .eq("id", str(individual_id))
@@ -480,10 +480,10 @@ class IndividualService:
         if not individual:
             raise ValueError(f"Individual not found: {individual_id}")
         
-        return DangerOverrideResponse(
-            danger_score=individual["danger_score"],
-            danger_override=individual.get("danger_override"),
-            display_score=individual.get("danger_override") or individual["danger_score"]
+        return UrgencyOverrideResponse(
+            urgency_score=individual["urgency_score"],
+            urgency_override=individual.get("urgency_override"),
+            display_score=individual.get("urgency_override") or individual["urgency_score"]
         )
     
     async def get_interactions(

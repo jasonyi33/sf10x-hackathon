@@ -24,8 +24,7 @@ async def export_individuals_csv(user_id: str = Depends(get_current_user)):
     - name
     - height  
     - weight
-    - skin_color
-    - danger_score (uses danger_override if set, else danger_score)
+    - urgency_score (uses urgency_override if set, else urgency_score)
     - last_seen (from most recent interaction)
     
     Returns CSV file download with all individuals (no filtering).
@@ -58,7 +57,7 @@ async def export_individuals_csv(user_id: str = Depends(get_current_user)):
         output = io.StringIO()
         writer = csv.DictWriter(
             output,
-            fieldnames=["name", "height", "weight", "skin_color", "danger_score", "last_seen"]
+            fieldnames=["name", "height", "weight", "urgency_score", "last_seen"]
         )
         writer.writeheader()
         
@@ -77,16 +76,12 @@ async def export_individuals_csv(user_id: str = Depends(get_current_user)):
             if weight is None:
                 weight = ""
                 
-            skin_color = data.get("skin_color", "")
-            if skin_color is None:
-                skin_color = ""
-            
-            # Determine danger score to display
-            danger_override = individual.get("danger_override")
-            if danger_override is not None:
-                danger_score = danger_override
+            # Determine urgency score to display
+            urgency_override = individual.get("urgency_override")
+            if urgency_override is not None:
+                urgency_score = urgency_override
             else:
-                danger_score = individual.get("danger_score", 0)
+                urgency_score = individual.get("urgency_score", 0)
             
             # Get last seen date
             last_seen = last_seen_map.get(individual["id"], "")
@@ -96,8 +91,7 @@ async def export_individuals_csv(user_id: str = Depends(get_current_user)):
                 "name": name,
                 "height": str(height) if height != "" else "",
                 "weight": str(weight) if weight != "" else "",
-                "skin_color": skin_color,
-                "danger_score": str(danger_score),
+                "urgency_score": str(urgency_score),
                 "last_seen": last_seen
             })
         

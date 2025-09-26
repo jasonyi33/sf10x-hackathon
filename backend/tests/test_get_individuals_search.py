@@ -44,18 +44,18 @@ class TestGetIndividualsSearch:
             {
                 "id": str(uuid4()),
                 "name": "John Doe",
-                "danger_score": 75,
-                "danger_override": None,
-                "data": {"name": "John Doe", "height": 72, "weight": 180, "skin_color": "Light"},
+                "urgency_score": 75,
+                "urgency_override": None,
+                "data": {"name": "John Doe", "height": 72, "weight": 180, "age": "Light"},
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
             },
             {
                 "id": str(uuid4()),
                 "name": "Jane Smith",
-                "danger_score": 30,
-                "danger_override": None,
-                "data": {"name": "Jane Smith", "height": 65, "weight": 140, "skin_color": "Dark"},
+                "urgency_score": 30,
+                "urgency_override": None,
+                "data": {"name": "Jane Smith", "height": 65, "weight": 140, "age": "Dark"},
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
@@ -91,9 +91,9 @@ class TestGetIndividualsSearch:
             {
                 "id": str(uuid4()),
                 "name": "John Doe",
-                "danger_score": 75,
-                "danger_override": None,
-                "data": {"name": "John Doe", "height": 72, "weight": 180, "skin_color": "Light"},
+                "urgency_score": 75,
+                "urgency_override": None,
+                "data": {"name": "John Doe", "height": 72, "weight": 180, "age": "Light"},
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
@@ -142,18 +142,18 @@ class TestGetIndividualsSearch:
             {
                 "id": str(uuid4()),
                 "name": "High Danger",
-                "danger_score": 90,
-                "danger_override": None,
-                "data": {"name": "High Danger", "height": 70, "weight": 200, "skin_color": "Medium"},
+                "urgency_score": 90,
+                "urgency_override": None,
+                "data": {"name": "High Danger", "height": 70, "weight": 200, "age": "Medium"},
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
             },
             {
                 "id": str(uuid4()),
                 "name": "Low Danger",
-                "danger_score": 20,
-                "danger_override": None,
-                "data": {"name": "Low Danger", "height": 65, "weight": 150, "skin_color": "Light"},
+                "urgency_score": 20,
+                "urgency_override": None,
+                "data": {"name": "Low Danger", "height": 65, "weight": 150, "age": "Light"},
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
@@ -165,7 +165,7 @@ class TestGetIndividualsSearch:
         mock_select.order.return_value.execute.return_value.data = mock_individuals
         
         response = client.get(
-            "/api/individuals?sort_by=danger_score&sort_order=desc",
+            "/api/individuals?sort_by=urgency_score&sort_order=desc",
             headers={"Authorization": "Bearer test-token"}
         )
         

@@ -19,7 +19,7 @@ import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { FadeInView } from '../components/ui/AnimatedView';
 import { theme } from '../theme';
-import { getDangerScoreColor, calculateDaysAgo } from '../utils/dangerScore';
+import { getUrgencyScoreColor, calculateDaysAgo } from '../utils/urgencyScore';
 
 export const ModernSearchScreen: React.FC<{ navigation: any; route: any }> = ({
   navigation,
@@ -147,21 +147,21 @@ export const ModernSearchScreen: React.FC<{ navigation: any; route: any }> = ({
     navigation.navigate('IndividualProfile', { individualId: result.id });
   };
 
-  const getDangerBadgeVariant = (score: number) => {
+  const getUrgencyBadgeVariant = (score: number) => {
     if (score >= 67) return 'danger';
     if (score >= 34) return 'warning';
     return 'success';
   };
 
-  const getDangerLabel = (score: number) => {
-    if (score >= 67) return 'High Risk';
-    if (score >= 34) return 'Medium Risk';
-    return 'Low Risk';
+  const getUrgencyLabel = (score: number) => {
+    if (score >= 67) return 'High Urgency';
+    if (score >= 34) return 'Medium Urgency';
+    return 'Low Urgency';
   };
 
   const renderSearchResult = ({ item, index }: { item: SearchResult; index: number }) => {
     const daysAgo = calculateDaysAgo(item.last_interaction_date);
-    const dangerScore = item.danger_override ?? item.danger_score ?? 0;
+    const urgencyScore = item.urgency_override ?? item.urgency_score ?? 0;
     const isHighlighted = highlightedId === item.id;
 
     return (
@@ -197,8 +197,8 @@ export const ModernSearchScreen: React.FC<{ navigation: any; route: any }> = ({
               </Badge>
             )}
           </View>
-          <Badge variant={getDangerBadgeVariant(dangerScore)} size="medium">
-            {Math.round(dangerScore)}
+          <Badge variant={getUrgencyBadgeVariant(urgencyScore)} size="medium">
+            {Math.round(urgencyScore)}
           </Badge>
         </View>
 
@@ -212,7 +212,7 @@ export const ModernSearchScreen: React.FC<{ navigation: any; route: any }> = ({
           <View style={styles.detailRow}>
             <Ionicons name="alert-circle-outline" size={14} color={theme.colors.text.secondary} />
             <Text style={styles.detailText}>
-              {getDangerLabel(dangerScore)}
+              {getUrgencyLabel(urgencyScore)}
             </Text>
           </View>
         </View>
@@ -243,12 +243,12 @@ export const ModernSearchScreen: React.FC<{ navigation: any; route: any }> = ({
     if (isLoading || searchResults.length === 0) return null;
 
     const totalResults = searchResults.length;
-    const highRisk = searchResults.filter(r => (r.danger_override ?? r.danger_score ?? 0) >= 67).length;
-    const mediumRisk = searchResults.filter(r => {
-      const score = r.danger_override ?? r.danger_score ?? 0;
+    const highUrgency = searchResults.filter(r => (r.urgency_override ?? r.urgency_score ?? 0) >= 67).length;
+    const mediumUrgency = searchResults.filter(r => {
+      const score = r.urgency_override ?? r.urgency_score ?? 0;
       return score >= 34 && score < 67;
     }).length;
-    const lowRisk = searchResults.filter(r => (r.danger_override ?? r.danger_score ?? 0) < 34).length;
+    const lowUrgency = searchResults.filter(r => (r.urgency_override ?? r.urgency_score ?? 0) < 34).length;
 
     return (
       <Card style={styles.statsCard} variant="filled">
@@ -264,16 +264,16 @@ export const ModernSearchScreen: React.FC<{ navigation: any; route: any }> = ({
             <Text style={styles.statLabel}>Total</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: theme.colors.danger[600] }]}>{highRisk}</Text>
-            <Text style={styles.statLabel}>High Risk</Text>
+            <Text style={[styles.statNumber, { color: theme.colors.danger[600] }]}>{highUrgency}</Text>
+            <Text style={styles.statLabel}>High Urgency</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: theme.colors.warning[600] }]}>{mediumRisk}</Text>
-            <Text style={styles.statLabel}>Medium Risk</Text>
+            <Text style={[styles.statNumber, { color: theme.colors.warning[600] }]}>{mediumUrgency}</Text>
+            <Text style={styles.statLabel}>Medium Urgency</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: theme.colors.success[600] }]}>{lowRisk}</Text>
-            <Text style={styles.statLabel}>Low Risk</Text>
+            <Text style={[styles.statNumber, { color: theme.colors.success[600] }]}>{lowUrgency}</Text>
+            <Text style={styles.statLabel}>Low Urgency</Text>
           </View>
         </View>
       </Card>

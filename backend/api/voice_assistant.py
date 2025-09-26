@@ -265,8 +265,8 @@ def analyze_local_patterns(individuals: List[Dict], categories: List[Dict]) -> D
     common_issues = sorted(issue_counts.items(), key=lambda x: x[1], reverse=True)[:5]
     
     # Calculate urgency levels
-    high_urgency_count = sum(1 for ind in individuals if ind.get('danger_score', 0) > 7)
-    medium_urgency_count = sum(1 for ind in individuals if 4 <= ind.get('danger_score', 0) <= 7)
+    high_urgency_count = sum(1 for ind in individuals if ind.get('urgency_score', 0) > 7)
+    medium_urgency_count = sum(1 for ind in individuals if 4 <= ind.get('urgency_score', 0) <= 7)
     
     return {
         "total_individuals": len(individuals),

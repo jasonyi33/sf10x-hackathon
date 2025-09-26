@@ -88,21 +88,15 @@ async def websocket_realtime_proxy(websocket: WebSocket):
                 "model": "gpt-realtime",
                 # Use audio-only; UI consumes transcript events for text
                 "output_modalities": ["audio"],
-                "instructions": """You are a specialized AI assistant for homeless outreach workers. You provide expert guidance on:
-
-1. **Crisis Intervention**: How to safely approach and de-escalate situations with homeless individuals
-2. **Care Protocols**: Best practices for providing assistance, medical care, and support
-3. **Resource Recommendations**: Information about shelters, food banks, medical services, and social programs
-4. **Medical Emergency Protocols**: Steps to take during medical emergencies
-5. **De-escalation Techniques**: Strategies for managing tense or potentially dangerous situations
-6. **Legal/Rights Information**: Understanding the rights of homeless individuals and legal considerations
-7. **Safety Guidelines**: How to protect yourself and others while providing outreach services
-
-Always prioritize safety, empathy, and practical guidance. Be concise but comprehensive in your responses.""",
+                "instructions": "You are a specialized AI assistant for homeless outreach workers. Provide BRIEF, ACTIONABLE guidance. Maximum 2-3 sentences per response. Focus on immediate, practical actions. Be direct and specific. Example: Call 911 immediately. Stay 6 feet back. Keep hands visible.",
                 "audio": {
                     "input": {
                         "format": {"type": "audio/pcm", "rate": 24000},
-                        "turn_detection": {"type": "semantic_vad"}
+                        "turn_detection": {
+                            "type": "server_vad",
+                            "threshold": 0.5,
+                            "silence_duration_ms": 800
+                        }
                     },
                     "output": {
                         "format": {"type": "audio/pcm", "rate": 24000},
@@ -170,7 +164,7 @@ Always prioritize safety, empathy, and practical guidance. Be concise but compre
                     while True:
                         message = await websocket.receive_text()
                         print(f"📤 Received from client: {message[:200]}...")
-                        
+
                         # Parse the message to check if it's an audio event
                         try:
                             parsed_message = json.loads(message)
@@ -182,19 +176,23 @@ Always prioritize safety, empathy, and practical guidance. Be concise but compre
                                 print("🎵 Audio buffer commit received")
                         except json.JSONDecodeError:
                             print("⚠️ Non-JSON message received")
-                        
+
                         print(f"📤 Forwarding to OpenAI: {message[:100]}...")
                         print(f"📤 Full message length: {len(message)} characters")
                         await openai_ws.send(message)
+                except websockets.exceptions.ConnectionClosed:
+                    print("🔌 OpenAI WebSocket connection closed normally")
+                    return
                 except Exception as e:
                     print(f"❌ Error forwarding to OpenAI: {e}")
-            
+                    return
+
             async def forward_to_client():
                 try:
                     while True:
                         message = await openai_ws.recv()
                         print(f"📨 Received from OpenAI: {message[:200]}...")
-                        
+
                         # Parse the message to check for errors
                         try:
                             parsed_message = json.loads(message)
@@ -205,17 +203,29 @@ Always prioritize safety, empathy, and practical guidance. Be concise but compre
                                     print("🎵 Audio buffer was empty - this suggests the audio data wasn't received properly")
                         except json.JSONDecodeError:
                             pass
-                        
+
                         await websocket.send_text(message)
+                except websockets.exceptions.ConnectionClosed:
+                    print("🔌 Client WebSocket connection closed normally")
+                    return
                 except Exception as e:
                     print(f"❌ Error forwarding to client: {e}")
-            
-            # Run both forwarding tasks concurrently
-            await asyncio.gather(
-                forward_to_openai(),
-                forward_to_client(),
-                return_exceptions=True
-            )
+                    return
+
+            # Run both forwarding tasks concurrently and handle completion
+            try:
+                await asyncio.gather(
+                    forward_to_openai(),
+                    forward_to_client()
+                )
+            except Exception as e:
+                print(f"⚠️ WebSocket forwarding ended: {e}")
+            finally:
+                print("🔌 Cleaning up WebSocket connections")
+                try:
+                    await openai_ws.close()
+                except:
+                    pass
             
     except Exception as e:
         print(f"❌ WebSocket proxy error: {str(e)}")

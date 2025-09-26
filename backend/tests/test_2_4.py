@@ -26,7 +26,7 @@ EXISTING_INDIVIDUALS = [
             "name": "John Doe",
             "height": 72,
             "weight": 180,
-            "skin_color": "Light",
+            "age": "Light",
             "gender": "Male",
             "substance_abuse_history": ["Mild"]
         }
@@ -38,7 +38,7 @@ EXISTING_INDIVIDUALS = [
             "name": "John D.",
             "height": 72,
             "weight": 180,
-            "skin_color": "Light",
+            "age": "Light",
             "notes": "Found near Market Street"
         }
     },
@@ -49,7 +49,7 @@ EXISTING_INDIVIDUALS = [
             "name": "John Smith",
             "height": 65,
             "weight": 150,
-            "skin_color": "Medium",
+            "age": "Medium",
             "gender": "Male"
         }
     },
@@ -60,7 +60,7 @@ EXISTING_INDIVIDUALS = [
             "name": "Sarah Jones",
             "height": 64,
             "weight": 120,
-            "skin_color": "Dark",
+            "age": "Dark",
             "gender": "Female"
         }
     },
@@ -71,7 +71,7 @@ EXISTING_INDIVIDUALS = [
             "name": "Michael Brown",
             "height": 70,
             "weight": 200,
-            "skin_color": "Medium"
+            "age": "Medium"
         }
     }
 ]
@@ -84,7 +84,7 @@ TEST_SCENARIOS = [
             "name": "John Doe",
             "height": 72,
             "weight": 180,
-            "skin_color": "Light",
+            "age": "Light",
             "gender": "Male"
         },
         "test_against": ["John Doe"],
@@ -96,7 +96,7 @@ TEST_SCENARIOS = [
             "name": "John Doe",
             "height": 72,
             "weight": 180,
-            "skin_color": "Light"
+            "age": "Light"
         },
         "test_against": ["John D."],
         "expected_high": True  # Should be >90%
@@ -107,7 +107,7 @@ TEST_SCENARIOS = [
             "name": "John Smith",
             "height": 72,
             "weight": 200,
-            "skin_color": "Dark"
+            "age": "Dark"
         },
         "test_against": ["John Smith"],
         "expected_medium": True  # Should be 50-70%
@@ -118,7 +118,7 @@ TEST_SCENARIOS = [
             "name": "Sarah Jones",
             "height": 64,
             "weight": 120,
-            "skin_color": "Dark"
+            "age": "Dark"
         },
         "test_against": ["Michael Brown"],
         "expected_low": True  # Should be <30%
@@ -199,7 +199,7 @@ async def test_duplicate_detection():
         "name": "John",
         "height": 72,
         "weight": 180,
-        "skin_color": "Light"
+        "age": "Light"
     }
     
     john_individuals = [ind for ind in EXISTING_INDIVIDUALS if "John" in ind['name']]

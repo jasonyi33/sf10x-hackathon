@@ -54,7 +54,7 @@ def update_database_schema():
             '''
         }).execute()
         
-        # Step 3: Update categories table to rename danger_weight to urgency_weight
+        # Step 3: Update categories table to rename urgency_weight to urgency_weight
         print("📝 Updating categories table...")
         client.rpc('exec_sql', {
             'sql': '''
@@ -66,8 +66,8 @@ def update_database_schema():
         client.rpc('exec_sql', {
             'sql': '''
             UPDATE categories 
-            SET urgency_weight = danger_weight 
-            WHERE urgency_weight IS NULL AND danger_weight IS NOT NULL;
+            SET urgency_weight = urgency_weight 
+            WHERE urgency_weight IS NULL AND urgency_weight IS NOT NULL;
             '''
         }).execute()
         

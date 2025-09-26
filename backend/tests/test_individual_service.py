@@ -29,21 +29,21 @@ class TestIndividualService:
             "name": "John Doe",
             "height": 72,
             "weight": 180,
-            "skin_color": "Light"
+            "age": "Light"
         }
         
         new_data = {
             "name": "John Doe",  # Same
             "height": 73,        # Changed
             "weight": 180,       # Same
-            "skin_color": "Medium",  # Changed
+            "age": "Medium",  # Changed
             "gender": "Male"     # New field
         }
         
         changes = service.get_changed_fields(old_data, new_data)
         assert changes == {
             "height": 73,
-            "skin_color": "Medium",
+            "age": "Medium",
             "gender": "Male"
         }
         assert "name" not in changes  # Unchanged
@@ -107,7 +107,7 @@ class TestIndividualService:
                 "name": "Jane Smith",
                 "height": 65,
                 "weight": 140,
-                "skin_color": "Dark"
+                "age": "Dark"
             },
             "created_at": datetime.utcnow().isoformat(),
             "updated_at": datetime.utcnow().isoformat()
@@ -127,7 +127,7 @@ class TestIndividualService:
                 "name": "Jane Smith",
                 "height": 65,
                 "weight": 140,
-                "skin_color": "Dark"
+                "age": "Dark"
             },
             "transcription": None
         }]
@@ -154,7 +154,7 @@ class TestIndividualService:
                 "name": "Jane Smith",
                 "height": 65,
                 "weight": 140,
-                "skin_color": "Dark"
+                "age": "Dark"
             },
             location=LocationData(
                 latitude=37.7749,
@@ -188,7 +188,7 @@ class TestIndividualService:
                 "name": "John Doe",
                 "height": 72,
                 "weight": 180,
-                "skin_color": "Light"
+                "age": "Light"
             }
         }
         
@@ -202,7 +202,7 @@ class TestIndividualService:
                 "name": "John Doe",
                 "height": 73,
                 "weight": 185,
-                "skin_color": "Light",
+                "age": "Light",
                 "veteran_status": "Yes"
             },
             "created_at": datetime.utcnow().isoformat(),
@@ -230,7 +230,7 @@ class TestIndividualService:
                 "name": "John Doe",
                 "height": 73,  # Changed
                 "weight": 185,  # Changed
-                "skin_color": "Light",  # Same
+                "age": "Light",  # Same
                 "veteran_status": "Yes"  # New
             },
             merge_with_id=merge_id
@@ -253,7 +253,7 @@ class TestIndividualService:
             await service.save_individual(
                 user_id="test-user",
                 user_name="Demo User",
-                data={"name": "Test", "height": 70, "weight": 160, "skin_color": "Light"},
+                data={"name": "Test", "height": 70, "weight": 160, "age": "Light"},
                 merge_with_id=uuid4()
             )
         assert "Individual not found" in str(exc.value)
@@ -325,7 +325,7 @@ class TestIndividualService:
             "name": "Test Person",
             "urgency_score": 60,
             "urgency_override": 75,
-            "data": {"name": "Test Person", "height": 70, "weight": 160, "skin_color": "Light"},
+            "data": {"name": "Test Person", "height": 70, "weight": 160, "age": "Light"},
             "created_at": datetime.utcnow().isoformat(),
             "updated_at": datetime.utcnow().isoformat()
         }

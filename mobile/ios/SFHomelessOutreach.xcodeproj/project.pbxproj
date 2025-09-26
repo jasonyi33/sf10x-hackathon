@@ -8,25 +8,25 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		3C487F1F379B6314592F5DEF /* libPods-SFHomelessOutreach.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A5EBE464B32D984CADB45A59 /* libPods-SFHomelessOutreach.a */; };
+		1F57DDD012834DDBB5BD9E87 /* libPods-SFHomelessOutreach.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B44E47829B928966236D8DE4 /* libPods-SFHomelessOutreach.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		73837E870EC8DA72C052832B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 10BB5FA7AB5DD073940AEC6A /* PrivacyInfo.xcprivacy */; };
+		7B9F7B46BC12F678F417B545 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2CAC415FAA18BBEF2FA21AE6 /* PrivacyInfo.xcprivacy */; };
+		8886CAD75BA641F6399482C4 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 852C29EEAB34E9568E737949 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
-		F6D6EF5AF3AC65DA09D6FB32 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B88ADD8800EB4C301C18F32B /* ExpoModulesProvider.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		10BB5FA7AB5DD073940AEC6A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = SFHomelessOutreach/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		0ED04CF8E48C29AB8A336BE8 /* Pods-SFHomelessOutreach.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SFHomelessOutreach.release.xcconfig"; path = "Target Support Files/Pods-SFHomelessOutreach/Pods-SFHomelessOutreach.release.xcconfig"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* SFHomelessOutreach.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SFHomelessOutreach.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = SFHomelessOutreach/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = SFHomelessOutreach/Info.plist; sourceTree = "<group>"; };
-		5CEB533425A12120DC2EE5A3 /* Pods-SFHomelessOutreach.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SFHomelessOutreach.debug.xcconfig"; path = "Target Support Files/Pods-SFHomelessOutreach/Pods-SFHomelessOutreach.debug.xcconfig"; sourceTree = "<group>"; };
-		A5EBE464B32D984CADB45A59 /* libPods-SFHomelessOutreach.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SFHomelessOutreach.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2CAC415FAA18BBEF2FA21AE6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = SFHomelessOutreach/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		852C29EEAB34E9568E737949 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-SFHomelessOutreach/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = SFHomelessOutreach/SplashScreen.storyboard; sourceTree = "<group>"; };
-		B45F69EE5D69C9765601F974 /* Pods-SFHomelessOutreach.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SFHomelessOutreach.release.xcconfig"; path = "Target Support Files/Pods-SFHomelessOutreach/Pods-SFHomelessOutreach.release.xcconfig"; sourceTree = "<group>"; };
-		B88ADD8800EB4C301C18F32B /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-SFHomelessOutreach/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		B44E47829B928966236D8DE4 /* libPods-SFHomelessOutreach.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SFHomelessOutreach.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
+		EA4C17AC5F2A31B3AA3DC93D /* Pods-SFHomelessOutreach.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SFHomelessOutreach.debug.xcconfig"; path = "Target Support Files/Pods-SFHomelessOutreach/Pods-SFHomelessOutreach.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = SFHomelessOutreach/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* SFHomelessOutreach-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "SFHomelessOutreach-Bridging-Header.h"; path = "SFHomelessOutreach/SFHomelessOutreach-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -37,7 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3C487F1F379B6314592F5DEF /* libPods-SFHomelessOutreach.a in Frameworks */,
+				1F57DDD012834DDBB5BD9E87 /* libPods-SFHomelessOutreach.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,26 +53,28 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				10BB5FA7AB5DD073940AEC6A /* PrivacyInfo.xcprivacy */,
+				2CAC415FAA18BBEF2FA21AE6 /* PrivacyInfo.xcprivacy */,
 			);
 			name = SFHomelessOutreach;
+			sourceTree = "<group>";
+		};
+		2A295D06FA043C8A89AF3395 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				EA4C17AC5F2A31B3AA3DC93D /* Pods-SFHomelessOutreach.debug.xcconfig */,
+				0ED04CF8E48C29AB8A336BE8 /* Pods-SFHomelessOutreach.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				A5EBE464B32D984CADB45A59 /* libPods-SFHomelessOutreach.a */,
+				B44E47829B928966236D8DE4 /* libPods-SFHomelessOutreach.a */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		4851EA851F729CAC37DE3509 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				ED8728C9A505781ABBE4005B /* SFHomelessOutreach */,
-			);
-			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -89,8 +91,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				9D27DB7BB96C3240AA11C7E9 /* Pods */,
-				4851EA851F729CAC37DE3509 /* ExpoModulesProviders */,
+				2A295D06FA043C8A89AF3395 /* Pods */,
+				A0AEF8E9C25DB2221F87E478 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -105,14 +107,12 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		9D27DB7BB96C3240AA11C7E9 /* Pods */ = {
+		A0AEF8E9C25DB2221F87E478 /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				5CEB533425A12120DC2EE5A3 /* Pods-SFHomelessOutreach.debug.xcconfig */,
-				B45F69EE5D69C9765601F974 /* Pods-SFHomelessOutreach.release.xcconfig */,
+				FA5C10A00E8154C09B3AEC73 /* SFHomelessOutreach */,
 			);
-			name = Pods;
-			path = Pods;
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
@@ -124,10 +124,10 @@
 			path = SFHomelessOutreach/Supporting;
 			sourceTree = "<group>";
 		};
-		ED8728C9A505781ABBE4005B /* SFHomelessOutreach */ = {
+		FA5C10A00E8154C09B3AEC73 /* SFHomelessOutreach */ = {
 			isa = PBXGroup;
 			children = (
-				B88ADD8800EB4C301C18F32B /* ExpoModulesProvider.swift */,
+				852C29EEAB34E9568E737949 /* ExpoModulesProvider.swift */,
 			);
 			name = SFHomelessOutreach;
 			sourceTree = "<group>";
@@ -140,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "SFHomelessOutreach" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				F16E553C18F21C8449C2B822 /* [Expo] Configure project */,
+				D18A9F0067CF09A42509D54B /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				9962DAB723C7FDFBED414CE4 /* [CP] Embed Pods Frameworks */,
+				DDCACE12CCA903836828F16E /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -196,7 +196,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				73837E870EC8DA72C052832B /* PrivacyInfo.xcprivacy in Resources */,
+				7B9F7B46BC12F678F417B545 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -276,25 +276,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-SFHomelessOutreach/Pods-SFHomelessOutreach-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		9962DAB723C7FDFBED414CE4 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-SFHomelessOutreach/Pods-SFHomelessOutreach-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-SFHomelessOutreach/Pods-SFHomelessOutreach-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		F16E553C18F21C8449C2B822 /* [Expo] Configure project */ = {
+		D18A9F0067CF09A42509D54B /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -313,6 +295,24 @@
 			shellPath = /bin/sh;
 			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-SFHomelessOutreach/expo-configure-project.sh\"\n";
 		};
+		DDCACE12CCA903836828F16E /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-SFHomelessOutreach/Pods-SFHomelessOutreach-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-SFHomelessOutreach/Pods-SFHomelessOutreach-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -321,7 +321,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				F6D6EF5AF3AC65DA09D6FB32 /* ExpoModulesProvider.swift in Sources */,
+				8886CAD75BA641F6399482C4 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -330,7 +330,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 5CEB533425A12120DC2EE5A3 /* Pods-SFHomelessOutreach.debug.xcconfig */;
+			baseConfigurationReference = EA4C17AC5F2A31B3AA3DC93D /* Pods-SFHomelessOutreach.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -366,7 +366,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = B45F69EE5D69C9765601F974 /* Pods-SFHomelessOutreach.release.xcconfig */;
+			baseConfigurationReference = 0ED04CF8E48C29AB8A336BE8 /* Pods-SFHomelessOutreach.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

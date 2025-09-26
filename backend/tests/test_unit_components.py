@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 import json
 
 # Import components to test
-from services.danger_calculator import calculate_danger_score
+from services.urgency_calculator import calculate_urgency_score
 from services.validation_helper import validate_categorized_data, ValidationResult
 from services.openai_service import OpenAIService
 
@@ -19,11 +19,11 @@ class TestDangerCalculator:
         """Test basic danger score calculation"""
         data = {"height": 90, "weight": 200}
         categories = [
-            {"name": "height", "type": "number", "danger_weight": 30, "auto_trigger": False},
-            {"name": "weight", "type": "number", "danger_weight": 50, "auto_trigger": False}
+            {"name": "height", "type": "number", "urgency_weight": 30, "auto_trigger": False},
+            {"name": "weight", "type": "number", "urgency_weight": 50, "auto_trigger": False}
         ]
         
-        score = calculate_danger_score(data, categories)
+        score = calculate_urgency_score(data, categories)
         # Expected: [(90/300)*30 + (200/300)*50] / (30+50) * 100
         # = [9 + 33.33] / 80 * 100 = 52.9 ≈ 52
         assert score == 52
@@ -33,10 +33,10 @@ class TestDangerCalculator:
         """Test auto-trigger immediately returns 100"""
         data = {"height": 50}  # Any non-zero value
         categories = [
-            {"name": "height", "type": "number", "danger_weight": 30, "auto_trigger": True}
+            {"name": "height", "type": "number", "urgency_weight": 30, "auto_trigger": True}
         ]
         
-        score = calculate_danger_score(data, categories)
+        score = calculate_urgency_score(data, categories)
         assert score == 100
         print("✅ Auto-trigger returns 100: PASS")
     
@@ -47,7 +47,7 @@ class TestDangerCalculator:
             {
                 "name": "risk_level",
                 "type": "single_select",
-                "danger_weight": 80,
+                "urgency_weight": 80,
                 "auto_trigger": False,
                 "options": [
                     {"label": "Low", "value": 0.2},
@@ -57,20 +57,20 @@ class TestDangerCalculator:
             }
         ]
         
-        score = calculate_danger_score(data, categories)
+        score = calculate_urgency_score(data, categories)
         # Expected: (0.9 * 80) / 80 * 100 = 90
         assert score == 90
         print("✅ Single-select calculation: PASS")
     
     def test_ignore_text_fields(self):
-        """Test that text fields are ignored even with danger_weight"""
+        """Test that text fields are ignored even with urgency_weight"""
         data = {"name": "John Doe", "height": 60}
         categories = [
-            {"name": "name", "type": "text", "danger_weight": 100, "auto_trigger": False},
-            {"name": "height", "type": "number", "danger_weight": 50, "auto_trigger": False}
+            {"name": "name", "type": "text", "urgency_weight": 100, "auto_trigger": False},
+            {"name": "height", "type": "number", "urgency_weight": 50, "auto_trigger": False}
         ]
         
-        score = calculate_danger_score(data, categories)
+        score = calculate_urgency_score(data, categories)
         # Should only consider height: (60/300)*50 / 50 * 100 = 20
         assert score == 20
         print("✅ Text fields ignored: PASS")
@@ -79,11 +79,11 @@ class TestDangerCalculator:
         """Test missing values are skipped in calculation"""
         data = {"height": 90}  # weight missing
         categories = [
-            {"name": "height", "type": "number", "danger_weight": 30, "auto_trigger": False},
-            {"name": "weight", "type": "number", "danger_weight": 50, "auto_trigger": False}
+            {"name": "height", "type": "number", "urgency_weight": 30, "auto_trigger": False},
+            {"name": "weight", "type": "number", "urgency_weight": 50, "auto_trigger": False}
         ]
         
-        score = calculate_danger_score(data, categories)
+        score = calculate_urgency_score(data, categories)
         # Only height is considered: (90/300)*30 / 30 * 100 = 0.3 * 100 = 30
         assert score == 30
         print(f"✅ Missing values skipped: PASS (score={score})")
@@ -92,11 +92,11 @@ class TestDangerCalculator:
         """Test all zero weights returns 0 (not divide by zero)"""
         data = {"height": 90, "weight": 200}
         categories = [
-            {"name": "height", "type": "number", "danger_weight": 0, "auto_trigger": False},
-            {"name": "weight", "type": "number", "danger_weight": 0, "auto_trigger": False}
+            {"name": "height", "type": "number", "urgency_weight": 0, "auto_trigger": False},
+            {"name": "weight", "type": "number", "urgency_weight": 0, "auto_trigger": False}
         ]
         
-        score = calculate_danger_score(data, categories)
+        score = calculate_urgency_score(data, categories)
         assert score == 0
         print("✅ Zero weights returns 0: PASS")
 
@@ -110,13 +110,13 @@ class TestValidationHelper:
             "name": "John Doe",
             "height": 72,
             "weight": 180,
-            "skin_color": "Light"
+            "age": "Light"
         }
         categories = [
             {"name": "name", "type": "text", "is_required": True},
             {"name": "height", "type": "number", "is_required": True},
             {"name": "weight", "type": "number", "is_required": True},
-            {"name": "skin_color", "type": "single_select", "is_required": True,
+            {"name": "age", "type": "single_select", "is_required": True,
              "options": [{"label": "Light", "value": 0}, {"label": "Medium", "value": 0}, {"label": "Dark", "value": 0}]}
         ]
         
@@ -131,19 +131,19 @@ class TestValidationHelper:
         data = {
             "name": "John Doe",
             "height": 72
-            # Missing weight and skin_color
+            # Missing weight and age
         }
         categories = [
             {"name": "name", "type": "text", "is_required": True},
             {"name": "height", "type": "number", "is_required": True},
             {"name": "weight", "type": "number", "is_required": True},
-            {"name": "skin_color", "type": "single_select", "is_required": True}
+            {"name": "age", "type": "single_select", "is_required": True}
         ]
         
         result = validate_categorized_data(data, categories)
         assert result.is_valid == False
         assert "weight" in result.missing_required
-        assert "skin_color" in result.missing_required
+        assert "age" in result.missing_required
         print("✅ Missing required fields detected: PASS")
     
     def test_number_range_validation(self):
@@ -152,13 +152,13 @@ class TestValidationHelper:
             "name": "John",
             "height": 400,  # Out of range
             "weight": -10,  # Out of range
-            "skin_color": "Light"
+            "age": "Light"
         }
         categories = [
             {"name": "name", "type": "text", "is_required": True},
             {"name": "height", "type": "number", "is_required": True},
             {"name": "weight", "type": "number", "is_required": True},
-            {"name": "skin_color", "type": "single_select", "is_required": True}
+            {"name": "age", "type": "single_select", "is_required": True}
         ]
         
         result = validate_categorized_data(data, categories)
@@ -176,19 +176,19 @@ class TestValidationHelper:
             "name": "John",
             "height": 72,
             "weight": 180,
-            "skin_color": "Blue"  # Invalid option
+            "age": "Blue"  # Invalid option
         }
         categories = [
             {"name": "name", "type": "text", "is_required": True},
             {"name": "height", "type": "number", "is_required": True},
             {"name": "weight", "type": "number", "is_required": True},
-            {"name": "skin_color", "type": "single_select", "is_required": True,
+            {"name": "age", "type": "single_select", "is_required": True,
              "options": [{"label": "Light", "value": 0}, {"label": "Medium", "value": 0}, {"label": "Dark", "value": 0}]}
         ]
         
         result = validate_categorized_data(data, categories)
         assert result.is_valid == False
-        skin_error = next((e for e in result.validation_errors if e["field"] == "skin_color"), None)
+        skin_error = next((e for e in result.validation_errors if e["field"] == "age"), None)
         assert skin_error is not None
         print("✅ Invalid select option detected: PASS")
     
@@ -198,14 +198,14 @@ class TestValidationHelper:
             "name": "John",
             "height": 72,
             "weight": 180,
-            "skin_color": "Light"
+            "age": "Light"
             # Gender is optional and missing
         }
         categories = [
             {"name": "name", "type": "text", "is_required": True},
             {"name": "height", "type": "number", "is_required": True},
             {"name": "weight", "type": "number", "is_required": True},
-            {"name": "skin_color", "type": "single_select", "is_required": True,
+            {"name": "age", "type": "single_select", "is_required": True,
              "options": [{"label": "Light", "value": 0}, {"label": "Medium", "value": 0}, {"label": "Dark", "value": 0}]},
             {"name": "gender", "type": "single_select", "is_required": False}
         ]

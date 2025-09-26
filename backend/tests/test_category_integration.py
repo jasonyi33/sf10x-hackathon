@@ -39,7 +39,7 @@ class TestCategoryIntegration:
                 "is_required": False,
                 "is_preset": False,
                 "priority": "high",
-                "danger_weight": 50,
+                "urgency_weight": 50,
                 "auto_trigger": False,
                 "options": [
                     {"label": "None", "value": 0},
@@ -72,7 +72,7 @@ class TestCategoryIntegration:
                         "name": "emergency status",
                         "type": "single_select",
                         "priority": "high",
-                        "danger_weight": 50,
+                        "urgency_weight": 50,
                         "options": [
                             {"label": "None", "value": 0},
                             {"label": "Medical", "value": 0.8},
@@ -85,7 +85,7 @@ class TestCategoryIntegration:
                 assert create_response.status_code == 201
                 created = create_response.json()
                 assert created["name"] == "Emergency status"  # Capitalized
-                assert created["danger_weight"] == 50
+                assert created["urgency_weight"] == 50
                 
                 # Now mock GET categories to include the new one
                 mock_table.select.return_value.order.return_value.execute.return_value.data = [
@@ -97,7 +97,7 @@ class TestCategoryIntegration:
                         "is_required": True,
                         "is_preset": True,
                         "priority": "high",
-                        "danger_weight": 0,
+                        "urgency_weight": 0,
                         "auto_trigger": False,
                         "options": None
                     },
@@ -122,5 +122,5 @@ class TestCategoryIntegration:
                     None
                 )
                 assert custom_category is not None
-                assert custom_category["danger_weight"] == 50
+                assert custom_category["urgency_weight"] == 50
                 assert custom_category["is_preset"] is False

@@ -86,8 +86,8 @@ export class ErrorHandler {
     if (error.message?.includes('Real API disabled')) {
       return {
         code: 'DEMO_MODE',
-        message: 'Demo mode active',
-        userMessage: 'Running in demo mode. Using mock data.',
+        message: '✅ Demo mode active - using mock data',
+        userMessage: '✅ Demo mode: Using realistic mock transcription data.',
         retryable: false,
         severity: 'low'
       };
@@ -178,8 +178,13 @@ export class ErrorHandler {
 
   // Show error to user
   static showError = (error: AppError) => {
-    console.error(`[${error.code}] ${error.message}`);
-    
+    // Use different logging level for demo mode
+    if (error.code === 'DEMO_MODE') {
+      console.log(`[${error.code}] ${error.message}`);
+    } else {
+      console.error(`[${error.code}] ${error.message}`);
+    }
+
     // Don't show toast for low severity errors
     if (error.severity === 'low') {
       return;

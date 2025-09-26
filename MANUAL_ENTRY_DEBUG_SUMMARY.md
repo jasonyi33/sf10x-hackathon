@@ -17,7 +17,7 @@
 #### 2. **Database Schema Issues** ⚠️
 - Backend returns categories but missing **"Additional Information"** category
 - **Column mismatch**: API creation fails due to missing `danger_weight` column
-- **Field requirements**: Backend shows `height` and `weight` as required, not `name` or `skin_color`
+- **Field requirements**: Backend shows `height` and `weight` as required, not `name` or `age`
 
 #### 3. **Categories API Response** ✅
 Backend returns these categories:
@@ -27,12 +27,12 @@ Backend returns these categories:
     {"name": "height", "type": "number", "is_required": true},
     {"name": "weight", "type": "number", "is_required": true}, 
     {"name": "name", "type": "text", "is_required": false},
-    {"name": "skin_color", "type": "single_select", "is_required": false},
+    {"name": "age", "type": "single_select", "is_required": false},
     {"name": "gender", "type": "single_select", "is_required": false},
     {"name": "substance_abuse_history", "type": "multi_select"},
     {"name": "medical_conditions", "type": "multi_select"},
     {"name": "housing_priority", "type": "single_select"},
-    {"name": "violent_behavior", "type": "single_select"},
+    {"name": "behavior", "type": "single_select"},
     {"name": "veteran_status", "type": "single_select"}
   ]
 }
@@ -52,7 +52,7 @@ Backend returns these categories:
 - Updated validation to match backend requirements
 - `height` and `weight` are truly required
 - `name` is validated as essential even if not technically required
-- Removed `skin_color` from hard requirements
+- Removed `age` from hard requirements
 
 ### 3. **Debugging Improvements**
 - Added comprehensive logging to `ManualEntryForm.tsx`

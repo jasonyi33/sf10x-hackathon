@@ -72,8 +72,8 @@ This backend provides APIs for:
    - `id` (UUID)
    - `name` (TEXT)
    - `data` (JSONB) - All categorized fields
-   - `danger_score` (INTEGER)
-   - `danger_override` (INTEGER)
+   - `urgency_score` (INTEGER)
+   - `urgency_override` (INTEGER)
 
 2. **interactions** - Historical log of changes
    - `id` (UUID)
@@ -317,13 +317,13 @@ pytest tests/test_api_integration.py
     - Search across multiple fields (name and all JSONB data fields)
     - Join with interactions for last_seen timestamp
     - Return location data as provided by frontend
-    - Support sort by last_seen, danger_score, name
+    - Support sort by last_seen, urgency_score, name
   - [ ] 2.15.5 Implement GET /api/individuals/{id} endpoint:
     - Return full individual data
     - Include recent interactions summary
     - Calculate display danger score (override or calculated)
   - [ ] 2.15.6 Implement PUT /api/individuals/{id}/danger-override endpoint:
-    - Update danger_override field
+    - Update urgency_override field
     - Return current scores for UI update
   - [ ] 2.15.7 Implement GET /api/individuals/{id}/interactions endpoint:
     - Return detailed interaction history
@@ -395,7 +395,7 @@ pytest tests/test_api_integration.py
   - [ ] 4.3 Create IndividualProfileScreen displaying:
     - All current field values from aggregated data
     - Danger score with color background (green #10B981, yellow #F59E0B, red #EF4444)
-    - Show danger_override if not null, else calculated danger_score
+    - Show urgency_override if not null, else calculated urgency_score
     - Interaction history list with date, worker name, abbreviated address
   - [ ] 4.4 Build DangerScore component with:
     - Large number display with colored background
@@ -486,7 +486,7 @@ pytest tests/test_api_integration.py
        '["Diabetes", "Heart Disease", "Mental Health", "Mobility Issues", "Chronic Pain", "None"]'::jsonb),
       ('housing_priority', 'single_select', false, false, 'high', 30, false,
        '[{"label": "Critical", "value": 1}, {"label": "High", "value": 0.7}, {"label": "Medium", "value": 0.4}, {"label": "Low", "value": 0.1}]'::jsonb),
-      ('violent_behavior', 'single_select', false, false, 'high', 40, true,
+      ('behavior', 'single_select', false, false, 'high', 40, true,
        '[{"label": "None", "value": 0}, {"label": "Verbal Only", "value": 0.3}, {"label": "Physical", "value": 1}]'::jsonb);
       ```
   - [ ] 6.2 **[Dev 2]** Test and fix voice recording flow ensuring:

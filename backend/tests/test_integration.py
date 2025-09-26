@@ -100,7 +100,7 @@ class TestIntegrationFlow:
                 "age": 30,
                 "height": 70,
                 "weight": 150,
-                "skin_color": "Light"
+                "age": "Light"
             },
             "location": {
                 "latitude": 37.7749,

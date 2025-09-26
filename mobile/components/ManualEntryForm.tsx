@@ -31,7 +31,6 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     name: '',
     height: '',
     weight: '',
-    skin_color: '',
     gender: '',
     substance_abuse_history: '',
     age: '',

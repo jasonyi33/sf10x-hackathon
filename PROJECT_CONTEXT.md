@@ -148,8 +148,8 @@ CREATE TABLE individuals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   data JSONB NOT NULL DEFAULT '{}', -- All categorized fields
-  danger_score INTEGER DEFAULT 0,
-  danger_override INTEGER, -- Manual override (NULL if not set)
+  urgency_score INTEGER DEFAULT 0,
+  urgency_override INTEGER, -- Manual override (NULL if not set)
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -189,7 +189,7 @@ INSERT INTO categories (name, type, is_required, is_preset, options) VALUES
 ('name', 'text', true, true, null),
 ('height', 'number', true, true, null),
 ('weight', 'number', true, true, null),
-('skin_color', 'single_select', true, true, 
+('age', 'single_select', true, true, 
  '[{"label": "Light", "value": 0}, {"label": "Medium", "value": 0}, {"label": "Dark", "value": 0}]'::jsonb),
 ('gender', 'single_select', false, true,
  '[{"label": "Male", "value": 0}, {"label": "Female", "value": 0}, {"label": "Other", "value": 0}, {"label": "Unknown", "value": 0}]'::jsonb),

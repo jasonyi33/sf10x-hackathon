@@ -47,7 +47,7 @@ class TestCreateCategory:
                 "name": "Test category",  # Capitalized
                 "type": "single_select",
                 "priority": "high",
-                "danger_weight": 30,
+                "urgency_weight": 30,
                 "auto_trigger": False,
                 "is_required": False,
                 "is_preset": False,
@@ -66,7 +66,7 @@ class TestCreateCategory:
                         "name": "test category",  # Should be capitalized
                         "type": "single_select",
                         "priority": "high",
-                        "danger_weight": 30,
+                        "urgency_weight": 30,
                         "options": [
                             {"label": "Low", "value": 0.2},
                             {"label": "High", "value": 0.8}
@@ -78,10 +78,10 @@ class TestCreateCategory:
             assert response.status_code == 201
             data = response.json()
             assert data["name"] == "Test category"  # Capitalized
-            assert data["danger_weight"] == 30
+            assert data["urgency_weight"] == 30
             
-    async def test_reject_invalid_danger_weight(self):
-        """Test rejection when non-numeric/single-select has danger_weight > 0"""
+    async def test_reject_invalid_urgency_weight(self):
+        """Test rejection when non-numeric/single-select has urgency_weight > 0"""
         
         async with AsyncClient(app=app, base_url="http://test") as client:
             response = await client.post(
@@ -89,13 +89,13 @@ class TestCreateCategory:
                 json={
                     "name": "invalid category",
                     "type": "text",
-                    "danger_weight": 50  # Invalid for text type
+                    "urgency_weight": 50  # Invalid for text type
                 },
                 headers={"Authorization": "Bearer test_token"}
             )
             
         assert response.status_code == 422  # FastAPI returns 422 for Pydantic validation errors
-        assert "danger_weight" in str(response.json())
+        assert "urgency_weight" in str(response.json())
             
     async def test_reject_duplicate_name(self):
         """Test rejection when category name already exists"""

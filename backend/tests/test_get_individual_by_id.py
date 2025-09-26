@@ -45,14 +45,14 @@ class TestGetIndividualById:
         mock_individual = {
             "id": individual_id,
             "name": "Test Person",
-            "danger_score": 45,
-            "danger_override": None,
-            "display_score": 45,  # Same as danger_score since no override
+            "urgency_score": 45,
+            "urgency_override": None,
+            "display_score": 45,  # Same as urgency_score since no override
             "data": {
                 "name": "Test Person",
                 "height": 70,
                 "weight": 160,
-                "skin_color": "Medium",
+                "age": "Medium",
                 "gender": "Male",
                 "veteran_status": "Yes"
             },
@@ -121,10 +121,10 @@ class TestGetIndividualById:
         mock_individual = {
             "id": individual_id,
             "name": "Test Person",
-            "danger_score": 45,
-            "danger_override": None,
+            "urgency_score": 45,
+            "urgency_override": None,
             "display_score": 45,
-            "data": {"name": "Test Person", "height": 70, "weight": 160, "skin_color": "Medium"},
+            "data": {"name": "Test Person", "height": 70, "weight": 160, "age": "Medium"},
             "created_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
@@ -173,7 +173,7 @@ class TestGetIndividualById:
         assert len(data["recent_interactions"]) == 3
         assert data["recent_interactions"][0]["has_transcription"] == True
     
-    def test_get_individual_with_danger_override(self, client, mock_supabase):
+    def test_get_individual_with_urgency_override(self, client, mock_supabase):
         """Test individual with danger override shows correct display score"""
         individual_id = str(uuid4())
         
@@ -181,10 +181,10 @@ class TestGetIndividualById:
         mock_individual = {
             "id": individual_id,
             "name": "High Risk Person",
-            "danger_score": 45,  # Calculated score
-            "danger_override": 85,  # Manual override
+            "urgency_score": 45,  # Calculated score
+            "urgency_override": 85,  # Manual override
             "display_score": 85,  # Shows override since it's set
-            "data": {"name": "High Risk Person", "height": 72, "weight": 200, "skin_color": "Light"},
+            "data": {"name": "High Risk Person", "height": 72, "weight": 200, "age": "Light"},
             "created_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
@@ -205,8 +205,8 @@ class TestGetIndividualById:
         
         assert response.status_code == 200
         data = response.json()
-        assert data["individual"]["danger_score"] == 45
-        assert data["individual"]["danger_override"] == 85
+        assert data["individual"]["urgency_score"] == 45
+        assert data["individual"]["urgency_override"] == 85
         # Note: display_score calculation would be in the service layer
     
     def test_get_individual_invalid_uuid(self, client, mock_supabase):

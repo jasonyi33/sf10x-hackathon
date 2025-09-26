@@ -86,7 +86,7 @@ class TestGetInteractions:
                     "name": "John Doe",
                     "height": 70,
                     "weight": 160,
-                    "skin_color": "Light"
+                    "age": "Light"
                 }
             }
         ]

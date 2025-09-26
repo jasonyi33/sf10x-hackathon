@@ -44,7 +44,7 @@ async def run_detailed_test():
                 print(f"   - Name: {data.get('name')} {'✅' if 'name' in data else '❌ MISSING'}")
                 print(f"   - Height: {data.get('height')} {'✅' if 'height' in data else '❌ MISSING'}")
                 print(f"   - Weight: {data.get('weight')} {'✅' if 'weight' in data else '❌ MISSING'}")
-                print(f"   - Skin Color: {data.get('skin_color')} {'✅' if 'skin_color' in data else '❌ MISSING'}")
+                print(f"   - Skin Color: {data.get('age')} {'✅' if 'age' in data else '❌ MISSING'}")
                 
                 print(f"\n   Missing Required Fields: {missing}")
                 
@@ -53,12 +53,12 @@ async def run_detailed_test():
                     print(f"   ⚠️  WARNING: Required fields missing! {missing}")
                 
                 # Verify skin color mapping (PRD line 136)
-                if data.get('skin_color'):
+                if data.get('age'):
                     valid_colors = ["Light", "Medium", "Dark"]
-                    if data['skin_color'] in valid_colors:
-                        print(f"   ✅ Skin color correctly mapped to: {data['skin_color']}")
+                    if data['age'] in valid_colors:
+                        print(f"   ✅ Skin color correctly mapped to: {data['age']}")
                     else:
-                        print(f"   ❌ Invalid skin color value: {data['skin_color']}")
+                        print(f"   ❌ Invalid skin color value: {data['age']}")
                 
                 # Verify number ranges (PRD lines 134-135)
                 if 'height' in data:
@@ -100,7 +100,7 @@ async def run_detailed_test():
             print(f"   Found {len(categories)} categories")
             
             # Check for required preset categories
-            required_categories = ["name", "height", "weight", "skin_color"]
+            required_categories = ["name", "height", "weight"]
             found_categories = [cat["name"] for cat in categories]
             
             for req_cat in required_categories:

@@ -64,8 +64,6 @@ class EmbeddingService:
                 text_parts.append(f"Height: {data['height']} inches")
             if data.get('weight'):
                 text_parts.append(f"Weight: {data['weight']} pounds")
-            if data.get('skin_color'):
-                text_parts.append(f"Skin color: {data['skin_color']}")
             if data.get('gender'):
                 text_parts.append(f"Gender: {data['gender']}")
             
@@ -83,11 +81,11 @@ class EmbeddingService:
             if data.get('behavior'):
                 text_parts.append(f"Behavior: {data['behavior']}")
         
-        # Danger score info
-        if individual_data.get('danger_score'):
-            text_parts.append(f"Danger score: {individual_data['danger_score']}")
-        if individual_data.get('danger_override'):
-            text_parts.append(f"Danger override: {individual_data['danger_override']}")
+        # Urgency score info
+        if individual_data.get('urgency_score'):
+            text_parts.append(f"Urgency score: {individual_data['urgency_score']}")
+        if individual_data.get('urgency_override'):
+            text_parts.append(f"Urgency override: {individual_data['urgency_override']}")
         
         # Combine all text parts
         combined_text = " ".join(text_parts)

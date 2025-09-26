@@ -41,8 +41,8 @@ class TestPostIndividuals:
         """Test creating new individual successfully"""
         # Mock categories
         mock_supabase.table.return_value.select.return_value.execute.return_value.data = [
-            {"name": "height", "type": "number", "danger_weight": 10},
-            {"name": "weight", "type": "number", "danger_weight": 5}
+            {"name": "height", "type": "number", "urgency_weight": 10},
+            {"name": "weight", "type": "number", "urgency_weight": 5}
         ]
         
         # Mock individual creation
@@ -51,13 +51,13 @@ class TestPostIndividuals:
             MagicMock(data=[{
                 "id": individual_id,
                 "name": "Test Person",
-                "danger_score": 15,
-                "danger_override": None,
+                "urgency_score": 15,
+                "urgency_override": None,
                 "data": {
                     "name": "Test Person",
                     "height": 70,
                     "weight": 160,
-                    "skin_color": "Medium"
+                    "age": "Medium"
                 },
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
@@ -73,7 +73,7 @@ class TestPostIndividuals:
                     "name": "Test Person",
                     "height": 70,
                     "weight": 160,
-                    "skin_color": "Medium"
+                    "age": "Medium"
                 }
             }])
         ]
@@ -85,7 +85,7 @@ class TestPostIndividuals:
                     "name": "Test Person",
                     "height": 70,
                     "weight": 160,
-                    "skin_color": "Medium"
+                    "age": "Medium"
                 },
                 "location": {
                     "latitude": 37.7749,
@@ -99,7 +99,7 @@ class TestPostIndividuals:
         assert response.status_code == 200
         data = response.json()
         assert data["individual"]["name"] == "Test Person"
-        assert data["individual"]["danger_score"] >= 0
+        assert data["individual"]["urgency_score"] >= 0
         assert data["interaction"]["has_transcription"] == False
     
     def test_post_individuals_missing_required_fields(self, client, mock_supabase):
@@ -108,7 +108,7 @@ class TestPostIndividuals:
         mock_supabase.table.return_value.select.return_value.execute.return_value.data = [
             {"name": "height", "type": "number", "is_required": True},
             {"name": "weight", "type": "number", "is_required": True},
-            {"name": "skin_color", "type": "single_select", "is_required": True}
+            {"name": "age", "type": "single_select", "is_required": True}
         ]
         
         response = client.post(
@@ -117,7 +117,7 @@ class TestPostIndividuals:
                 "data": {
                     "name": "Test Person",
                     "height": 70
-                    # Missing weight and skin_color
+                    # Missing weight and age
                 }
             },
             headers={"Authorization": "Bearer test-token"}
@@ -141,18 +141,18 @@ class TestPostIndividuals:
             MagicMock(data={
                 "id": merge_id,
                 "name": "John Doe",
-                "danger_score": 50,
-                "danger_override": None,
-                "data": {"name": "John Doe", "height": 72, "weight": 180, "skin_color": "Light"},
+                "urgency_score": 50,
+                "urgency_override": None,
+                "data": {"name": "John Doe", "height": 72, "weight": 180, "age": "Light"},
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }),
             MagicMock(data={
                 "id": merge_id,
                 "name": "John Doe",
-                "danger_score": 50,
-                "danger_override": None,
-                "data": {"name": "John Doe", "height": 72, "weight": 180, "skin_color": "Light"},
+                "urgency_score": 50,
+                "urgency_override": None,
+                "data": {"name": "John Doe", "height": 72, "weight": 180, "age": "Light"},
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
             })
@@ -162,13 +162,13 @@ class TestPostIndividuals:
         mock_supabase.table.return_value.update.return_value.eq.return_value.execute.return_value.data = [{
             "id": merge_id,
             "name": "John Doe",
-            "danger_score": 0,
-            "danger_override": None,
+            "urgency_score": 0,
+            "urgency_override": None,
             "data": {
                 "name": "John Doe",
                 "height": 73,
                 "weight": 180,
-                "skin_color": "Light",
+                "age": "Light",
                 "veteran_status": "Yes"
             },
             "created_at": datetime.now(timezone.utc).isoformat(),
@@ -201,7 +201,7 @@ class TestPostIndividuals:
                     "name": "John Doe",
                     "height": 73,
                     "weight": 180,
-                    "skin_color": "Light",
+                    "age": "Light",
                     "veteran_status": "Yes"
                 },
                 "merge_with_id": merge_id
@@ -231,7 +231,7 @@ class TestPostIndividuals:
                     "name": "Test",
                     "height": 70,
                     "weight": 160,
-                    "skin_color": "Light"
+                    "age": "Light"
                 },
                 "merge_with_id": str(uuid4())
             },
@@ -252,12 +252,12 @@ class TestPostIndividuals:
             MagicMock(data=[{
                 "id": individual_id,
                 "name": "Voice Person",
-                "danger_score": 0,
+                "urgency_score": 0,
                 "data": {
                     "name": "Voice Person",
                     "height": 68,
                     "weight": 150,
-                    "skin_color": "Dark"
+                    "age": "Dark"
                 },
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
@@ -278,7 +278,7 @@ class TestPostIndividuals:
                     "name": "Voice Person",
                     "height": 68,
                     "weight": 150,
-                    "skin_color": "Dark"
+                    "age": "Dark"
                 },
                 "transcription": "Met Voice Person near the library...",
                 "audio_url": "https://example.com/audio.m4a"
