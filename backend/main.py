@@ -13,6 +13,8 @@ import wave
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from services.context_service import ContextService
+from supabase import create_client, Client
 
 # Load environment variables
 load_dotenv()
@@ -27,6 +29,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize Supabase client for context service
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_ANON_KEY")
+supabase: Client = create_client(supabase_url, supabase_key)
 
 @app.get("/health")
 async def health_check():
@@ -58,6 +65,72 @@ Clients must send 24kHz, mono, 16-bit PCM base64 for input audio, or use the
 Whisper transcription endpoint (/api/voice-assistant/transcribe) and then send
 text via conversation.item.create.
 """
+
+async def process_client_message_with_context(message_str: str) -> str:
+    """
+    Process client message and inject database context if names are detected.
+
+    Args:
+        message_str: Raw WebSocket message from client
+
+    Returns:
+        Processed message (potentially with context injection)
+    """
+    try:
+        parsed_message = json.loads(message_str)
+
+        # Check if this is a conversation item creation with text content
+        if (parsed_message.get("type") == "conversation.item.create" and
+            parsed_message.get("item", {}).get("type") == "message"):
+
+            content = parsed_message.get("item", {}).get("content", [])
+
+            # Look for text input content
+            for content_item in content:
+                if content_item.get("type") == "input_text":
+                    text = content_item.get("text", "")
+                    print(f"🔍 Analyzing message for names: {text}")
+
+                    # Use context service to get individual context
+                    context_service = ContextService(supabase)
+                    context_result = await context_service.get_context_for_message(text)
+
+                    if context_result["context"]:
+                        print(f"📊 Found context for {len(context_result['individuals_found'])} individuals")
+                        print(f"🏷️ Names detected: {context_result['names_detected']}")
+
+                        # Inject context as a system message before the user message
+                        context_message = {
+                            "type": "conversation.item.create",
+                            "item": {
+                                "id": f"context_{parsed_message.get('item', {}).get('id', 'unknown')}",
+                                "type": "message",
+                                "role": "system",
+                                "content": [
+                                    {
+                                        "type": "input_text",
+                                        "text": f"CONTEXT: {context_result['context']}"
+                                    }
+                                ]
+                            }
+                        }
+
+                        # Return both the context message and original message as separate messages
+                        # We'll need to send them sequentially in the calling code
+                        return json.dumps(context_message) + "\n" + message_str
+
+                    else:
+                        print("📝 No context found for this message")
+
+        return message_str
+
+    except json.JSONDecodeError:
+        print("⚠️ Could not parse message as JSON")
+        return message_str
+    except Exception as e:
+        print(f"❌ Error processing message for context: {str(e)}")
+        print(f"📝 Original message will be forwarded without context")
+        return message_str
 
 @app.websocket("/api/voice-assistant/realtime/ws")
 async def websocket_realtime_proxy(websocket: WebSocket):
@@ -177,9 +250,24 @@ async def websocket_realtime_proxy(websocket: WebSocket):
                         except json.JSONDecodeError:
                             print("⚠️ Non-JSON message received")
 
-                        print(f"📤 Forwarding to OpenAI: {message[:100]}...")
-                        print(f"📤 Full message length: {len(message)} characters")
-                        await openai_ws.send(message)
+                        # Process message for context injection
+                        processed_message = await process_client_message_with_context(message)
+
+                        # Check if context was injected (indicated by newline separator)
+                        if "\n" in processed_message:
+                            # Send context message first, then user message
+                            context_msg, user_msg = processed_message.split("\n", 1)
+
+                            print(f"📤 Sending context to OpenAI: {context_msg[:100]}...")
+                            await openai_ws.send(context_msg)
+
+                            print(f"📤 Sending user message to OpenAI: {user_msg[:100]}...")
+                            await openai_ws.send(user_msg)
+                        else:
+                            # Send original message
+                            print(f"📤 Forwarding to OpenAI: {processed_message[:100]}...")
+                            print(f"📤 Full message length: {len(processed_message)} characters")
+                            await openai_ws.send(processed_message)
                 except websockets.exceptions.ConnectionClosed:
                     print("🔌 OpenAI WebSocket connection closed normally")
                     return

@@ -12,6 +12,7 @@ import tempfile
 import os
 from supabase import create_client, Client
 from services.openai_service import OpenAIService
+from services.context_service import ContextService
 
 router = APIRouter(prefix="/api/voice-assistant")
 security = HTTPBearer()
@@ -31,6 +32,14 @@ class VoiceAssistantResponse(BaseModel):
 
 class ApiKeyResponse(BaseModel):
     api_key: str
+
+class ContextRequest(BaseModel):
+    message: str
+
+class ContextResponse(BaseModel):
+    context: str
+    individuals_found: List[Dict[str, Any]]
+    names_detected: List[str]
 
 @router.get("/test")
 async def test_voice_assistant_endpoint():
@@ -342,5 +351,39 @@ async def get_safety_guidelines(credentials: HTTPAuthorizationCredentials = Depe
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get guidelines: {str(e)}")
+
+@router.post("/context", response_model=ContextResponse)
+async def get_context_for_message(
+    request: ContextRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """
+    Get individual context for a message containing names
+
+    This endpoint analyzes a user message, extracts potential names,
+    searches the database for matching individuals, and returns
+    formatted context information for the AI assistant.
+    """
+    try:
+        print(f"🔍 Getting context for message: {request.message}")
+
+        # Initialize context service
+        context_service = ContextService(supabase)
+
+        # Get context for the message
+        result = await context_service.get_context_for_message(request.message)
+
+        print(f"📊 Found {len(result['individuals_found'])} individuals")
+        print(f"🏷️ Detected names: {result['names_detected']}")
+
+        return ContextResponse(
+            context=result["context"],
+            individuals_found=result["individuals_found"],
+            names_detected=result["names_detected"]
+        )
+
+    except Exception as e:
+        print(f"❌ Error getting context: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get context: {str(e)}")
 
 # WebSocket endpoint moved to main.py to avoid conflicts
