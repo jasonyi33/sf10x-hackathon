@@ -1,11 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { ModernAudioRecorder } from '../components/ModernAudioRecorder';
 import { TranscriptionResults } from '../components/TranscriptionResults';
 import { ManualEntryForm } from '../components/ManualEntryForm';
 import { LocationPicker } from '../components/LocationPicker';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../services/supabase';
 import { api, TranscriptionResult } from '../services/api';
 import { ErrorHandler } from '../utils/errorHandler';
 
@@ -123,22 +122,14 @@ export const RecordScreen: React.FC = () => {
   };
 
   const handleSaveManualEntry = async (data: Record<string, any>) => {
-    try {
-      const saveData = {
-        ...data,
-        location: selectedLocation?.location,
-      };
-      
-      await api.saveIndividual(saveData);
-      ErrorHandler.showSuccess('Data saved successfully');
-      
-      // Reset state
-      setShowManualEntry(false);
-      setSelectedLocation(null);
-    } catch (error) {
-      const appError = ErrorHandler.handleError(error, 'Save Manual Entry');
-      ErrorHandler.showError(appError);
-    }
+    // Note: ManualEntryForm already saves the data via api.saveIndividual()
+    // This handler just manages the UI state after successful save
+
+    // Reset state
+    setShowManualEntry(false);
+    setSelectedLocation(null);
+
+    // Success message is already shown by ManualEntryForm via Toast
   };
 
   const handleCancelTranscription = () => {
@@ -220,7 +211,7 @@ export const RecordScreen: React.FC = () => {
 
       {/* Audio Recorder */}
       <View style={styles.recorderContainer}>
-        <AudioRecorder
+        <ModernAudioRecorder
           ref={audioRecorderRef}
           onRecordingComplete={handleRecordingComplete}
           onRecordingStart={handleRecordingStart}

@@ -342,17 +342,13 @@ export const ModernRecordScreen: React.FC = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Location Picker Modal */}
-      <Modal
-        visible={showLocationPicker}
-        animationType="slide"
-        onRequestClose={() => setShowLocationPicker(false)}
-      >
+      {/* Location Picker - already has its own Modal */}
+      {showLocationPicker && (
         <LocationPicker
           onLocationSelected={handleLocationSelect}
           onCancel={() => setShowLocationPicker(false)}
         />
-      </Modal>
+      )}
 
       {/* Manual Entry Modal */}
       <Modal
