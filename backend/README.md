@@ -46,9 +46,9 @@ This backend provides APIs for:
    ```
 
 5. **Access the API:**
-   - API: http://10.19.123.174:8001
-   - Docs: http://10.19.123.174:8001/docs
-   - Health: http://10.19.123.174:8001/health
+   - API: http://10.18.111.71:8001
+   - Docs: http://10.18.111.71:8001/docs
+   - Health: http://10.18.111.71:8001/health
 
 ## API Endpoints
 

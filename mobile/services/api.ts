@@ -490,42 +490,7 @@ export interface TranscriptionResult {
   }>;
 }
 
-// Mock transcription for testing (when backend isn't ready)
-const mockTranscription = (audioUrl: string): TranscriptionResult => {
-  console.log('Using mock transcription for:', audioUrl);
-  
-  // Test different confidence levels based on audio URL
-  let confidence = 87; // Default for testing merge UI (60-94% range)
-  
-  if (audioUrl.includes('high-confidence')) {
-    confidence = 97; // Test streamlined confirmation (≥95%)
-  } else if (audioUrl.includes('low-confidence')) {
-    confidence = 45; // Test no merge UI (<60%)
-  } else if (audioUrl.includes('no-match')) {
-    confidence = 0; // Test no matches
-  }
-  
-  return {
-    transcription: "Met John near Market Street. About 45 years old, 6 feet tall, maybe 180 pounds. Light skin. Shows signs of moderate substance abuse, been on streets 3 months. Needs diabetes medication.",
-    categorized_data: {
-      name: "John",
-      age: 45,
-      height: 72,
-      weight: 180,
-      substance_abuse: "Moderate",
-      medical_conditions: "Diabetes",
-      location: "Market Street"
-    },
-    missing_required: ["height", "weight"],
-    potential_matches: confidence > 0 ? [
-      {
-        id: "550e8400-e29b-41d4-a716-446655440007", // Use a real UUID from demo data (John Doe)
-        confidence: confidence,
-        name: "John Doe"
-      }
-    ] : []
-  };
-};
+// Mock transcription function removed - app now uses real API only
 
 // API functions for your app
 export const api = {
@@ -890,51 +855,20 @@ export const api = {
   // Get categories
   getCategories: async (): Promise<any[]> => {
     try {
-      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
-        console.log('Using mock categories');
-        return [
-          { id: '1', name: 'Name', type: 'text', is_required: true, priority: 'high' },
-          { id: '2', name: 'Height', type: 'number', is_required: true, priority: 'medium' },
-          { id: '3', name: 'Weight', type: 'number', is_required: true, priority: 'medium' },
-          { id: '4', name: 'Age', type: 'number', is_required: false, priority: 'medium' },
-          { id: '6', name: 'Gender', type: 'single-select', is_required: false, priority: 'medium' },
-          { id: '7', name: 'Medical Conditions', type: 'multi-select', is_required: false, priority: 'high' },
-          { id: '8', name: 'Substance Abuse History', type: 'single-select', is_required: false, priority: 'high' },
-          { id: '9', name: 'Housing Priority', type: 'single-select', is_required: false, priority: 'medium' },
-          { id: '10', name: 'Veteran Status', type: 'single-select', is_required: false, priority: 'medium' },
-          { id: '11', name: 'Additional Information', type: 'text', is_required: false, priority: 'low' },
-        ];
-      }
+      // Always use real API - no mock data
 
       const result = await apiRequest('/api/categories');
       return result.categories || [];
     } catch (error) {
       console.error('Error fetching categories:', error);
-      console.log('Falling back to mock categories due to API error');
-      // Fall back to comprehensive mock data if real API fails
-      return [
-        { id: '1', name: 'Name', type: 'text', is_required: true, priority: 'high' },
-        { id: '2', name: 'Height', type: 'number', is_required: true, priority: 'medium' },
-        { id: '3', name: 'Weight', type: 'number', is_required: true, priority: 'medium' },
-        { id: '4', name: 'Age', type: 'number', is_required: false, priority: 'medium' },
-        { id: '6', name: 'Gender', type: 'single-select', is_required: false, priority: 'medium' },
-        { id: '7', name: 'Medical Conditions', type: 'multi-select', is_required: false, priority: 'high' },
-        { id: '8', name: 'Substance Abuse History', type: 'single-select', is_required: false, priority: 'high' },
-        { id: '9', name: 'Housing Priority', type: 'single-select', is_required: false, priority: 'medium' },
-        { id: '10', name: 'Veteran Status', type: 'single-select', is_required: false, priority: 'medium' },
-        { id: '11', name: 'Additional Information', type: 'text', is_required: false, priority: 'low' },
-      ];
+      throw error; // Don't fallback to mock data - show real error
     }
   },
 
   // Export CSV
   exportCSV: async (): Promise<string> => {
     try {
-      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
-        console.log('Using mock CSV export');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return 'mock-csv-export-url';
-      }
+      // Always use real API - no mock data
 
       const result = await apiRequest('/api/export', {
         method: 'GET',
@@ -962,16 +896,7 @@ export const api = {
   // Legacy functions for backward compatibility
   uploadAudio: async (audioUri: string) => {
     try {
-      // Skip real API calls if disabled
-      if (!API_CONFIG.USE_REAL_API || API_CONFIG.DEMO.USE_MOCK_DATA) {
-        console.log('Using mock audio upload');
-        // Simulate upload delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return {
-          url: 'mock-audio-url',
-          error: null
-        };
-      }
+      // Always use real API - no mock data
 
       const token = await getAuthToken();
       const formData = new FormData();
@@ -1075,6 +1000,29 @@ export const api = {
       return searchResults;
     } catch (error) {
       console.error('❌ Get all individuals error:', error);
+      return [];
+    }
+  },
+
+  // Check for potential duplicates using sophisticated matching
+  checkDuplicates: async (data: Record<string, any>): Promise<Array<{id: string, name: string, confidence: number, data: any}>> => {
+    try {
+      console.log('🔍 API: Checking for duplicates with data:', data);
+      console.log('🔍 API: Making request to /api/individuals/check-duplicates');
+      
+      const result = await apiRequest('/api/individuals/check-duplicates', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      
+      console.log('🔍 API: Duplicate check result:', result);
+      console.log('🔍 API: Potential matches:', result.potential_matches);
+      console.log('🔍 API: Number of matches:', result.potential_matches?.length || 0);
+      
+      return result.potential_matches || [];
+    } catch (error) {
+      console.error('❌ API: Duplicate check error:', error);
+      console.error('❌ API: Error details:', error.message);
       return [];
     }
   },

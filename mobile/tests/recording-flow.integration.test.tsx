@@ -60,7 +60,7 @@ jest.mock('../services/api', () => ({
       missing_required: [],
       potential_matches: [
         {
-          id: "123",
+          id: "550e8400-e29b-41d4-a716-446655440007",
           confidence: 87,
           name: "John Smith"
         }
@@ -259,7 +259,7 @@ describe('Recording Flow Integration Test', () => {
       missing_required: [],
       potential_matches: [
         {
-          id: "123",
+          id: "550e8400-e29b-41d4-a716-446655440007",
           confidence: 96,
           name: "John Smith"
         }

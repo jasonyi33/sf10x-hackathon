@@ -7,7 +7,7 @@ function testApiIntegration() {
 
   // Test configuration
   const config = {
-    baseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://10.19.123.174:8001',
+    baseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://10.18.111.71:8001',
     useRealApi: process.env.EXPO_PUBLIC_USE_REAL_API !== 'false',
     demoMode: true
   };

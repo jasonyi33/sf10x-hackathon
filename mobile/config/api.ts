@@ -28,11 +28,8 @@ export const API_CONFIG = {
     return process.env.EXPO_PUBLIC_API_BASE_URL || options[mode as keyof typeof options] || options.LOCAL;
   })(),
 
-  // Enable real API calls (automatically disabled in MOCK mode)
-  USE_REAL_API: (() => {
-    const mode = process.env.EXPO_PUBLIC_DEMO_MODE || 'RAILWAY';
-    return mode !== 'MOCK';
-  })(),
+  // Enable real API calls (always use real API, never mock)
+  USE_REAL_API: true,
 
   // Supabase Configuration (for direct frontend access if needed)
   SUPABASE: {
@@ -57,11 +54,8 @@ export const API_CONFIG = {
   
   // Demo configuration
   DEMO: {
-    // Use mock data for demo (automatically set based on demo mode)
-    USE_MOCK_DATA: (() => {
-      const mode = process.env.EXPO_PUBLIC_DEMO_MODE || 'RAILWAY';
-      return mode === 'MOCK';
-    })(),
+    // Never use mock data - always use real API
+    USE_MOCK_DATA: false,
 
     // Mock response delays (ms)
     MOCK_DELAY: 1000,

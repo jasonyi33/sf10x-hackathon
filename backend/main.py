@@ -331,7 +331,7 @@ from api import categories, transcription, individuals, export, embeddings, voic
 # Register routers
 app.include_router(categories.router)
 app.include_router(transcription.router)
-app.include_router(individuals.router)
+app.include_router(individuals.router, prefix="/api/individuals", tags=["individuals"])
 app.include_router(export.router)
 app.include_router(embeddings.router)
 app.include_router(voice_assistant.router)

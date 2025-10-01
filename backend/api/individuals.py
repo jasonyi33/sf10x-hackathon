@@ -3,6 +3,7 @@ Individual management API endpoints
 """
 import os
 from fastapi import APIRouter, HTTPException, Depends, status, Query, BackgroundTasks
+from fastapi.responses import JSONResponse
 from uuid import UUID
 from typing import Optional
 from datetime import datetime, timezone
@@ -389,4 +390,41 @@ async def get_interactions(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get interactions: {str(e)}"
+        )
+
+
+@router.post("/check-duplicates")
+async def check_duplicates(
+    data: dict,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Check for potential duplicate individuals using sophisticated matching
+    
+    This endpoint uses the same duplicate detection logic as the transcription API
+    but works with manually entered data.
+    """
+    try:
+        # Get Supabase client
+        supabase = get_supabase_client()
+        
+        # Initialize duplicate detection service
+        from services.duplicate_detection_service import DuplicateDetectionService
+        from services.openai_service import OpenAIService
+        
+        openai_service = OpenAIService()
+        duplicate_service = DuplicateDetectionService(supabase, openai_service)
+        
+        # Find potential duplicates using the same logic as transcription
+        potential_matches = await duplicate_service.find_duplicates(data)
+        
+        return JSONResponse(content={
+            "potential_matches": potential_matches
+        })
+        
+    except Exception as e:
+        print(f"Duplicate detection error: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Duplicate detection failed: {str(e)}"}
         )

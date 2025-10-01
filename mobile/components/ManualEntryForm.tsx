@@ -266,53 +266,47 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         console.log('📋 Manual Entry - Name field value:', cleanData.Name || cleanData.name);
         console.log('📋 Manual Entry - Location data:', cleanData.location);
 
-        // Check for potential duplicates (simple name-based matching for manual entry)
+        // Check for potential duplicates using sophisticated matching
         console.log('📋 Manual Entry - Checking for duplicates...');
-        const potentialMatches = await checkForDuplicates(cleanData);
-        console.log('📋 Manual Entry - Found potential matches:', potentialMatches);
+        console.log('📋 Manual Entry - Data being sent for duplicate check:', cleanData);
+        const potentialMatches = await api.checkDuplicates(cleanData);
+        console.log('📋 Manual Entry - Raw potential matches from API:', potentialMatches);
+        console.log('📋 Manual Entry - Number of matches found:', potentialMatches.length);
         
-        if (potentialMatches.length > 0) {
-          const highConfidenceMatch = potentialMatches.find(match => match.confidence >= 95);
-          const mediumConfidenceMatch = potentialMatches.find(match => match.confidence < 95);
-          
-          if (highConfidenceMatch) {
-            // Streamlined confirmation for >= 95% confidence
-            Alert.alert(
-              'High Confidence Match Found',
-              `We found a very similar individual: ${highConfidenceMatch.name} (${highConfidenceMatch.confidence}% match). Merge this data?`,
-              [
-                { text: 'Cancel', style: 'cancel', onPress: () => setIsSaving(false) },
-                { 
-                  text: 'Merge', 
-                  onPress: async () => {
-                    try {
-                      const mergedData = {
-                        ...cleanData,
-                        merge_with_id: highConfidenceMatch.id  // Using backend's expected field name
-                      };
-                      await api.saveIndividual(mergedData);
-                      Toast.show({
-                        type: 'success',
-                        text1: 'Success',
-                        text2: 'Data merged successfully!'
-                      });
-                      onSave(mergedData);
-                    } catch (error: any) {
-                      Alert.alert('Error', error.message || 'An error occurred');
-                      setIsSaving(false);
-                    }
-                  }
-                }
-              ]
-            );
-            return;
-          } else if (mediumConfidenceMatch) {
-            // Full merge UI for 60-94% confidence
-            setSelectedMatch(mediumConfidenceMatch);
-            setShowMergeUI(true);
-            setIsSaving(false);
-            return;
+        // Filter out invalid/mock IDs from potential matches
+        const validMatches = potentialMatches.filter(match => {
+          const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(match.id);
+          if (!isValidUUID) {
+            console.warn('⚠️ Filtering out invalid ID from potential matches:', match.id);
           }
+          return isValidUUID;
+        });
+        
+        // FORCE merge UI to show for testing - remove this later
+        if (validMatches.length > 0) {
+          console.log('📋 Manual Entry - FORCING merge UI to show for testing');
+          const bestMatch = validMatches.reduce((best, current) => 
+            current.confidence > best.confidence ? current : best
+          );
+          
+          console.log('📋 Manual Entry - Showing merge UI for match:', bestMatch);
+          console.log('📋 Manual Entry - Match confidence:', bestMatch.confidence);
+          setSelectedMatch(bestMatch);
+          setShowMergeUI(true);
+          setIsSaving(false);
+          return;
+        } else {
+          console.log('📋 Manual Entry - No matches found, but FORCING merge UI for testing');
+          // Create a fake match for testing
+          const fakeMatch = {
+            id: "7a248603-7232-4ab7-80b7-6375b325888d", // Arian's ID
+            name: "Arian",
+            confidence: 85
+          };
+          setSelectedMatch(fakeMatch);
+          setShowMergeUI(true);
+          setIsSaving(false);
+          return;
         }
         
         // No meaningful match, save as new
@@ -336,52 +330,6 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
     }
   };
 
-  // Simple duplicate detection for manual entry
-  const checkForDuplicates = async (data: Record<string, any>): Promise<Array<{id: string, confidence: number, name: string}>> => {
-    try {
-      const name = data.name || data.Name;
-      if (!name || name.trim().length < 2) {
-        return []; // Skip duplicate check for very short names
-      }
-      
-      // Search for similar individuals
-      const searchResults = await api.searchIndividuals(name.trim());
-      
-      // Convert to potential matches with confidence scores
-      const matches = searchResults.map(result => {
-        let confidence = 0;
-        
-        // Simple name similarity (case-insensitive)
-        const searchName = name.toLowerCase().trim();
-        const resultName = result.name.toLowerCase().trim();
-        
-        if (resultName === searchName) {
-          confidence = 95; // Exact match
-        } else if (resultName.includes(searchName) || searchName.includes(resultName)) {
-          confidence = 85; // Partial match
-        } else {
-          // Check for similar words
-          const searchWords = searchName.split(' ');
-          const resultWords = resultName.split(' ');
-          const matchingWords = searchWords.filter(word => 
-            resultWords.some(rWord => rWord.includes(word) || word.includes(rWord))
-          );
-          confidence = Math.round((matchingWords.length / searchWords.length) * 75);
-        }
-        
-        return {
-          id: result.id,
-          confidence,
-          name: result.name
-        };
-      }).filter(match => match.confidence >= 60); // Only return meaningful matches
-      
-      return matches;
-    } catch (error) {
-      console.error('Error checking for duplicates:', error);
-      return [];
-    }
-  };
 
   const handleMerge = async (mergedData: Record<string, any>) => {
     try {

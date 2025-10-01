@@ -385,12 +385,8 @@ class IndividualService:
             .eq("id", str(individual_id)) \
             .single()
         
-        # Handle both real and mock responses
-        if hasattr(individual_query, 'execute'):
-            individual_response = individual_query.execute()
-        else:
-            # Mock response - single() already returns MockResponse
-            individual_response = individual_query
+        # Execute the query
+        individual_response = individual_query.execute()
         
         if not individual_response.data:
             return None
@@ -411,12 +407,8 @@ class IndividualService:
             .order("created_at", desc=True) \
             .limit(10)
         
-        # Handle both real and mock responses
-        if hasattr(interactions_query, 'execute'):
-            interactions_response = interactions_query.execute()
-        else:
-            # Mock response - already returns MockResponse
-            interactions_response = interactions_query
+        # Execute the query
+        interactions_response = interactions_query.execute()
         
         # Format response
         individual_resp = IndividualResponse(
@@ -461,12 +453,8 @@ class IndividualService:
             }) \
             .eq("id", str(individual_id))
         
-        # Handle both real and mock responses
-        if hasattr(update_query, 'execute'):
-            update_response = update_query.execute()
-        else:
-            # Mock response - update() already returns MockResponse
-            update_response = update_query
+        # Execute the query
+        update_response = update_query.execute()
         
         if not update_response.data:
             raise ValueError(f"Individual not found: {individual_id}")

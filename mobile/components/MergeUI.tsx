@@ -25,6 +25,22 @@ export const MergeUI: React.FC<MergeUIProps> = ({
   onCreateNew,
   onCancel,
 }) => {
+  // Validate that potentialMatch has a valid UUID
+  const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(potentialMatch.id);
+  
+  if (!isValidUUID) {
+    console.error('❌ MergeUI received invalid ID:', potentialMatch.id);
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>
+          Invalid merge target. Please try again.
+        </Text>
+        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+          <Text style={styles.cancelButtonText}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
   const [fetchedExistingData, setFetchedExistingData] = useState<Record<string, any>>(existingData);
   const [isLoadingExistingData, setIsLoadingExistingData] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -76,16 +92,15 @@ export const MergeUI: React.FC<MergeUIProps> = ({
     };
 
     fetchExistingData();
-  }, [potentialMatch.id, existingData]);
+  }, [potentialMatch.id]); // Remove existingData from dependencies to prevent infinite loops
 
   // Track if initial selection has been set
   const [selectedFields, setSelectedFields] = useState<Record<string, 'new' | 'existing'>>({});
   const isSelectionInitializedRef = useRef(false);
 
-  // Initialize field selection only once when data is loaded
-  useEffect(() => {
-    // Only initialize once when we have data to work with
-    if (!isSelectionInitializedRef.current && !isLoadingExistingData) {
+  // Memoize the initial field selection to prevent infinite loops
+  const initialFieldSelection = useMemo(() => {
+    if (!isLoadingExistingData) {
       const selection: Record<string, 'new' | 'existing'> = {};
 
       // Get all fields from both new and existing data
@@ -102,13 +117,24 @@ export const MergeUI: React.FC<MergeUIProps> = ({
         }
       });
 
-      // Only update state if we have fields to select
-      if (Object.keys(selection).length > 0) {
-        setSelectedFields(selection);
-        isSelectionInitializedRef.current = true;
-      }
+      return selection;
     }
+    return {};
   }, [newData, fetchedExistingData, isLoadingExistingData]);
+
+  // Initialize field selection only once when data is loaded
+  useEffect(() => {
+    // Only initialize once when we have data to work with
+    if (!isSelectionInitializedRef.current && Object.keys(initialFieldSelection).length > 0) {
+      setSelectedFields(initialFieldSelection);
+      isSelectionInitializedRef.current = true;
+    }
+  }, [initialFieldSelection]);
+
+  // Reset the initialization flag when the potential match changes
+  useEffect(() => {
+    isSelectionInitializedRef.current = false;
+  }, [potentialMatch.id]);
 
   const handleFieldSelection = (fieldName: string, source: 'new' | 'existing') => {
     setSelectedFields(prev => ({
@@ -130,9 +156,23 @@ export const MergeUI: React.FC<MergeUIProps> = ({
       }
     });
 
+    // Fallback: if no fields were selected, use all new data
+    if (Object.keys(mergedData).length === 0 && Object.keys(newData).length > 0) {
+      console.warn('⚠️ No fields selected, using all new data as fallback');
+      Object.assign(mergedData, newData);
+    }
+
+    // Ensure we have the merge ID
+    if (!potentialMatch.id || potentialMatch.id === 'mock-123') {
+      console.error('❌ Invalid merge ID:', potentialMatch.id);
+      Alert.alert('Error', 'Invalid merge target. Please try again.');
+      return;
+    }
+
     // Add the existing individual's ID for merging (using backend's expected field name)
     mergedData.merge_with_id = potentialMatch.id;
     
+    console.log('🔄 Merging data:', mergedData);
     onMerge(mergedData);
   };
 
@@ -296,6 +336,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#dc3545',
+    textAlign: 'center',
+    padding: 20,
   },
   header: {
     padding: 20,

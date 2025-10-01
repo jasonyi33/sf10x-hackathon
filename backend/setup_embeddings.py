@@ -20,56 +20,9 @@ def get_supabase_client() -> Client:
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_SERVICE_KEY")
     
-    # For demo/hackathon, use mock client if credentials are mock
-    if url == "mock" or key == "mock" or not url or not key:
-        print("Using mock Supabase client for demo")
-        # Return a mock client that returns demo data
-        class MockSupabaseClient:
-            def table(self, name):
-                return MockTable(name)
-        
-        class MockTable:
-            def __init__(self, table_name):
-                self.table_name = table_name
-                self.mock_data = self._get_mock_data()
-            
-            def _get_mock_data(self):
-                if self.table_name == "individuals":
-                    return [
-                        {
-                            "id": "550e8400-e29b-41d4-a716-446655440001",
-                            "name": "John Doe",
-                            "urgency_score": 75,
-                            "urgency_override": None,
-                            "data": {"age": 45, "height": 72, "weight": 180},
-                            "created_at": "2024-01-15T10:30:00Z",
-                            "updated_at": "2024-01-15T10:30:00Z"
-                        }
-                    ]
-                elif self.table_name == "individual_embeddings":
-                    return []
-                return []
-            
-            def select(self, *args):
-                return self
-            
-            def insert(self, data):
-                return self
-            
-            def update(self, data):
-                return self
-            
-            def eq(self, field, value):
-                return self
-            
-            def execute(self):
-                return MockResponse(self.mock_data)
-        
-        class MockResponse:
-            def __init__(self, data):
-                self.data = data
-        
-        return MockSupabaseClient()
+    # Ensure real Supabase credentials are provided
+    if not url or not key:
+        raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_KEY must be provided - no mock data allowed")
     
     return create_client(url, key)
 

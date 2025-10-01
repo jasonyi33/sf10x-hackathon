@@ -126,71 +126,63 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
     setIsSaving(true);
 
     try {
-      // Check for potential matches according to PRD specifications
-      const highConfidenceMatch = result.potential_matches?.find(match => match.confidence >= 95);
-      const mediumConfidenceMatch = result.potential_matches?.find(match => match.confidence < 95);
-      const lowConfidenceMatch = result.potential_matches?.find(match => match.confidence < 60);
+      // Filter out invalid/mock IDs from potential matches
+      const validMatches = result.potential_matches?.filter(match => {
+        const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(match.id);
+        if (!isValidUUID) {
+          console.warn('⚠️ Filtering out invalid ID from potential matches:', match.id);
+        }
+        return isValidUUID;
+      }) || [];
 
-      if (highConfidenceMatch) {
-        // Streamlined confirmation for >= 95% confidence
-        Alert.alert(
-          'High Confidence Match Found',
-          `We found a similar individual: ${highConfidenceMatch.name} (${highConfidenceMatch.confidence}% match). Merge this data?`,
-          [
-            { text: 'Cancel', style: 'cancel', onPress: () => setIsSaving(false) },
-            { 
-              text: 'Merge', 
-              onPress: async () => {
-                try {
-                  const mergedData = {
-                    ...categorizedData,
-                    merge_with_id: highConfidenceMatch.id,  // Using backend's expected field name
-                    ...(location && { location })
-                  };
-                  await api.saveIndividual(mergedData);
-                  Toast.show({
-                    type: 'success',
-                    text1: 'Success',
-                    text2: 'Data merged successfully!'
-                  });
-                  onSave(mergedData);
-                } catch (error: any) {
-                  Alert.alert('Error', error.message || 'An error occurred');
-                  setIsSaving(false);
-                }
-              }
-            }
-          ]
+      // FORCE merge UI to show for testing - remove this later
+      if (validMatches.length > 0) {
+        console.log('🎤 Voice Transcription - FORCING merge UI to show for testing');
+        const bestMatch = validMatches.reduce((best, current) => 
+          current.confidence > best.confidence ? current : best
         );
-        return;
-      } else if (mediumConfidenceMatch) {
-        // Full merge UI for 60-94% confidence
-        setSelectedMatch(mediumConfidenceMatch);
+        
+        console.log('🎤 Voice Transcription - Showing merge UI for match:', bestMatch);
+        console.log('🎤 Voice Transcription - Match confidence:', bestMatch.confidence);
+        setSelectedMatch(bestMatch);
         setShowMergeUI(true);
         setIsSaving(false);
         return;
       } else {
-        // No meaningful match (< 60% or no matches), save as new
-        const saveData: Record<string, any> = { 
-          ...categorizedData,
-          ...(location && { location })
+        console.log('🎤 Voice Transcription - No matches found, but FORCING merge UI for testing');
+        // Create a fake match for testing
+        const fakeMatch = {
+          id: "7a248603-7232-4ab7-80b7-6375b325888d", // Arian's ID
+          name: "Arian",
+          confidence: 85
         };
-        const heightKey = Object.keys(saveData).find(k => k.trim().toLowerCase() === 'height');
-        if (heightKey && saveData[heightKey]) {
-          // Only normalize if it's a string - if it's already a number, keep it as is
-          if (typeof saveData[heightKey] === 'string') {
-            const normalized = normalizeHeightToStandardString(saveData[heightKey]);
-            if (normalized) saveData[heightKey] = normalized;
-          }
-        }
-        await api.saveIndividual(saveData);
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'Data saved successfully!'
-        });
-        onSave(saveData);
+        setSelectedMatch(fakeMatch);
+        setShowMergeUI(true);
+        setIsSaving(false);
+        return;
       }
+      
+      // No meaningful match (< 60% or no matches), save as new
+      console.log('🎤 Voice Transcription - No matches found, saving as new individual');
+      const saveData: Record<string, any> = { 
+        ...categorizedData,
+        ...(location && { location })
+      };
+      const heightKey = Object.keys(saveData).find(k => k.trim().toLowerCase() === 'height');
+      if (heightKey && saveData[heightKey]) {
+        // Only normalize if it's a string - if it's already a number, keep it as is
+        if (typeof saveData[heightKey] === 'string') {
+          const normalized = normalizeHeightToStandardString(saveData[heightKey]);
+          if (normalized) saveData[heightKey] = normalized;
+        }
+      }
+      await api.saveIndividual(saveData);
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Data saved successfully!'
+      });
+      onSave(saveData);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'An error occurred');
     } finally {
@@ -349,6 +341,12 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
 
   // Show MergeUI if there's a low confidence match
   if (showMergeUI && selectedMatch) {
+    console.log('🔄 Opening MergeUI with:', {
+      newData: categorizedData,
+      selectedMatch: selectedMatch,
+      categorizedDataKeys: Object.keys(categorizedData)
+    });
+    
     return (
       <MergeUI
         newData={categorizedData}
@@ -428,13 +426,20 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
       </View>
 
       {/* Potential Matches */}
-      {result.potential_matches && result.potential_matches.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Potential Matches</Text>
-          <Text style={styles.sectionSubtitle}>
-            We found similar individuals in our database
-          </Text>
-          {result.potential_matches.map((match, index) => (
+      {(() => {
+        // Filter out invalid/mock IDs for display
+        const validMatches = result.potential_matches?.filter(match => {
+          const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(match.id);
+          return isValidUUID;
+        }) || [];
+
+        return validMatches.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Potential Matches</Text>
+            <Text style={styles.sectionSubtitle}>
+              We found similar individuals in our database
+            </Text>
+            {validMatches.map((match, index) => (
             <View key={index} style={[
               styles.matchContainer,
               match.confidence >= 95 && styles.highConfidenceMatch,
@@ -456,7 +461,8 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
             </View>
           ))}
         </View>
-      )}
+        ) : null;
+      })()}
 
       {/* Action Buttons */}
       <View style={styles.buttonContainer}>
