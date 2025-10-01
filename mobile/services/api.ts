@@ -1004,17 +1004,21 @@ export const api = {
   // Check for potential duplicates using sophisticated matching
   checkDuplicates: async (data: Record<string, any>): Promise<Array<{id: string, name: string, confidence: number, data: any}>> => {
     try {
-      console.log('🔍 Checking for duplicates...');
+      console.log('🔍 API: Checking for duplicates with data:', data);
+      console.log('🔍 API: Making POST request to /api/individuals/check-duplicates');
+      
       const result = await apiRequest('/api/individuals/check-duplicates', {
         method: 'POST',
         body: JSON.stringify(data),
       });
       
+      console.log('🔍 API: Raw response from backend:', result);
       const matches = result.potential_matches || [];
-      console.log('🔍 Found', matches.length, 'potential matches');
+      console.log('🔍 API: Found', matches.length, 'potential matches:', matches);
       return matches;
     } catch (error) {
-      console.error('❌ Duplicate check error:', error);
+      console.error('❌ API: Duplicate check error:', error);
+      console.error('❌ API: Error details:', error.message);
       return [];
     }
   },

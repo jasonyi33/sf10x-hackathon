@@ -297,6 +297,18 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           return;
         } else {
           console.log('📋 Manual Entry - No valid matches found, proceeding to save as new');
+          
+          // TEMPORARY: Force merge UI to always show for debugging
+          console.log('📋 Manual Entry - DEBUGGING: Forcing merge UI to show');
+          const debugMatch = {
+            id: "7a248603-7232-4ab7-80b7-6375b325888d", // John's ID
+            name: "John",
+            confidence: 85
+          };
+          setSelectedMatch(debugMatch);
+          setShowMergeUI(true);
+          setIsSaving(false);
+          return;
         }
         
         // No meaningful match, save as new
