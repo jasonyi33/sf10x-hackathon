@@ -14,6 +14,11 @@ from urllib.parse import urlparse
 class OpenAIService:
     def __init__(self):
         self.client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self._api_key = os.getenv("OPENAI_API_KEY")
+
+    def _recreate_client(self):
+        """Recreate the OpenAI client to handle session expiration"""
+        self.client = AsyncOpenAI(api_key=self._api_key)
         
     async def transcribe_audio(self, audio_url: str) -> str:
         """
@@ -73,13 +78,13 @@ class OpenAIService:
                 
             # Note: Duration validation would happen on frontend
             # Backend accepts whatever audio Whisper can process
-            # Frontend enforces 10-second minimum and 2-minute maximum
+            # Frontend enforces 5-second minimum and 2-minute maximum
             
             return transcript.strip()
             
         except Exception as e:
             if "Audio file is too short" in str(e):
-                raise ValueError("Audio must be at least 10 seconds long")
+                raise ValueError("Audio must be at least 5 seconds long")
             elif "Audio file is too long" in str(e):
                 raise ValueError("Audio must be less than 2 minutes")
             raise
@@ -127,7 +132,7 @@ class OpenAIService:
             
         except Exception as e:
             if "Audio file is too short" in str(e):
-                raise ValueError("Audio must be at least 10 seconds long")
+                raise ValueError("Audio must be at least 5 seconds long")
             elif "Audio file is too long" in str(e):
                 raise ValueError("Audio must be less than 2 minutes")
             raise
@@ -362,3 +367,104 @@ Return only a number 0-100."""
         
         # Only return matches with meaningful confidence (>30%)
         return [m for m in matches if m['confidence'] > 30]
+
+    async def compare_individuals(self, comparison_prompt: str) -> Dict[str, int]:
+        """
+        Compare individuals using a custom prompt and return confidence scores
+
+        Args:
+            comparison_prompt: Formatted prompt for GPT-4o comparison
+
+        Returns:
+            Dictionary mapping individual IDs to confidence scores (0-100)
+            Example: {"id1": 95, "id2": 73, "id3": 45}
+        """
+        try:
+            # Call GPT-4o with the comparison prompt
+            response = await self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a data comparison assistant. Compare individuals and return JSON with confidence scores."
+                    },
+                    {"role": "user", "content": comparison_prompt}
+                ],
+                temperature=0.3,  # Lower temperature for consistent scoring
+                response_format={"type": "json_object"}  # Force JSON response
+            )
+
+            # Parse JSON response
+            result = response.choices[0].message.content
+
+            # Try to parse as JSON
+            try:
+                confidence_scores = json.loads(result)
+
+                # Ensure all values are integers between 0-100
+                cleaned_scores = {}
+                for id_key, score in confidence_scores.items():
+                    try:
+                        # Convert to int and clamp to 0-100 range
+                        score_int = int(score)
+                        score_int = min(max(score_int, 0), 100)
+                        cleaned_scores[id_key] = score_int
+                    except (ValueError, TypeError):
+                        # Skip invalid scores
+                        continue
+
+                return cleaned_scores
+
+            except json.JSONDecodeError:
+                # If JSON parsing fails, try to extract scores manually
+                # This is a fallback for when GPT doesn't return proper JSON
+                scores = {}
+
+                # Look for patterns like "id1": 85 or "uuid": 90
+                import re
+                pattern = r'"([^"]+)":\s*(\d+)'
+                matches = re.findall(pattern, result)
+
+                for id_str, score_str in matches:
+                    try:
+                        score = int(score_str)
+                        score = min(max(score, 0), 100)
+                        scores[id_str] = score
+                    except ValueError:
+                        continue
+
+                return scores
+
+        except Exception as e:
+            # Check for session expiration error
+            if "session" in str(e).lower() and "expired" in str(e).lower():
+                print("OpenAI session expired, recreating client...")
+                self._recreate_client()
+                # Try once more with new client
+                try:
+                    response = await self.client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are a data comparison assistant. Compare individuals and return JSON with confidence scores."
+                            },
+                            {"role": "user", "content": comparison_prompt}
+                        ],
+                        temperature=0.3,
+                        response_format={"type": "json_object"}
+                    )
+                    result = response.choices[0].message.content
+                    scores = json.loads(result) if isinstance(result, str) else result
+                    validated_scores = {}
+                    for key, value in scores.items():
+                        if isinstance(value, (int, float)):
+                            validated_scores[key] = int(value)
+                    return validated_scores
+                except Exception as retry_error:
+                    print(f"Retry after session recreation failed: {str(retry_error)}")
+                    return {}
+
+            print(f"Error in compare_individuals: {str(e)}")
+            # Return empty scores on error
+            return {}

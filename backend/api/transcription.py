@@ -113,22 +113,21 @@ async def transcribe_audio_endpoint(
         if validation_result.validation_errors:
             print(f"Validation errors: {validation_result.validation_errors}")
         
-        # 5. Find potential duplicates (simplified for testing)
+        # 5. Find potential duplicates using real database search and LLM comparison
         potential_matches = []
-        
-        # Only search if we have a name (check both capitalized and lowercase)
-        name = categorized_data.get("Name") or categorized_data.get("name")
-        if name:
-            
-            # Simple mock duplicate detection for testing
-            if name.lower() in ["john", "jane", "mike"]:
-                potential_matches = [
-                    {
-                        "id": "mock-123",
-                        "name": name,
-                        "confidence": 85
-                    }
-                ]
+
+        # Import and initialize duplicate detection service
+        from services.duplicate_detection_service import DuplicateDetectionService
+
+        duplicate_service = DuplicateDetectionService(supabase, openai_service)
+
+        # Find potential duplicates
+        try:
+            potential_matches = await duplicate_service.find_duplicates(categorized_data)
+        except Exception as e:
+            # Log error but don't fail the request
+            print(f"Duplicate detection error: {str(e)}")
+            potential_matches = []
         
         # 6. Return complete results
         return TranscribeResponse(

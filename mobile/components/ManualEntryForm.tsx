@@ -286,9 +286,9 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
                   text: 'Merge', 
                   onPress: async () => {
                     try {
-                      const mergedData = { 
-                        ...cleanData, 
-                        existing_individual_id: highConfidenceMatch.id 
+                      const mergedData = {
+                        ...cleanData,
+                        merge_with_id: highConfidenceMatch.id  // Using backend's expected field name
                       };
                       await api.saveIndividual(mergedData);
                       Toast.show({

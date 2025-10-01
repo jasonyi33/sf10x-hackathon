@@ -3,14 +3,6 @@ import { API_CONFIG, getApiUrl } from '../config/api';
 import { ErrorHandler } from '../utils/errorHandler';
 import { SearchResult, IndividualProfile } from '../types';
 
-// Generate a proper UUID v4 format
-const generateUUID = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-};
 
 // Helper function to get auth token
 const getAuthToken = async () => {
@@ -18,11 +10,12 @@ const getAuthToken = async () => {
   return session?.access_token;
 };
 
-// Generic API request function
+// Generic API request function with retry logic
 const apiRequest = async (
   endpoint: string,
-  options: RequestInit = {}
-) => {
+  options: RequestInit = {},
+  retries: number = 1
+): Promise<any> => {
   // Skip real API calls if disabled
   if (!API_CONFIG.USE_REAL_API) {
     const error = ErrorHandler.handleApiError(new Error('Real API disabled for demo'));
@@ -30,8 +23,9 @@ const apiRequest = async (
     throw error;
   }
 
+  // Get fresh token for each attempt
   const token = await getAuthToken();
-  
+
   const config: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
@@ -45,19 +39,38 @@ const apiRequest = async (
     const fullUrl = getApiUrl(endpoint);
     console.log(`Making API request to: ${fullUrl}`);
     const response = await fetch(fullUrl, config);
-    
+
     if (!response.ok) {
+      // If we get 401/403 and have retries left, refresh token and retry
+      if ((response.status === 401 || response.status === 403) && retries > 0) {
+        console.log('Auth error, refreshing session and retrying...');
+        // Force refresh session
+        const { data: { session }, error } = await supabase.auth.refreshSession();
+        if (!error && session) {
+          // Retry with fresh token
+          return apiRequest(endpoint, options, retries - 1);
+        }
+      }
+
       const errorText = await response.text();
       console.error(`API Error ${response.status}:`, errorText);
       const error = ErrorHandler.handleApiError(new Error(`API request failed: ${response.status} ${response.statusText}`));
       ErrorHandler.showError(error);
       throw error;
     }
-    
+
     const result = await response.json();
     console.log(`API response from ${endpoint}:`, result);
     return result;
-  } catch (error) {
+  } catch (error: any) {
+    // Retry on network failures if we have retries left
+    if (error.message?.includes('Network request failed') && retries > 0) {
+      console.log('Network error, retrying...');
+      // Wait a bit before retry
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return apiRequest(endpoint, options, retries - 1);
+    }
+
     const appError = ErrorHandler.handleError(error, `API Request to ${endpoint}`);
     ErrorHandler.showError(appError);
     throw appError;
@@ -506,9 +519,9 @@ const mockTranscription = (audioUrl: string): TranscriptionResult => {
     missing_required: ["height", "weight"],
     potential_matches: confidence > 0 ? [
       {
-        id: "123",
+        id: "550e8400-e29b-41d4-a716-446655440007", // Use a real UUID from demo data (John Doe)
         confidence: confidence,
-        name: "John Smith"
+        name: "John Doe"
       }
     ] : []
   };
@@ -556,60 +569,85 @@ export const api = {
   // Save individual (create new or update existing)
   saveIndividual: async (data: any) => {
     try {
-      console.log('💾 Saving individual to database...');
+      console.log('💾 Saving individual via backend API...');
       console.log('Data to save:', data);
-      
-      // Extract categorized data (age, height, weight, etc.) from the data
-      const { Name, name, id, urgency_score, urgency_override, data: existingData, location, ...categorizedData } = data;
-      
-      // Convert categorized data field names to lowercase for profile display
-      const processedData: Record<string, any> = {};
-      Object.entries(categorizedData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined && value !== '') {
-          processedData[key.toLowerCase()] = value;
-        }
-      });
-      
-      console.log('📊 Processed categorized data:', processedData);
-      console.log('📍 Location data:', location);
-      
-      // Use direct Supabase insert for real database
-      const { data: result, error } = await supabase
-        .from('individuals')
-        .insert({
-          id: id || generateUUID(),
-          name: Name || name || 'Unknown Individual',
-          data: existingData || processedData || {},
-          urgency_score: urgency_score || 0,
-          urgency_override: urgency_override || null,
-          last_location: location || null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
 
-      if (error) {
-        console.error('❌ Save error:', error);
-        return {
-          id: 'error-' + Date.now(),
-          success: false,
-          message: 'Failed to save: ' + error.message
-        };
+      // Extract merge-related fields and location
+      const {
+        existing_individual_id,  // Old field name for backward compatibility
+        merge_with_id,            // New field name expected by backend
+        location,
+        transcription,
+        audio_url,
+        // These should not be in the categorized data
+        id,
+        urgency_score,
+        urgency_override,
+        data: existingData,
+        ...categorizedData
+      } = data;
+
+      // Determine the merge ID (support both field names)
+      const mergeId = merge_with_id || existing_individual_id || null;
+
+      // Build the request body according to backend expectations
+      const requestBody: any = {
+        data: categorizedData,  // All the categorized fields
+        ...(location && { location }),  // Add location if present
+        ...(transcription && { transcription }),  // Add transcription if present
+        ...(audio_url && { audio_url }),  // Add audio_url if present
+      };
+
+      // Add merge_with_id at root level if merging
+      if (mergeId) {
+        requestBody.merge_with_id = mergeId;
+        console.log('🔄 Merging with existing individual:', mergeId);
+      } else {
+        console.log('➕ Creating new individual');
       }
 
-      console.log('✅ Successfully saved individual:', result);
+      console.log('📤 Request body:', requestBody);
+
+      // Call the backend API endpoint
+      const response = await apiRequest('/api/individuals', {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('✅ Backend API response:', response);
+
+      // Extract the individual ID from the response
+      const individualId = response.individual?.id || response.id;
+
+      if (!individualId) {
+        throw new Error('No ID returned from backend');
+      }
+
       return {
-        id: result.id,
+        id: individualId,
         success: true,
-        message: 'Data saved successfully to database'
+        message: mergeId
+          ? 'Individual data merged successfully'
+          : 'New individual saved successfully',
+        data: response.individual
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Save individual error:', error);
+
+      // Extract error message from backend response if available
+      let errorMessage = 'Failed to save individual';
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.detail) {
+        errorMessage = error.detail;
+      }
+
       return {
         id: 'error-' + Date.now(),
         success: false,
-        message: 'Save failed: ' + error
+        message: errorMessage
       };
     }
   },

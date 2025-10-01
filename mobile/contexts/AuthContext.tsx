@@ -29,21 +29,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let initialized = false;
+
     // Auto-login on app launch
     handleAutoLogin();
 
-    // Listen for auth changes
+    // Listen for auth changes but filter out excessive TOKEN_REFRESHED events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+        // Only log significant events, not every token refresh
+        if (event !== 'TOKEN_REFRESHED') {
+          console.log('Auth state changed:', event, session?.user?.email);
+        }
+
+        // Only update state if session actually changed
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'INITIAL_SESSION') {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+          if (!initialized) {
+            initialized = true;
+          }
+        } else if (event === 'TOKEN_REFRESHED' && session) {
+          // Only update session if it's different
+          setSession(prev => {
+            // Check if the session actually changed
+            if (prev?.access_token !== session.access_token) {
+              return session;
+            }
+            return prev;
+          });
+        }
       }
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, []); // Empty dependency array - only run once on mount
 
   const handleAutoLogin = async () => {
     try {

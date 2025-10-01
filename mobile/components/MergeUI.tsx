@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { api } from '../services/api';
 
@@ -28,15 +28,30 @@ export const MergeUI: React.FC<MergeUIProps> = ({
   const [fetchedExistingData, setFetchedExistingData] = useState<Record<string, any>>(existingData);
   const [isLoadingExistingData, setIsLoadingExistingData] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const lastFetchedIdRef = useRef<string | null>(null);
 
   // Fetch existing individual data if not provided
   useEffect(() => {
     const fetchExistingData = async () => {
       // Only fetch if no existing data provided and we have a potential match ID
-      if (Object.keys(existingData).length === 0 && potentialMatch.id) {
+      // And we haven't already fetched for this specific ID
+      if (Object.keys(existingData).length === 0 && potentialMatch.id && lastFetchedIdRef.current !== potentialMatch.id) {
+        lastFetchedIdRef.current = potentialMatch.id;
+
+        // Skip fetching if the ID looks like a mock ID (not a valid UUID)
+        const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(potentialMatch.id);
+
+        if (!isValidUUID) {
+          console.warn('⚠️ Skipping fetch for non-UUID ID:', potentialMatch.id);
+          // Only update if not already empty to avoid infinite re-renders
+          setFetchedExistingData(prev => Object.keys(prev).length === 0 ? prev : {});
+          setIsLoadingExistingData(false);
+          return;
+        }
+
         setIsLoadingExistingData(true);
         setLoadError(null);
-        
+
         try {
           console.log('🔍 Fetching existing individual data for merge comparison:', potentialMatch.id);
           const profile = await api.getIndividualProfile(potentialMatch.id);
@@ -63,28 +78,37 @@ export const MergeUI: React.FC<MergeUIProps> = ({
     fetchExistingData();
   }, [potentialMatch.id, existingData]);
 
-  // Use fetched data instead of props
-  const currentExistingData = fetchedExistingData;
-  // Initialize field selection - prefer new data for most fields
-  const initialSelection = useMemo(() => {
-    const selection: Record<string, 'new' | 'existing'> = {};
-    const allFields = new Set([...Object.keys(newData), ...Object.keys(currentExistingData)]);
-    
-    allFields.forEach(field => {
-      // Prefer new data if it exists, otherwise use existing
-      if (newData[field] !== undefined && newData[field] !== null && newData[field] !== '') {
-        selection[field] = 'new';
-      } else if (currentExistingData[field] !== undefined && currentExistingData[field] !== null && currentExistingData[field] !== '') {
-        selection[field] = 'existing';
-      } else {
-        selection[field] = 'new'; // Default to new
-      }
-    });
-    
-    return selection;
-  }, [newData, currentExistingData]);
+  // Track if initial selection has been set
+  const [selectedFields, setSelectedFields] = useState<Record<string, 'new' | 'existing'>>({});
+  const isSelectionInitializedRef = useRef(false);
 
-  const [selectedFields, setSelectedFields] = useState<Record<string, 'new' | 'existing'>>(initialSelection);
+  // Initialize field selection only once when data is loaded
+  useEffect(() => {
+    // Only initialize once when we have data to work with
+    if (!isSelectionInitializedRef.current && !isLoadingExistingData) {
+      const selection: Record<string, 'new' | 'existing'> = {};
+
+      // Get all fields from both new and existing data
+      const allFields = new Set([...Object.keys(newData), ...Object.keys(fetchedExistingData)]);
+
+      allFields.forEach(field => {
+        // Prefer new data if it exists, otherwise use existing
+        if (newData[field] !== undefined && newData[field] !== null && newData[field] !== '') {
+          selection[field] = 'new';
+        } else if (fetchedExistingData[field] !== undefined && fetchedExistingData[field] !== null && fetchedExistingData[field] !== '') {
+          selection[field] = 'existing';
+        } else {
+          selection[field] = 'new'; // Default to new
+        }
+      });
+
+      // Only update state if we have fields to select
+      if (Object.keys(selection).length > 0) {
+        setSelectedFields(selection);
+        isSelectionInitializedRef.current = true;
+      }
+    }
+  }, [newData, fetchedExistingData, isLoadingExistingData]);
 
   const handleFieldSelection = (fieldName: string, source: 'new' | 'existing') => {
     setSelectedFields(prev => ({
@@ -102,12 +126,12 @@ export const MergeUI: React.FC<MergeUIProps> = ({
       if (source === 'new') {
         mergedData[field] = newData[field];
       } else if (source === 'existing') {
-        mergedData[field] = currentExistingData[field];
+        mergedData[field] = fetchedExistingData[field];
       }
     });
 
-    // Add the existing individual's ID for merging
-    mergedData.existing_individual_id = potentialMatch.id;
+    // Add the existing individual's ID for merging (using backend's expected field name)
+    mergedData.merge_with_id = potentialMatch.id;
     
     onMerge(mergedData);
   };
@@ -117,7 +141,7 @@ export const MergeUI: React.FC<MergeUIProps> = ({
   };
 
   const getFieldValue = (fieldName: string, source: 'new' | 'existing') => {
-    const data = source === 'new' ? newData : currentExistingData;
+    const data = source === 'new' ? newData : fetchedExistingData;
     const value = data[fieldName];
     
     if (value === undefined || value === null || value === '') {
@@ -138,7 +162,7 @@ export const MergeUI: React.FC<MergeUIProps> = ({
     const existingValue = getFieldValue(fieldName, 'existing');
     const selectedSource = selectedFields[fieldName];
     const hasNewData = newData[fieldName] !== undefined && newData[fieldName] !== null && newData[fieldName] !== '';
-    const hasExistingData = currentExistingData[fieldName] !== undefined && currentExistingData[fieldName] !== null && currentExistingData[fieldName] !== '';
+    const hasExistingData = fetchedExistingData[fieldName] !== undefined && fetchedExistingData[fieldName] !== null && fetchedExistingData[fieldName] !== '';
 
     return (
       <View key={fieldName} style={styles.fieldRow}>
@@ -191,7 +215,10 @@ export const MergeUI: React.FC<MergeUIProps> = ({
     );
   };
 
-  const allFields = Array.from(new Set([...Object.keys(newData), ...Object.keys(currentExistingData)]));
+  const allFields = useMemo(
+    () => Array.from(new Set([...Object.keys(newData), ...Object.keys(fetchedExistingData)])),
+    [newData, fetchedExistingData]
+  );
 
   // Show loading state while fetching existing data
   if (isLoadingExistingData) {

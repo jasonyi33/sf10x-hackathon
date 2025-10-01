@@ -309,17 +309,17 @@ describe('Recording Flow Integration Test', () => {
       expect(getByText('⏹️ Stop')).toBeTruthy();
     });
 
-    // Stop button should be disabled initially (before 10 seconds)
+    // Stop button should be disabled initially (before 5 seconds)
     const stopButton = getByText('⏹️ Stop');
     expect(stopButton.props.disabled).toBe(true);
 
-    // Simulate recording for 15 seconds
+    // Simulate recording for 7 seconds
     await act(async () => {
       // Fast-forward time to simulate recording duration
-      jest.advanceTimersByTime(15000);
+      jest.advanceTimersByTime(7000);
     });
 
-    // Stop button should be enabled after 10 seconds
+    // Stop button should be enabled after 5 seconds
     expect(stopButton.props.disabled).toBe(false);
   });
 

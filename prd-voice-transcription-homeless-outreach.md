@@ -3,7 +3,7 @@
 
 ## Introduction/Overview
 
-This product is a mobile voice transcription application designed for San Francisco homeless street workers to efficiently document their inmteractions with individuals experiencing homelessness. The app allows workers to speak their observations, which are then transcribed and automatically categorized by an AI system into a structured database. Workers can also manually enter data without voice recording. This solution replaces the current time-consuming process of manual data entry after field rounds, saving hours of work daily while improving data quality and accessibility.
+This product is a mobile voice transcription application designed for San Francisco homeless street workers to efficiently document their interactions with individuals experiencing homelessness. The app allows workers to speak their observations, which are then transcribed and automatically categorized by an AI system into a structured database. Workers can also manually enter data without voice recording. This solution replaces the current time-consuming process of manual data entry after field rounds, saving hours of work daily while improving data quality and accessibility.
 
 **Implementation Status**: Backend infrastructure (Task 1.0) and AI integration (Task 2.0) are complete. Individual management APIs are being implemented to support frontend development.
 

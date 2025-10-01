@@ -142,9 +142,9 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
               text: 'Merge', 
               onPress: async () => {
                 try {
-                  const mergedData = { 
-                    ...categorizedData, 
-                    existing_individual_id: highConfidenceMatch.id,
+                  const mergedData = {
+                    ...categorizedData,
+                    merge_with_id: highConfidenceMatch.id,  // Using backend's expected field name
                     ...(location && { location })
                   };
                   await api.saveIndividual(mergedData);

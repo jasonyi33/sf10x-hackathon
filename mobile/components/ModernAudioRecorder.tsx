@@ -206,10 +206,10 @@ export const ModernAudioRecorder = forwardRef<AudioRecorderRef, AudioRecorderPro
 
     try {
       // Check minimum recording duration
-      if (duration < 10) {
+      if (duration < 5) {
         Alert.alert(
           '⏱️ Too Short',
-          `Please record at least 10 seconds (${10 - duration}s more)`,
+          `Please record at least 5 seconds (${5 - duration}s more)`,
           [{ text: 'Continue Recording', style: 'default' }]
         );
         return;
@@ -321,7 +321,7 @@ export const ModernAudioRecorder = forwardRef<AudioRecorderRef, AudioRecorderPro
             isRecording && styles.recordingButton,
           ]}
           onPress={isRecording ? stopRecording : startRecording}
-          disabled={!isRecording && duration > 0 && duration < 10}
+          disabled={!isRecording && duration > 0 && duration < 5}
           activeOpacity={0.7}
         >
           {isRecording ? (
@@ -339,8 +339,8 @@ export const ModernAudioRecorder = forwardRef<AudioRecorderRef, AudioRecorderPro
         {isRecording
           ? 'Recording in progress...'
           : duration > 0
-          ? duration < 10
-          ? `Minimum 10 seconds (${10 - duration}s more)`
+          ? duration < 5
+          ? `Minimum 5 seconds (${5 - duration}s more)`
           : 'Recording complete!'
           : 'Tap to start recording'}
       </Text>
@@ -350,7 +350,7 @@ export const ModernAudioRecorder = forwardRef<AudioRecorderRef, AudioRecorderPro
         <View style={styles.instructions}>
           <View style={styles.instructionItem}>
             <Ionicons name="time-outline" size={16} color={theme.colors.text.secondary} />
-            <Text style={styles.instructionText}>Minimum 10 seconds</Text>
+            <Text style={styles.instructionText}>Minimum 5 seconds</Text>
           </View>
           <View style={styles.instructionItem}>
             <Ionicons name="timer-outline" size={16} color={theme.colors.text.secondary} />

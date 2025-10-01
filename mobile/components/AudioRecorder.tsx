@@ -155,11 +155,11 @@ export const AudioRecorder = forwardRef<AudioRecorderRef, AudioRecorderProps>(({
     if (!recording) return;
 
     try {
-      // Check minimum recording duration (10 seconds)
-      if (duration < 10) {
+      // Check minimum recording duration (5 seconds)
+      if (duration < 5) {
         Alert.alert(
           'Recording Too Short',
-          'Recording must be at least 10 seconds long. Please continue recording.',
+          'Recording must be at least 5 seconds long. Please continue recording.',
           [{ text: 'OK' }]
         );
         return;
@@ -266,7 +266,7 @@ export const AudioRecorder = forwardRef<AudioRecorderRef, AudioRecorderProps>(({
   };
 
   // Check if recording is too short
-  const isTooShort = duration < 10;
+  const isTooShort = duration < 5;
   
   // Check if we should show warning color (after 1:30 = 90 seconds)
   const shouldShowWarning = duration > 90;
@@ -345,7 +345,7 @@ export const AudioRecorder = forwardRef<AudioRecorderRef, AudioRecorderProps>(({
           {!isRecording 
             ? 'Tap "Start Recording" to begin'
             : isTooShort 
-              ? 'Recording must be at least 10 seconds'
+              ? 'Recording must be at least 5 seconds'
               : 'Tap "Stop" when finished'
           }
         </Text>
