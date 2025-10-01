@@ -238,7 +238,7 @@ async def search_individuals(
         )
 
 
-@router.get("/api/individuals/{individual_id}", response_model=IndividualDetailResponse)
+@router.get("/{individual_id}", response_model=IndividualDetailResponse)
 async def get_individual(
     individual_id: UUID,
     user_id: str = Depends(get_current_user)
@@ -282,7 +282,7 @@ async def get_individual(
         )
 
 
-@router.put("/api/individuals/{individual_id}/urgency-override", response_model=UrgencyOverrideResponse)
+@router.put("/{individual_id}/urgency-override", response_model=UrgencyOverrideResponse)
 async def update_urgency_override(
     individual_id: UUID,
     request: UrgencyOverrideRequest,
@@ -338,7 +338,7 @@ async def update_urgency_override(
         )
 
 
-@router.get("/api/individuals/{individual_id}/interactions", response_model=InteractionsResponse)
+@router.get("/{individual_id}/interactions", response_model=InteractionsResponse)
 async def get_interactions(
     individual_id: UUID,
     limit: int = Query(50, ge=1, le=100, description="Maximum interactions per page"),

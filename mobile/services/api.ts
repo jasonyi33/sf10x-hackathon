@@ -737,24 +737,21 @@ export const api = {
   // Get individual profile
   getIndividualProfile: async (individualId: string): Promise<IndividualProfile | null> => {
     try {
-      console.log('👤 Fetching individual profile from database...');
+      console.log('👤 Fetching individual profile from backend API...');
       console.log('Individual ID:', individualId);
       
-      // Use direct Supabase query for real database
-      const { data: individual, error } = await supabase
-        .from('individuals')
-        .select('*')
-        .eq('id', individualId)
-        .single();
+      // Use backend API instead of direct Supabase query
+      const result = await apiRequest(`/api/individuals/${individualId}`);
 
-      if (error) {
-        console.error('❌ Profile fetch error:', error);
+      if (!result || !result.individual) {
+        console.error('❌ Profile fetch error: No data returned');
         return null;
       }
 
-      console.log('✅ Found individual profile:', individual);
+      console.log('✅ Found individual profile:', result.individual);
       
       // Convert to IndividualProfile format
+      const individual = result.individual;
       const profile: IndividualProfile = {
         id: individual.id,
         name: individual.name,
@@ -1007,22 +1004,17 @@ export const api = {
   // Check for potential duplicates using sophisticated matching
   checkDuplicates: async (data: Record<string, any>): Promise<Array<{id: string, name: string, confidence: number, data: any}>> => {
     try {
-      console.log('🔍 API: Checking for duplicates with data:', data);
-      console.log('🔍 API: Making request to /api/individuals/check-duplicates');
-      
+      console.log('🔍 Checking for duplicates...');
       const result = await apiRequest('/api/individuals/check-duplicates', {
         method: 'POST',
         body: JSON.stringify(data),
       });
       
-      console.log('🔍 API: Duplicate check result:', result);
-      console.log('🔍 API: Potential matches:', result.potential_matches);
-      console.log('🔍 API: Number of matches:', result.potential_matches?.length || 0);
-      
-      return result.potential_matches || [];
+      const matches = result.potential_matches || [];
+      console.log('🔍 Found', matches.length, 'potential matches');
+      return matches;
     } catch (error) {
-      console.error('❌ API: Duplicate check error:', error);
-      console.error('❌ API: Error details:', error.message);
+      console.error('❌ Duplicate check error:', error);
       return [];
     }
   },

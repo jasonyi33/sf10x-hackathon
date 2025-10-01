@@ -135,31 +135,19 @@ export const TranscriptionResults: React.FC<TranscriptionResultsProps> = ({
         return isValidUUID;
       }) || [];
 
-      // FORCE merge UI to show for testing - remove this later
       if (validMatches.length > 0) {
-        console.log('🎤 Voice Transcription - FORCING merge UI to show for testing');
+        // Show merge UI for any match found
         const bestMatch = validMatches.reduce((best, current) => 
           current.confidence > best.confidence ? current : best
         );
         
-        console.log('🎤 Voice Transcription - Showing merge UI for match:', bestMatch);
-        console.log('🎤 Voice Transcription - Match confidence:', bestMatch.confidence);
+        console.log('🎤 Voice Transcription - Showing merge UI for:', bestMatch.name, `(${bestMatch.confidence}%)`);
         setSelectedMatch(bestMatch);
         setShowMergeUI(true);
         setIsSaving(false);
         return;
       } else {
-        console.log('🎤 Voice Transcription - No matches found, but FORCING merge UI for testing');
-        // Create a fake match for testing
-        const fakeMatch = {
-          id: "7a248603-7232-4ab7-80b7-6375b325888d", // Arian's ID
-          name: "Arian",
-          confidence: 85
-        };
-        setSelectedMatch(fakeMatch);
-        setShowMergeUI(true);
-        setIsSaving(false);
-        return;
+        console.log('🎤 Voice Transcription - No valid matches found, proceeding to save as new');
       }
       
       // No meaningful match (< 60% or no matches), save as new

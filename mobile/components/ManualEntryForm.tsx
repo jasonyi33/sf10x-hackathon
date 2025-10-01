@@ -268,10 +268,12 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
 
         // Check for potential duplicates using sophisticated matching
         console.log('📋 Manual Entry - Checking for duplicates...');
-        console.log('📋 Manual Entry - Data being sent for duplicate check:', cleanData);
         const potentialMatches = await api.checkDuplicates(cleanData);
-        console.log('📋 Manual Entry - Raw potential matches from API:', potentialMatches);
-        console.log('📋 Manual Entry - Number of matches found:', potentialMatches.length);
+        console.log('📋 Manual Entry - Found', potentialMatches.length, 'potential matches');
+        
+        if (potentialMatches.length > 0) {
+          console.log('📋 Manual Entry - Matches:', potentialMatches.map(m => `${m.name} (${m.confidence}%)`));
+        }
         
         // Filter out invalid/mock IDs from potential matches
         const validMatches = potentialMatches.filter(match => {
@@ -282,31 +284,19 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
           return isValidUUID;
         });
         
-        // FORCE merge UI to show for testing - remove this later
         if (validMatches.length > 0) {
-          console.log('📋 Manual Entry - FORCING merge UI to show for testing');
+          // Show merge UI for any match found
           const bestMatch = validMatches.reduce((best, current) => 
             current.confidence > best.confidence ? current : best
           );
           
-          console.log('📋 Manual Entry - Showing merge UI for match:', bestMatch);
-          console.log('📋 Manual Entry - Match confidence:', bestMatch.confidence);
+          console.log('📋 Manual Entry - Showing merge UI for:', bestMatch.name, `(${bestMatch.confidence}%)`);
           setSelectedMatch(bestMatch);
           setShowMergeUI(true);
           setIsSaving(false);
           return;
         } else {
-          console.log('📋 Manual Entry - No matches found, but FORCING merge UI for testing');
-          // Create a fake match for testing
-          const fakeMatch = {
-            id: "7a248603-7232-4ab7-80b7-6375b325888d", // Arian's ID
-            name: "Arian",
-            confidence: 85
-          };
-          setSelectedMatch(fakeMatch);
-          setShowMergeUI(true);
-          setIsSaving(false);
-          return;
+          console.log('📋 Manual Entry - No valid matches found, proceeding to save as new');
         }
         
         // No meaningful match, save as new

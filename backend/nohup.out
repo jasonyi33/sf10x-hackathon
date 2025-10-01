@@ -1,10 +1,9 @@
-INFO:     Started server process [41802]
+INFO:     Started server process [57139]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://10.18.111.71:8001 (Press CTRL+C to quit)
-INFO:     10.18.111.71:50713 - "POST /api/individuals/check-duplicates HTTP/1.1" 200 OK
-INFO:     10.18.111.71:50719 - "POST /api/individuals/check-duplicates HTTP/1.1" 200 OK
+INFO:     10.18.111.71:51543 - "GET /api/individuals/7a248603-7232-4ab7-80b7-6375b325888d HTTP/1.1" 200 OK
 INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [41802]
+INFO:     Finished server process [57139]
