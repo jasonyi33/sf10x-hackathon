@@ -187,8 +187,8 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     latitude: location.coords.latitude,
     longitude: location.coords.longitude,
   }) || {
-    latitude: 37.7749, // San Francisco default
-    longitude: -122.4194,
+    latitude: 37.80808794862037, // San Francisco default
+    longitude: -122.43016054168524,
   };
 
   return (

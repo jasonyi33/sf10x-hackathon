@@ -379,16 +379,21 @@ class IndividualService:
     
     async def get_individual_by_id(self, individual_id: UUID) -> Optional[IndividualDetailResponse]:
         """Get individual details with recent interactions"""
-        # Get individual
-        individual_query = self.supabase.table("individuals") \
-            .select("*") \
-            .eq("id", str(individual_id)) \
-            .single()
-        
-        # Execute the query
-        individual_response = individual_query.execute()
-        
-        if not individual_response.data:
+        try:
+            # Get individual - use .maybe_single() to handle 0 rows gracefully
+            individual_query = self.supabase.table("individuals") \
+                .select("*") \
+                .eq("id", str(individual_id)) \
+                .maybe_single()
+            
+            # Execute the query
+            individual_response = individual_query.execute()
+            
+            if not individual_response.data:
+                return None
+        except Exception as e:
+            # Handle any database errors gracefully
+            print(f"Database error getting individual {individual_id}: {str(e)}")
             return None
         
         # Handle both single item and array responses

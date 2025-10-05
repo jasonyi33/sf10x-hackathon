@@ -25,6 +25,15 @@ interface LocationPickerProps {
 const DEMO_LOCATIONS = [
   {
     id: 1,
+    name: 'Fort Mason',
+    address: 'Fort Mason, San Francisco, CA 94123',
+    latitude: 37.80808794862037,
+    longitude: -122.43016054168524,
+    icon: 'flag' as const,
+    description: 'Fort Mason Center',
+  },
+  {
+    id: 2,
     name: 'Market Street & 5th Street',
     address: '5th Street & Market Street, San Francisco, CA 94103',
     latitude: 37.7838,
@@ -33,7 +42,7 @@ const DEMO_LOCATIONS = [
     description: 'Downtown financial district',
   },
   {
-    id: 2,
+    id: 3,
     name: 'Mission District - 16th Street',
     address: '16th Street & Mission Street, San Francisco, CA 94110',
     latitude: 37.7649,
@@ -42,7 +51,7 @@ const DEMO_LOCATIONS = [
     description: 'Mission neighborhood',
   },
   {
-    id: 3,
+    id: 4,
     name: 'Golden Gate Park',
     address: 'Golden Gate Park, San Francisco, CA 94117',
     latitude: 37.7694,
@@ -51,7 +60,7 @@ const DEMO_LOCATIONS = [
     description: 'Park entrance area',
   },
   {
-    id: 4,
+    id: 5,
     name: 'Tenderloin - Jones Street',
     address: 'Jones Street & Eddy Street, San Francisco, CA 94102',
     latitude: 37.7837,
@@ -60,7 +69,7 @@ const DEMO_LOCATIONS = [
     description: 'Tenderloin neighborhood',
   },
   {
-    id: 5,
+    id: 6,
     name: 'SOMA - 2nd Street',
     address: '2nd Street & Howard Street, San Francisco, CA 94105',
     latitude: 37.7873,
@@ -69,7 +78,7 @@ const DEMO_LOCATIONS = [
     description: 'South of Market area',
   },
   {
-    id: 6,
+    id: 7,
     name: 'Civic Center Plaza',
     address: 'Civic Center Plaza, San Francisco, CA 94102',
     latitude: 37.7798,
@@ -78,7 +87,7 @@ const DEMO_LOCATIONS = [
     description: 'Near City Hall',
   },
   {
-    id: 7,
+    id: 8,
     name: 'Haight-Ashbury',
     address: 'Haight Street & Ashbury Street, San Francisco, CA 94117',
     latitude: 37.7692,
@@ -87,7 +96,7 @@ const DEMO_LOCATIONS = [
     description: 'Historic neighborhood',
   },
   {
-    id: 8,
+    id: 9,
     name: 'Embarcadero & Bryant',
     address: 'Embarcadero & Bryant Street, San Francisco, CA 94107',
     latitude: 37.7895,

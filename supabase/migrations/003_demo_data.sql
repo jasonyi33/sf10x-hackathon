@@ -106,7 +106,7 @@ INSERT INTO interactions (id, individual_id, user_id, transcription, data, locat
 ('550e8400-e29b-41d4-a716-446655440101', '550e8400-e29b-41d4-a716-446655440007', 'demo-user-1',
  'Met John near Market Street. About 45 years old, 6 feet tall, maybe 180 pounds. Shows signs of moderate substance abuse, been on streets 3 months. Needs diabetes medication.',
  '{"name": "John", "age": 45, "height": 72, "weight": 180, "substance_abuse": "Moderate", "medical_conditions": ["Diabetes"]}'::jsonb,
- '{"lat": 37.7749, "lng": -122.4194, "address": "Market St & 5th, San Francisco, CA"}'::jsonb,
+ '{"lat": 37.80808794862037, "lng": -122.43016054168524, "address": "Market St & 5th, San Francisco, CA"}'::jsonb,
  '2024-01-15T15:30:00Z'),
 
 ('550e8400-e29b-41d4-a716-446655440102', '550e8400-e29b-41d4-a716-446655440007', 'demo-user-2',
@@ -147,7 +147,7 @@ INSERT INTO interactions (id, individual_id, user_id, transcription, data, locat
 ('550e8400-e29b-41d4-a716-446655440107', '550e8400-e29b-41d4-a716-446655440017', 'demo-user-3',
  'Kevin in SOMA area. 44 years old, 5 foot 10, 185 pounds. Veteran with heart disease. Physical violence reported. Critical housing priority.',
  '{"name": "Kevin", "age": 44, "height": 70, "weight": 185, "veteran_status": "Yes", "medical_conditions": ["Heart Disease"], "housing_priority": "Critical", "behavior": "Physical"}'::jsonb,
- '{"lat": 37.7749, "lng": -122.4194, "address": "SOMA District, San Francisco, CA"}'::jsonb,
+ '{"lat": 37.80808794862037, "lng": -122.43016054168524, "address": "SOMA District, San Francisco, CA"}'::jsonb,
  '2024-01-17T18:30:00Z');
 
 -- Add more interactions for variety (simplified for demo)

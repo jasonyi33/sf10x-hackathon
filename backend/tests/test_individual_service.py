@@ -122,7 +122,7 @@ class TestIndividualService:
             "user_id": "test-user",
             "user_name": "Demo User",
             "created_at": datetime.utcnow().isoformat(),
-            "location": {"latitude": 37.7749, "longitude": -122.4194, "address": "123 Market St"},
+            "location": {"latitude": 37.80808794862037, "longitude": -122.43016054168524, "address": "123 Market St"},
             "changes": {
                 "name": "Jane Smith",
                 "height": 65,
@@ -275,7 +275,7 @@ class TestIndividualService:
         # Mock last interaction
         mock_supabase.table.return_value.select.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value.data = [{
             "created_at": datetime.utcnow().isoformat(),
-            "location": {"latitude": 37.7749, "longitude": -122.4194, "address": "123 Market Street"}
+            "location": {"latitude": 37.80808794862037, "longitude": -122.43016054168524, "address": "123 Market Street"}
         }]
         
         # Test search

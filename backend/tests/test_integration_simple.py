@@ -8,7 +8,13 @@ import json
 import time
 from tests.test_api_integration import TEST_AUDIO_FILES
 
-BASE_URL = "http://10.18.111.71:8001"
+# Import centralized IP configuration
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
+from ip_config import API_URL
+
+BASE_URL = API_URL
 TEST_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItMTIzIn0.test"
 
 async def run_integration_test():

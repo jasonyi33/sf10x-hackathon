@@ -17,8 +17,8 @@ function testSaveFlow() {
         height: 72,
         weight: 180,
         location: {
-          latitude: 37.7749,
-          longitude: -122.4194,
+          latitude: 37.80808794862037,
+          longitude: -122.43016054168524,
           address: "123 Market Street, San Francisco, CA"
         }
       }

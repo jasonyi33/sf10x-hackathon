@@ -1,11 +1,25 @@
 // API Configuration
 // Update these values when backend becomes available
 
+// Centralized IP Configuration - Change this IP to update everywhere
+const LOCAL_IP = '192.168.68.53'; // Update this IP address
+const API_PORT = '8001';
+const LOCALHOST_URL = `http://localhost:${API_PORT}`;
+const API_URL = `http://${LOCAL_IP}:${API_PORT}`;
+
+// Centralized Location Configuration - Change these coordinates to update everywhere
+const DEFAULT_LATITUDE = 37.80808794862037;
+const DEFAULT_LONGITUDE = -122.43016054168524;
+const DEFAULT_LOCATION = {
+  latitude: DEFAULT_LATITUDE,
+  longitude: DEFAULT_LONGITUDE
+};
+
 export const API_CONFIG = {
   // Demo configuration - multiple backend options
   DEMO_BACKEND_OPTIONS: {
     // Option 1: Local development (requires local backend running)
-    LOCAL: 'http://localhost:8001',
+    LOCAL: LOCALHOST_URL,
 
     // Option 2: Railway deployment (stable public URL)
     RAILWAY: 'https://sf10x-demo-test-production.up.railway.app',
@@ -21,7 +35,7 @@ export const API_CONFIG = {
   BASE_URL: (() => {
     const mode = process.env.EXPO_PUBLIC_DEMO_MODE || 'RAILWAY';
     const options = {
-      LOCAL: 'http://localhost:8001',
+      LOCAL: LOCALHOST_URL,
       RAILWAY: 'https://sf10x-demo-test-production.up.railway.app',
       MOCK: 'mock://demo',
     };

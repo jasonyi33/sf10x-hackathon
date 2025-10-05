@@ -46,9 +46,9 @@ This backend provides APIs for:
    ```
 
 5. **Access the API:**
-   - API: http://10.18.111.71:8001
-   - Docs: http://10.18.111.71:8001/docs
-   - Health: http://10.18.111.71:8001/health
+   - API: http://YOUR_IP:8001 (update config/ip_config.py to set your IP)
+   - Docs: http://YOUR_IP:8001/docs
+   - Health: http://YOUR_IP:8001/health
 
 ## API Endpoints
 

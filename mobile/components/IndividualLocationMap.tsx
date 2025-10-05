@@ -1,7 +1,20 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import MapView, { Marker, Region } from 'react-native-maps';
 import { IndividualProfile } from '../types';
+
+const HARD_CODED_COORDINATE = {
+  latitude: 37.80764528381612,
+  longitude: -122.43002243616286,
+};
+
+const HARD_CODED_COORDINATE_TEXT = '37.80764528381612, -122.43002243616286';
+
+const INITIAL_REGION: Region = {
+  ...HARD_CODED_COORDINATE,
+  latitudeDelta: 0.004,
+  longitudeDelta: 0.004,
+};
 
 interface IndividualLocationMapProps {
   profile: IndividualProfile;
@@ -9,43 +22,22 @@ interface IndividualLocationMapProps {
 }
 
 export default function IndividualLocationMap({ profile, showTitle = true }: IndividualLocationMapProps) {
-  const { width, height } = Dimensions.get('window');
-  
-  // Default to San Francisco if no location is available
-  const defaultRegion: Region = {
-    latitude: 37.7749,
-    longitude: -122.4194,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  };
-
-  const [mapRegion, setMapRegion] = useState<Region>(() => {
-    if (profile.last_location) {
-      return {
-        latitude: profile.last_location.latitude,
-        longitude: profile.last_location.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
-    }
-    return defaultRegion;
-  });
+  const [mapRegion, setMapRegion] = useState<Region>(INITIAL_REGION);
+  const coordinatesLabel = HARD_CODED_COORDINATE_TEXT;
 
   const handleMarkerPress = () => {
-    if (profile.last_location) {
-      Alert.alert(
-        'Last Known Location',
-        `${profile.name} was last seen at:\n${profile.last_location.address}`,
-        [{ text: 'OK' }]
-      );
-    }
+    const address = profile.last_location?.address;
+    const message = address
+      ? `${profile.name} was last seen at:\n${address}`
+      : `Coordinates:\n${coordinatesLabel}`;
+    Alert.alert('Selected Location', message, [{ text: 'OK' }]);
   };
 
   const formatLocationText = () => {
-    if (!profile.last_location) {
-      return 'No location data available';
+    if (!profile.last_location?.address) {
+      return coordinatesLabel;
     }
-    
+
     // Extract just the street address and city for display
     const parts = profile.last_location.address.split(' ');
     if (parts.length > 3) {
@@ -53,21 +45,6 @@ export default function IndividualLocationMap({ profile, showTitle = true }: Ind
     }
     return profile.last_location.address;
   };
-
-  if (!profile.last_location) {
-    return (
-      <View style={styles.container}>
-        {showTitle && <Text style={styles.title}>Last Known Location</Text>}
-        <View style={styles.noLocationContainer}>
-          <Text style={styles.noLocationIcon}>📍</Text>
-          <Text style={styles.noLocationText}>No location data available</Text>
-          <Text style={styles.noLocationSubtext}>
-            Location will be recorded during future interactions
-          </Text>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -86,12 +63,9 @@ export default function IndividualLocationMap({ profile, showTitle = true }: Ind
           rotateEnabled={false}
         >
           <Marker
-            coordinate={{
-              latitude: profile.last_location.latitude,
-              longitude: profile.last_location.longitude,
-            }}
+            coordinate={HARD_CODED_COORDINATE}
             title={profile.name}
-            description={profile.last_location.address}
+            description={profile.last_location?.address || coordinatesLabel}
             onPress={handleMarkerPress}
           >
             <View style={styles.markerContainer}>
@@ -105,11 +79,18 @@ export default function IndividualLocationMap({ profile, showTitle = true }: Ind
         <View style={styles.addressContainer}>
           <Text style={styles.addressLabel}>Address:</Text>
           <Text style={styles.addressText}>{formatLocationText()}</Text>
+          {!profile.last_location?.address && (
+            <Text style={styles.noLocationSubtext}>
+              No stored address for this individual. Showing default coordinates.
+            </Text>
+          )}
+          <Text style={[styles.addressLabel, { marginTop: 12 }]}>Coordinates:</Text>
+          <Text style={styles.addressText}>{coordinatesLabel}</Text>
           <TouchableOpacity 
             style={styles.fullAddressButton}
             onPress={() => Alert.alert(
               'Full Address', 
-              profile.last_location?.address || 'No address available'
+              profile.last_location?.address || `Coordinates:\n${coordinatesLabel}`
             )}
           >
             <Text style={styles.fullAddressButtonText}>View Full Address</Text>
@@ -196,27 +177,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#007AFF',
     fontWeight: '500',
-  },
-  noLocationContainer: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderStyle: 'dashed',
-  },
-  noLocationIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-    opacity: 0.6,
-  },
-  noLocationText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: 4,
   },
   noLocationSubtext: {
     fontSize: 14,

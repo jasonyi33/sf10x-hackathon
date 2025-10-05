@@ -298,10 +298,10 @@ export const ManualEntryForm: React.FC<ManualEntryFormProps> = ({
         } else {
           console.log('📋 Manual Entry - No valid matches found, proceeding to save as new');
           
-          // TEMPORARY: Force merge UI to always show for debugging
-          console.log('📋 Manual Entry - DEBUGGING: Forcing merge UI to show');
+          // DEBUG: Force merge UI to show with configured UUID
+          console.log('📋 Manual Entry - DEBUG: Forcing merge UI to show with configured UUID');
           const debugMatch = {
-            id: "7a248603-7232-4ab7-80b7-6375b325888d", // John's ID
+            id: "f7f4804b-c9ca-4374-9daf-a39963f6ce51", // Configured UUID
             name: "John",
             confidence: 85
           };

@@ -1,13 +1,18 @@
 // Test script for API integration
 // This script verifies the backend API integration
 
+// Centralized IP Configuration - Change this IP to update everywhere
+const LOCAL_IP = '192.168.68.53'; // Update this IP address
+const API_PORT = '8001';
+const API_URL = `http://${LOCAL_IP}:${API_PORT}`;
+
 function testApiIntegration() {
   console.log("🧪 Testing Backend API Integration");
   console.log("===================================");
 
   // Test configuration
   const config = {
-    baseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://10.18.111.71:8001',
+    baseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || API_URL,
     useRealApi: process.env.EXPO_PUBLIC_USE_REAL_API !== 'false',
     demoMode: true
   };
@@ -49,8 +54,8 @@ function testApiIntegration() {
     weight: 180,
     skin_color: "Light",
     location: {
-      latitude: 37.7749,
-      longitude: -122.4194,
+      latitude: 37.80808794862037,
+      longitude: -122.43016054168524,
       address: "123 Market Street, San Francisco, CA 94105"
     }
   };

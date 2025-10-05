@@ -149,40 +149,40 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
     total_interactions: 3,
     last_interaction_date: '2024-01-15T10:30:00Z',
     last_location: {
-      latitude: 37.7749,
-      longitude: -122.4194,
-      address: 'Market Street & 5th Avenue, San Francisco, CA'
+      latitude: 37.80808794862037,
+      longitude: -122.43016054168524,
+      address: 'Fort Mason, San Francisco, CA 94123'
     },
     interactions: [
       {
         id: 'int1',
         individual_id: '1',
         user_id: 'user1',
-        transcription: 'Met John near Market Street. About 45 years old, 6 feet tall, maybe 180 pounds. Light skin. Shows signs of moderate substance abuse, been on streets 3 months. Needs diabetes medication.',
-        location: { lat: 37.7749, lng: -122.4194 },
+        transcription: 'Met John near Fort Mason. About 45 years old, 6 feet tall, maybe 180 pounds. Light skin. Shows signs of moderate substance abuse, been on streets 3 months. Needs diabetes medication.',
+        location: { lat: 37.80808794862037, lng: -122.43016054168524 },
         created_at: '2024-01-15T10:30:00Z',
         worker_name: 'Officer Smith',
-        abbreviated_address: 'Market St & 5th Ave',
+        abbreviated_address: 'Fort Mason',
       },
       {
         id: 'int2',
         individual_id: '1',
         user_id: 'user2',
         data: { substance_abuse_history: ['Moderate'] },
-        location: { lat: 37.7849, lng: -122.4094 },
+        location: { lat: 37.80808794862037, lng: -122.43016054168524 },
         created_at: '2024-01-12T14:20:00Z',
         worker_name: 'Officer Johnson',
-        abbreviated_address: 'Golden Gate Park',
+        abbreviated_address: 'Fort Mason',
       },
       {
         id: 'int3',
         individual_id: '1',
         user_id: 'user3',
         data: { medical_conditions: ['Diabetes'] },
-        location: { lat: 37.7949, lng: -122.3994 },
+        location: { lat: 37.80808794862037, lng: -122.43016054168524 },
         created_at: '2024-01-10T10:00:00Z',
         worker_name: 'Officer Davis',
-        abbreviated_address: 'Mission District',
+        abbreviated_address: 'Fort Mason',
       },
     ],
   },
@@ -203,9 +203,9 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
     total_interactions: 2,
     last_interaction_date: '2024-01-12T14:20:00Z',
     last_location: {
-      latitude: 37.7849,
-      longitude: -122.4094,
-      address: 'Golden Gate Park, San Francisco, CA'
+      latitude: 37.80808794862037,
+      longitude: -122.43016054168524,
+      address: 'Fort Mason, San Francisco, CA 94123'
     },
     interactions: [
       {
@@ -213,7 +213,7 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
         individual_id: '2',
         user_id: 'user1',
         transcription: 'Met Sarah at the library. She is 35 years old, 5\'5", about 140 pounds. Medium skin tone. No signs of substance abuse. She is looking for housing assistance.',
-        location: { lat: 37.7749, lng: -122.4194 },
+        location: { lat: 37.80808794862037, lng: -122.43016054168524 },
         created_at: '2024-01-12T14:20:00Z',
         worker_name: 'Officer Smith',
         abbreviated_address: 'Public Library',
@@ -223,7 +223,7 @@ const mockIndividualProfiles: Record<string, IndividualProfile> = {
         individual_id: '2',
         user_id: 'user2',
         data: { housing_status: 'Seeking Assistance' },
-        location: { lat: 37.7849, lng: -122.4094 },
+        location: { lat: 37.80808794862037, lng: -122.43016054168524 },
         created_at: '2024-01-08T09:00:00Z',
         worker_name: 'Officer Johnson',
         abbreviated_address: 'City Hall',
@@ -517,7 +517,7 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ 
           audio_data: base64Audio,
-          location: { latitude: 37.7749, longitude: -122.4194 } // Default SF location
+          location: { latitude: 37.80808794862037, longitude: -122.43016054168524 } // Default SF location
         }),
       });
       

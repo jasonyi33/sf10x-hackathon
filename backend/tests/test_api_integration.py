@@ -11,7 +11,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Test configuration
-BASE_URL = "http://10.18.111.71:8001"
+# Import centralized IP configuration
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'config'))
+from ip_config import API_URL
+
+BASE_URL = API_URL
 TEST_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItMTIzIn0.test"
 
 # TODO: Replace these with your actual Supabase Storage URLs after uploading
@@ -98,8 +104,8 @@ async def test_complete_transcription_flow(client, auth_headers):
         request_data = {
             "audio_url": test_data["url"],
             "location": {
-                "latitude": 37.7749,
-                "longitude": -122.4194
+                "latitude": 37.80808794862037,
+                "longitude": -122.43016054168524
             }
         }
         

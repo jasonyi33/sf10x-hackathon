@@ -17,7 +17,7 @@ jest.mock('expo-av', () => ({
 jest.mock('expo-location', () => ({
   requestForegroundPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
   getCurrentPositionAsync: jest.fn(() => Promise.resolve({
-    coords: { latitude: 37.7749, longitude: -122.4194 }
+    coords: { latitude: 37.80808794862037, longitude: -122.43016054168524 }
   })),
   reverseGeocodeAsync: jest.fn(() => Promise.resolve([{
     street: 'Market Street',
