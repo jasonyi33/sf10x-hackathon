@@ -4,11 +4,11 @@ import MapView, { Marker, Region } from 'react-native-maps';
 import { IndividualProfile } from '../types';
 
 const HARD_CODED_COORDINATE = {
-  latitude: 37.80764528381612,
-  longitude: -122.43002243616286,
+  latitude: 37.80808794862037,
+  longitude: -122.43016054168524,
 };
 
-const HARD_CODED_COORDINATE_TEXT = '37.80764528381612, -122.43002243616286';
+const HARD_CODED_COORDINATE_TEXT = '37.80808794862037, -122.43016054168524';
 
 const INITIAL_REGION: Region = {
   ...HARD_CODED_COORDINATE,
