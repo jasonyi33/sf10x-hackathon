@@ -8,8 +8,8 @@ const LOCALHOST_URL = `http://localhost:${API_PORT}`;
 const API_URL = `http://${LOCAL_IP}:${API_PORT}`;
 
 // Centralized Location Configuration - Change these coordinates to update everywhere
-const DEFAULT_LATITUDE = 37.80808794862037;
-const DEFAULT_LONGITUDE = -122.43016054168524;
+const DEFAULT_LATITUDE = 37.7821638619815;
+const DEFAULT_LONGITUDE = -122.41033921502972;
 const DEFAULT_LOCATION = {
   latitude: DEFAULT_LATITUDE,
   longitude: DEFAULT_LONGITUDE

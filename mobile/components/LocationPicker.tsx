@@ -59,8 +59,8 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
       // Set initial selected location to Fort Mason default if not provided
       if (!initialLocation) {
         setSelectedLocation({
-          latitude: 37.80808794862037, // Fort Mason default
-          longitude: -122.43016054168524,
+          latitude: 37.7821638619815, // Updated default location
+          longitude: -122.41033921502972,
         });
       }
 
@@ -183,10 +183,10 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     );
   }
 
-  // Always default to Fort Mason coordinates
+  // Always default to updated coordinates
   const mapRegion = selectedLocation || {
-    latitude: 37.80808794862037, // Fort Mason default
-    longitude: -122.43016054168524,
+    latitude: 37.7821638619815, // Updated default location
+    longitude: -122.41033921502972,
   };
 
   return (

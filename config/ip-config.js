@@ -22,8 +22,8 @@ export const IP_CONFIG = {
 // Centralized Location Configuration
 // Change these coordinates to update default location everywhere in the project
 export const LOCATION_CONFIG = {
-  DEFAULT_LATITUDE: 37.80808794862037,
-  DEFAULT_LONGITUDE: -122.43016054168524,
+  DEFAULT_LATITUDE: 37.7821638619815,
+  DEFAULT_LONGITUDE: -122.41033921502972,
   
   // Generate location dictionary for API calls
   get DEFAULT_LOCATION() {

@@ -2,7 +2,7 @@
 # Change this IP address to update it everywhere in the project
 
 # Your computer's IP address - change this to update everywhere
-LOCAL_IP = '192.168.68.53'
+LOCAL_IP = '10.23.0.57'
 
 # Port for backend API
 API_PORT = '8001'
@@ -15,8 +15,8 @@ LOCALHOST_URL = f'http://localhost:{API_PORT}'
 
 # Centralized Location Configuration
 # Change these coordinates to update default location everywhere in the project
-DEFAULT_LATITUDE = 37.80808794862037
-DEFAULT_LONGITUDE = -122.43016054168524
+DEFAULT_LATITUDE = 37.7821638619815
+DEFAULT_LONGITUDE = -122.41033921502972
 
 # Generate location dictionary for API calls
 DEFAULT_LOCATION = {
