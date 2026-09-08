@@ -40,10 +40,10 @@ Run the migration to create the embeddings table:
 
 ```bash
 # Connect to your database and run:
-psql -d your_database -f migrations/add_embeddings_table.sql
+psql -d your_database -f supabase/schema.sql
 ```
 
-Or manually execute the SQL from `migrations/add_embeddings_table.sql`.
+Or manually execute the SQL from `supabase/schema.sql`.
 
 ### 3. Environment Variables
 
@@ -109,10 +109,10 @@ GET /api/embeddings/status
 
 The frontend automatically uses semantic search when available, with fallback to regular search:
 
-1. **SearchScreen** calls `api.semanticSearchIndividuals()`
+1. **ModernSearchScreen** calls `api.semanticSearchIndividuals()`
 2. If semantic search fails, it falls back to `api.searchIndividuals()`
 3. Results include similarity scores when available
-4. **SearchResultItem** displays match percentages for embedding results
+4. **ModernSearchScreen** displays match percentages for embedding results
 
 ## How It Works
 

@@ -22,12 +22,12 @@ Mobile App (React Native) → Backend (FastAPI) → OpenAI Whisper → GPT-4o �
 
 ```bash
 # Supabase Configuration
-SUPABASE_URL=https://vhfyquescrbwbbvvhxdg.supabase.co/
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZnlxdWVzY3Jid2JidnZoeGRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjQ5NDksImV4cCI6MjA2OTcwMDk0OX0.3grO_YeaqeM73db9jzvBV0WyLBwuD_ynW9lH3Z4Os4g
-SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoZnlxdWVzY3Jid2JidnZoeGRnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDEyNDk0OSwiZXhwIjoyMDY5NzAwOTQ5fQ.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8
+SUPABASE_URL=https://[project-id].supabase.co
+SUPABASE_ANON_KEY=[your-anon-key]
+SUPABASE_SERVICE_KEY=[your-service-role-key]
 
 # OpenAI Configuration
-OPENAI_API_KEY=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
+OPENAI_API_KEY=[your-openai-api-key]
 
 # Demo Credentials (for reference)
 DEMO_EMAIL=demo@sfgov.org
@@ -74,7 +74,7 @@ from supabase import create_client, Client
 
 from api.auth import get_current_user
 from services.openai_service import OpenAIService
-from services.danger_calculator import calculate_urgency_score
+from services.urgency_calculator import calculate_urgency_score
 from services.validation_helper import validate_categorized_data
 
 
@@ -948,7 +948,7 @@ saveIndividual: async (data: any) => {
 
 #### 3.3 Updated Record Screen
 
-**Location:** Find the `uploadAudioFile` and `transcribeAudio` functions in `mobile/screens/RecordScreen.tsx`
+**Location:** Find the `uploadAudioFile` and `transcribeAudio` functions in `mobile/screens/ModernRecordScreen.tsx`
 
 **Instructions:** Replace the existing `uploadAudioFile` and `transcribeAudio` functions with the following code:
 

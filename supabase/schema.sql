@@ -169,6 +169,18 @@ SELECT
     i.data
 FROM individuals i;
 
+-- The app reads individuals.last_location for the profile map. The backend sets
+-- it on every write (individual_service.py), but the seed above inserts
+-- interactions directly, so backfill it here or the demo profiles show no map.
+UPDATE individuals i
+SET    last_location = sub.location
+FROM  (SELECT DISTINCT ON (individual_id) individual_id, location
+       FROM   interactions
+       WHERE  location IS NOT NULL
+       ORDER  BY individual_id, created_at DESC) AS sub
+WHERE i.id = sub.individual_id
+  AND i.last_location IS NULL;
+
 -- ---------------------------------------------------------------------------
 -- RLS. These are wide-open demo policies, matching what the project shipped.
 -- A real deployment needs per-agency scoping — this is medical data.

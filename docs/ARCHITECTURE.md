@@ -111,7 +111,9 @@ Always required (hardcoded):
 1. **Name** (text) - Non-empty string
 2. **Height** (number) - Integer 0-300
 3. **Weight** (number) - Integer 0-300
-4. **Skin Color** (single_select) - Light/Medium/Dark
+
+(Skin Color was a fourth required field in earlier drafts; it was removed. The
+live list is enforced at `backend/db/models.py:29`.)
 
 ### Danger Score Calculation
 ```python
@@ -180,16 +182,17 @@ backend/
 mobile/
 ├── App.tsx                # Entry point, navigation setup
 ├── screens/
-│   ├── RecordScreen.tsx   # Voice recording (default tab)
-│   ├── SearchScreen.tsx   # Individual search
-│   ├── IndividualProfileScreen.tsx # Profile view
-│   ├── CategoriesScreen.tsx # Category management
-│   └── VoiceAssistantScreen.tsx # Realtime voice UI
+│   ├── ModernRecordScreen.tsx      # Voice recording (default tab)
+│   ├── ModernSearchScreen.tsx      # Individual search
+│   ├── ModernIndividualProfileScreen.tsx # Profile view (pushed from Search)
+│   ├── ModernVoiceAssistantScreen.tsx    # Realtime voice UI
+│   ├── CategoriesScreen.tsx        # Category management
+│   └── UserProfileScreen.tsx       # Worker profile
 ├── components/
-│   ├── AudioRecorder.tsx  # 2-minute recording limit
-│   ├── ManualEntryForm.tsx # Direct data entry
-│   ├── DangerScore.tsx    # Score display + override
-│   └── MergeUI.tsx        # Duplicate resolution
+│   ├── ModernAudioRecorder.tsx # 5 s min / 2 min max recording
+│   ├── ManualEntryForm.tsx     # Direct data entry
+│   ├── UrgencyScore.tsx        # Score display + override
+│   └── MergeUI.tsx             # Duplicate resolution
 ├── services/
 │   ├── api.ts             # API client
 │   └── supabase.ts        # Supabase config
@@ -473,7 +476,7 @@ WHERE id = 'uuid';
 
 ## Critical Success Factors
 
-1. **Required fields must validate** - Name, Height, Weight, Skin Color
+1. **Required fields must validate** - Name, Height, Weight
 2. **Audio must be M4A format** - Enforce in recorder
 3. **Danger score calculation correct** - Test with edge cases
 4. **Duplicate detection working** - LLM confidence accurate

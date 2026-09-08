@@ -4,9 +4,12 @@ A field-documentation app for San Francisco homeless-outreach workers.
 
 A social worker finishes a street interaction and, instead of typing notes back at
 the office, speaks for thirty seconds. The app transcribes the audio, pulls
-structured fields out of it (name, height, weight, medical conditions, urgency),
-checks whether this person is already in the database, and either creates a new
-record or merges into the existing one.
+structured fields out of it (name, height, weight, medical conditions), scores
+urgency from those fields, checks whether this person is already in the database,
+and either creates a new record or merges into the existing one.
+
+That last step is the intended design; see [Known broken](#known-broken) for why
+the create-new path does not currently run.
 
 There is also a hands-free voice assistant: the worker can ask "what should I know
 before approaching John?" and get an answer grounded in what the database already
@@ -24,17 +27,18 @@ holds about that person.
 
 ```
 backend/          FastAPI service — all API logic and OpenAI calls
-  api/            HTTP routers, one per resource
+  api/            HTTP routers, one per resource (auth.py is a dependency, not a router)
   services/       Business logic (categorization, dedup, embeddings, urgency)
   db/             Pydantic models
   scripts/        Operational one-offs (seed demo data, backfill embeddings)
-  tests/          pytest integration tests (require a live backend — see Testing)
+  tests/          pytest suites — mostly integration, a few offline (see Testing)
 mobile/           React Native (Expo) iOS app
-  screens/        One screen per tab
+  screens/        5 tab screens + the profile screen pushed from Search
   components/     Shared UI
   services/       API + Supabase clients
 supabase/
   schema.sql      ← the database. Run this once. See Database.
+config/           Shared IP/location constants (see the caveat under Mobile)
 docs/             Architecture, PRD, and feature deep-dives
 main.py           Railway entrypoint; re-exports backend.main:app
 ```
@@ -47,10 +51,10 @@ main.py           Railway entrypoint; re-exports backend.main:app
                   │                                          │
    1. record m4a  │  POST /api/transcribe                    │
                   │    ├─ Whisper        → transcript        │
-                  │    └─ GPT-4o         → structured fields │
+                  │    ├─ GPT-4o         → structured fields │
+                  │    └─ GPT-4o         → duplicate check   │
                   │                                          │
    2. save        │  POST /api/individuals                   │
-                  │    ├─ GPT-4o         → duplicate check   │
                   │    ├─ urgency score  → computed          │
                   │    └─ embedding      → generated in bg   │
                   │                                          │
@@ -68,7 +72,7 @@ Three separate AI capabilities, easy to confuse:
 |---|---|---|
 | Transcribe + extract fields | Whisper + GPT-4o | `services/openai_service.py` |
 | Semantic search over profiles | `text-embedding-3-large` | `services/embedding_service.py` |
-| Live spoken assistant | OpenAI Realtime API | `api/voice_assistant.py` |
+| Live spoken assistant | `gpt-realtime` | `main.py` (the WS proxy); `api/voice_assistant.py` (context endpoints) |
 
 ### The data model in one paragraph
 
@@ -103,7 +107,11 @@ Then create a **private** Storage bucket named `audio` (5 MB limit, MIME types
 python3 -m pip install -r requirements.txt
 
 cp backend/.env.example backend/.env    # fill in the values below
-python3 -m uvicorn backend.main:app --reload --port 8001
+
+# Run from inside backend/ -- its modules import each other absolutely
+# (e.g. `from services.context_service import ...`), so backend/ must be on
+# sys.path. The root main.py shim exists for Railway, not for local dev.
+cd backend && python3 -m uvicorn main:app --reload --port 8001
 ```
 
 Required environment variables:
@@ -138,23 +146,28 @@ EXPO_PUBLIC_API_BASE_URL=http://192.168.1.x:8001 npm start
 ```
 
 On a physical device this must be your machine's LAN IP — `localhost` resolves
-to the phone. Note that `config/ip-config.js` and `mobile/config/api.ts`
-currently hold *different* hardcoded IPs despite `config/` describing itself as
-the single source of truth; setting the environment variable above sidesteps
-that.
+to the phone. Be warned that three files hold three *different* hardcoded IPs
+despite `config/` billing itself as the single source of truth:
+`config/ip-config.js` (`192.168.1.3`), `config/ip_config.py` (`10.23.0.57`) and
+`mobile/config/api.ts` (`192.168.68.53`, which is dead code — `DEMO_MODE=LOCAL`
+resolves to `localhost`, not to it). Setting the environment variable above
+sidesteps all of it.
 
-`mobile/env.example` covers Supabase and Google Maps keys, which the app reads
-for direct Supabase access and map rendering.
+Ignore `mobile/env.example` — it is vestigial. The app reads **no** Supabase or
+Google Maps values from the environment: `services/supabase.ts` builds its client
+from the values hardcoded in `config/api.ts`, and `GOOGLE_MAPS_API_KEY` has no
+references anywhere in the codebase. `EXPO_PUBLIC_DEMO_MODE` and
+`EXPO_PUBLIC_API_BASE_URL` are the only environment variables the app reads.
 
-### 4. Optional: seed and backfill
+### 4. Optional: backfill embeddings
+
+`supabase/schema.sql` already seeds six demo individuals, and new individuals get
+embeddings automatically in the background. The backfill script is only needed
+for rows that predate that:
 
 ```bash
-python3 backend/scripts/load_demo_data.py        # extra demo individuals
-python3 backend/scripts/backfill_embeddings.py   # embeddings for existing rows
+cd backend && python3 scripts/backfill_embeddings.py
 ```
-
-New individuals get embeddings automatically in the background; the backfill
-script is only for rows that predate that.
 
 ## API
 
@@ -173,23 +186,40 @@ Base URL `http://localhost:8001`.
 | `GET` / `POST` | `/api/categories` | Read / define collected fields |
 | `POST` | `/api/embeddings/search` | Semantic profile search |
 | `GET` | `/api/embeddings/status` | Embedding coverage |
-| `GET` | `/api/export` | CSV export |
-| `WS` | `/api/voice-assistant/realtime/ws` | Realtime assistant proxy |
+| `POST` | `/api/embeddings/generate` | Embed one individual |
+| `POST` | `/api/embeddings/generate-all` | Embed every individual |
+| `GET` | `/api/export` | CSV export — **registered twice, see below** |
+| `WS` | `/api/voice-assistant/realtime/ws` | Realtime assistant proxy (defined in `main.py`) |
+| `POST` | `/api/voice-assistant/context` | DB context for a named person |
+| `GET` | `/api/voice-assistant/{resources,guidelines,test}` | Static assistant helpers |
+| `POST` | `/api/voice-assistant/{chat,transcribe}` | Non-realtime assistant fallbacks |
+| `GET` | `/api/voice-assistant/api-key` | **Returns the raw `OPENAI_API_KEY` — see below** |
 
 Interactive docs at `/docs` when the server is running.
 
 ### Two rules worth knowing before changing anything
 
-**Urgency score.** Only `number` and `single_select` category types may carry an
-urgency weight. Numbers contribute `value / 300 * weight`; selects contribute
-`option_value * weight`. A category flagged `auto_trigger` pins the score to 100
-outright. A manual override, when set, is displayed instead of the computed
-value — it does not overwrite it. See `services/urgency_calculator.py`.
+**Urgency score.** Only `number` and `single_select` types may carry an urgency
+weight — enforced by a validator in `db/models.py:155`. Each contributing
+category adds `normalized_value * weight` to a running sum, where a number is
+`min(value / 300, 1.0)` (so it clamps above 300) and a select is its option's
+value. The result is then **normalized by the total weight** and scaled:
+`int(weighted_sum / total_weight * 100)`. Skipping that last step is the easy
+mistake — the per-category term alone is not the score. A category flagged
+`auto_trigger` pins the score to 100, but only when its value is actually
+present and non-zero. A manual override is displayed instead of the computed
+value without overwriting it. See `services/urgency_calculator.py`.
 
-**Duplicate detection.** GPT-4o compares a new record against candidates and
-returns a confidence of 0–100. At ≥ 95 the app offers an automatic merge; below
-that it shows the merge UI and lets the worker decide. Newer values win on
-conflict. See `services/duplicate_detection_service.py`.
+**Duplicate detection — the code and the spec disagree here.** GPT-4o compares a
+new record against candidates and returns 0–100; the backend discards anything
+below 60 (`duplicate_detection_service.py:208`). `docs/PRD.md` calls for an
+automatic merge at ≥ 95, but **that threshold is not implemented**: the only 95
+in the backend assigns a confidence to an exact name match, and the frontend
+opens the same field-by-field merge UI for *every* surviving match
+(`TranscriptionResults.tsx:137`). The merge UI defaults each field to the newer
+value, but the worker can flip any field. Note also that the backend does not
+merge server-side — `individual_service.py:150` replaces the whole `data` JSONB
+with what the client posts, so any field the client omits is dropped.
 
 ## Testing
 
@@ -202,22 +232,42 @@ cd mobile && npm test
 Runs, and **3 of 10 tests pass.** Jest previously had no configuration at all —
 no `jest` key, no `babel.config.js` — so every suite died on a parse error and
 zero tests executed. That is now wired up (`jest-expo` preset, plus an
-AsyncStorage mock in `test/setup.js`). The 7 remaining failures are stale
-assertions: the tests were written against the pre-"Modern" components and still
-look for copy like `Potential Duplicate Found` that the current UI no longer
-renders. The tests are wrong, not the components — they need rewriting against
-the current screens.
+AsyncStorage mock in `test/setup.js`).
+
+The 7 remaining failures are broken *fixtures*, not stale copy — every string
+the tests look for is still rendered:
+
+- **5 in `MergeUI`** — the fixture uses `id: '123'`, which fails the UUID guard
+  at `MergeUI.tsx:29`, so the component early-returns its "Invalid merge target"
+  branch before rendering anything the tests assert on.
+- **2 in `LocationPicker`** — the `expo-location` mock omits `Accuracy`, so
+  `Location.Accuracy.High` throws and the error view renders instead. The
+  permission-denied test additionally sets its mock *after* `render()`, so it
+  can never affect the mount-time call.
+
+While fixing those, note `MergeUI.tsx:29-42` returns conditionally *before* its
+`useState`/`useEffect` — a Rules-of-Hooks violation that will throw if a
+`potentialMatch.id` ever changes validity on a mounted component. So it is not
+purely a test problem.
 
 ```bash
 python3 -m pytest backend/tests/test_api_integration.py
 ```
 
-These are **integration** tests, not unit tests: they expect a backend already
-running on the configured host and a populated Supabase project with real
-credentials. They cannot pass on a clean checkout. That was a deliberate
-hackathon tradeoff — end-to-end confidence over isolated units — but it means
-there is no test you can run offline to check the backend. `backend/services/`
-is where unit tests would go if this project continued.
+Most of `backend/tests/` is **integration** tests that expect a backend already
+running and a populated Supabase project, and those cannot pass on a clean
+checkout — a deliberate hackathon tradeoff.
+
+Two suites *are* fully mocked and run offline:
+
+```bash
+python3 -m pytest backend/tests/test_duplicate_service_unit.py backend/tests/test_unit_components.py
+```
+
+20 pass, 1 fails (`test_multiple_candidates_returns_highest_confidence`).
+Separately, `backend/tests/test_models.py` is dead: it imports
+`DangerOverrideRequest`, which was renamed to `UrgencyOverrideRequest`, so it
+fails at import rather than for any environmental reason.
 
 ## Deployment
 
@@ -237,6 +287,33 @@ resolves. Only the backend deploys; `mobile/` and `docs/` are excluded via
 | [`docs/EMBEDDINGS.md`](docs/EMBEDDINGS.md) | Semantic search setup and behaviour |
 | [`docs/DEMO.md`](docs/DEMO.md) | Demo walkthrough script |
 
+## Known broken
+
+Distinct from the deliberate shortcuts below — these look like working features
+but are not:
+
+- **Recording a brand-new person does not save them.** `TranscriptionResults.tsx:152-161`
+  contains a leftover `// DEBUG: Force merge UI` block: when transcription finds
+  *no* duplicate match, it fabricates a match against a hardcoded UUID named
+  "John", opens the merge UI, and `return`s — making the genuine save-as-new path
+  below it unreachable. This is the single highest-value thing to fix.
+- **`GET /api/export` is registered twice.** `api/categories.py:19` and
+  `api/export.py:18` claim the same path; `categories.router` is included first,
+  so all of `api/export.py` is dead code. The two implementations differ: the
+  live one emits 12 columns but computes urgency as
+  `urgency_override or urgency_score` (an override of `0` wrongly falls through
+  to the calculated score); the dead one emits 5 columns but handles the override
+  correctly and derives `last_seen` from interactions rather than `updated_at`.
+- **`api.exportCSV()` cannot work.** `services/api.ts:60` always calls
+  `response.json()`, but both export handlers return CSV.
+- **Three client methods call routes that do not exist** — `POST /api/upload-audio`,
+  `POST /api/interactions`, and `PUT /api/individuals/{id}` (only `GET` exists).
+  All are currently unreferenced, so nothing breaks today.
+- **Category weights render as `undefined`.** `CategoriesScreen.tsx:189` and
+  friends read `danger_weight`; the API returns `urgency_weight`.
+- **`expo-audio` is imported but not a dependency.** `utils/audioProcessor.ts:7`
+  imports it; `package.json` only lists `expo-av`.
+
 ## Shortcuts taken
 
 Listed explicitly so nobody mistakes them for finished work:
@@ -249,9 +326,14 @@ Listed explicitly so nobody mistakes them for finished work:
   effectively hands anyone with the repo full read/write access to that demo
   project. Rotate the project and move these to environment variables before
   this goes anywhere real.
+- **`GET /api/voice-assistant/api-key` hands the raw `OPENAI_API_KEY` to any
+  caller** with a bearer token that is never signature-checked — i.e. effectively
+  to anyone. The endpoint's own docstring says "In production, this should be
+  more secure."
 - **JWTs are decoded but not signature-verified.**
 - **CORS allows all origins.**
 - **Auth is a hardcoded demo account**, auto-logged-in, no email verification.
 - **No offline support.** The app requires connectivity throughout.
 - **Categories are create-only** — the MVP has no edit or delete.
-- Audio is M4A/AAC, 10 s minimum and 2 min maximum per recording.
+- Audio is M4A/AAC, **5 s** minimum and 2 min maximum per recording
+  (`ModernAudioRecorder.tsx:209`). `docs/PRD.md` says 10 s; the code says 5.

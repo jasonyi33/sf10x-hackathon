@@ -8,8 +8,8 @@ import os
 import sys
 from dotenv import load_dotenv
 
-# Add the backend directory to the Python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Add the backend directory (this file's parent's parent) to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from services.embedding_service import EmbeddingService
 from supabase import create_client, Client
