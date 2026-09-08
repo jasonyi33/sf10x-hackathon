@@ -1,4 +1,0 @@
--- Database migration for location feature
--- This file documents the required database changes
--- These changes have been defined in backend/migrations/add_last_location_to_individuals.sql
--- Please run that migration script in your Supabase SQL Editor to add location support

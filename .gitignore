@@ -1,5 +1,38 @@
+# Secrets
 .env
+.env.*
+!.env.example
 
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.venv*/
+venv/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
 
-# ignore doc
-deckgl-docs/
+# Node / React Native
+node_modules/
+.expo/
+*.tsbuildinfo
+
+# iOS build artifacts
+mobile/ios/Pods/
+mobile/ios/build/
+*.xcuserdatad/
+
+# Logs & temp
+*.log
+nohup.out
+*.tmp
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo

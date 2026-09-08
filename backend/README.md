@@ -22,8 +22,8 @@ This backend provides APIs for:
 
 1. **Install dependencies:**
    ```bash
-   cd backend
-   pip install -r requirements.txt
+   # requirements.txt lives at the repo root, shared with the Railway build
+   python3 -m pip install -r ../requirements.txt
    ```
 
 2. **Set up environment variables:**
@@ -94,10 +94,13 @@ This backend provides APIs for:
 
 ## Testing
 
-Run tests with:
 ```bash
-pytest tests/test_api_integration.py
+python3 -m pytest tests/test_api_integration.py
 ```
+
+Note that these are **integration** tests: they expect a backend already running
+on the configured host and a populated Supabase project. They will not pass on a
+clean checkout without those.
 
 ## Deployment
 
@@ -121,9 +124,15 @@ pytest tests/test_api_integration.py
 4. **Set environment variables in Railway dashboard**
 
 ### Configuration Files
-- `Procfile` - Defines the web process
-- `railway.toml` - Railway-specific configuration
-- `runtime.txt` - Python version specification
+
+Railway builds from the **repo root**, not this directory, so the deploy
+configuration lives one level up:
+
+- `../railway.toml` - Build and start command
+- `../runtime.txt` - Python version
+- `../requirements.txt` - Dependencies
+- `../main.py` - Entrypoint; re-exports `backend.main:app`
+- `../.railwayignore` - Excludes `mobile/` and `docs/` from the image
 
 ## Architecture Notes
 

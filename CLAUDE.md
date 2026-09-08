@@ -18,7 +18,7 @@ This is a Voice Transcription App for SF Homeless Outreach - a mobile app for so
 - Time is extremely limited - focus on working features
 
 ### Always Refer to PRD
-- Every implementation decision must align with @prd-voice-transcription
+- Every implementation decision must align with @docs/PRD.md
 - If the PRD doesn't require it, don't build it
 - If the PRD specifies something, follow it exactly
 - No assumptions - only what's written in the PRD
@@ -35,7 +35,7 @@ cd backend && uvicorn main:app --reload --port 8001
 cd backend && pytest tests/test_api_integration.py
 
 # Install dependencies
-cd backend && python3 -m pip install -r requirements.txt
+python3 -m pip install -r requirements.txt   # single requirements.txt at repo root
 
 # Deploy to Railway
 railway up
@@ -58,11 +58,9 @@ cd mobile && expo build:ios
 
 ### Database (Supabase)
 ```bash
-# Run migrations
-supabase db push
-
-# Seed demo data
-supabase db seed
+# There is no migration chain. Run the consolidated schema once in the
+# Supabase SQL Editor -- it creates every table and seeds demo data:
+#   supabase/schema.sql
 ```
 
 ## Architecture
@@ -166,19 +164,12 @@ Before implementing features:
 6. **Auto-login is mandatory** - Skip login screen entirely
 7. **Categories can't be edited/deleted** - Create-only in MVP
 
-## Task Assignments
-
-- **Dev 1**: Backend infrastructure, APIs, AI integration
-- **Dev 2**: Frontend recording features, audio handling
-- **Dev 3**: Frontend data management, search, profiles
-
-**IMPORTANT: You are Dev 1. Only work on tasks marked [Dev 1]. Do not work on [Dev 2] or [Dev 3] tasks.**
-
 ## Important: File References
 
 In every command, always refer to:
-- @prd-voice-transcription - Contains all product requirements and specifications
-- @tasks-voice-transcription.md - Contains the complete task breakdown and assignments
+- @README.md - Repo layout, setup, API surface, and known shortcuts
+- @docs/PRD.md - Product requirements and specifications
+- @docs/ARCHITECTURE.md - Codebase tour
 
 These files are the source of truth for all implementation decisions.
 

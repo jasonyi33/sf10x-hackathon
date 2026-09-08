@@ -96,7 +96,7 @@ async def generate_embedding_background(individual_id: str, individual_data: dic
         print(f"❌ Background task: Failed to generate embedding for {individual_data.get('name', 'Unknown')}: {str(e)}")
 
 
-@router.post("/api/individuals", response_model=SaveIndividualResponse)
+@router.post("", response_model=SaveIndividualResponse)
 async def save_individual(
     request: SaveIndividualRequest,
     background_tasks: BackgroundTasks,
@@ -193,7 +193,7 @@ async def save_individual(
         )
 
 
-@router.get("/api/individuals", response_model=SearchIndividualsResponse)
+@router.get("", response_model=SearchIndividualsResponse)
 async def search_individuals(
     search: Optional[str] = Query(None, description="Search term for name and data fields"),
     limit: int = Query(20, ge=1, le=100, description="Maximum results per page"),

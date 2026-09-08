@@ -27,11 +27,6 @@ export interface SearchResult {
   search_type?: 'exact' | 'semantic'; // Type of search match
 }
 
-export interface SearchScreenProps {
-  navigation: any;
-}
-
-// New interfaces for IndividualProfileScreen
 export interface Interaction {
   id: string;
   individual_id: string;
@@ -63,15 +58,6 @@ export interface IndividualProfile {
     latitude: number;
     longitude: number;
     address: string;
-  };
-}
-
-export interface IndividualProfileScreenProps {
-  navigation: any;
-  route: {
-    params: {
-      individualId: string;
-    };
   };
 }
 
